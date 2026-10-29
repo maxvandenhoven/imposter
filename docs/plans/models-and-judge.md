@@ -137,7 +137,9 @@ class JudgeVerdict(BaseModel):
   shared stem for clues). Only undecided cases reach the LLM.
 - `judge/llm_judge.py`: `LlmJudge`, implementing `JudgeProtocol` with Gemini Flash-Lite and
   structured output. Temperature 0.
-- `GameRunner` takes one `judge: JudgeProtocol` for both clues and guesses. When the
+- `GameRunner` takes one `judge: JudgeProtocol` for both clues and guesses. The game
+  setting `model_clue_check` (on by default) decides whether clues reach the model.
+  When it is off, or no judge is set, only the code checks judge clues. When the
   model fails, the judge falls back to the lenient verdict (clue valid, guess wrong).
 - Verdicts are on events (the `guess_made` event, and the rejection reason on the clue event)
   and span attributes.

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from imposter.config import GamePhase, PlayerRole
 from imposter.engine.game import ActionRejection, Game
 from imposter.judge.base import JudgeProtocol, JudgeVerdict
+from imposter.judge.checks import clue_check
 from imposter.players.base import (
     ClueResponse,
     DebriefResponse,
@@ -56,8 +57,9 @@ class GameRunner:
 
     Attributes:
         players: The player at each seat, in seat order.
-        judge: Decides whether a clue that passed the engine's checks is valid and
-            whether a guess that is not an exact match is the word, if set.
+        judge: Decides whether a clue that passed the code checks is valid, when the
+            game's `model_clue_check` is on, and whether a guess that is not an exact
+            match is the word, if set.
     """
 
     players: Sequence[PlayerProtocol]
@@ -171,16 +173,18 @@ class GameRunner:
                 rejection = game.clue_rejection(seat=seat, clue=clue)
 
                 # A clue that says the word is accepted: submitting it ends the game.
-                if (
-                    rejection is not None
-                    or self.judge is None
-                    or game.clue_says_word(clue)
-                ):
+                if rejection is not None or game.clue_says_word(clue):
                     return rejection
 
-                verdict = await self.judge.is_valid_clue(clue=clue, word=game.secret.word)
+                # The judge runs the code checks itself before it asks the model.
+                if self.judge is not None and game.config.model_clue_check:
+                    verdict = await self.judge.is_valid_clue(
+                        clue=clue, word=game.secret.word
+                    )
+                else:
+                    verdict = clue_check(clue=clue, word=game.secret.word)
 
-                if verdict.verdict:
+                if verdict is None or verdict.verdict:
                     return None
 
                 # Telling an imposter why would hint at the word, so it just passes.

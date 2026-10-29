@@ -246,6 +246,22 @@ async def test_clue_judge_rejection_is_retried_for_civilians_only() -> None:
     assert all(reason is None for reason in players[imposter].retry_reasons)
 
 
+async def test_model_clue_check_can_be_turned_off() -> None:
+    judge = RecordingJudge()
+    game = new_game(clue_rounds=1, discussion_rounds=0, model_clue_check=False)
+    players = scripted_players(game)
+    civilian = next(s.seat for s in game.seats if s.role is PlayerRole.CIVILIAN)
+    players[civilian].script.insert(0, ClueResponse(clue="giraffid"))
+
+    await GameRunner(players=players, judge=judge).play(game)
+
+    # The code checks still reject the shared stem, and only the guess is judged.
+    assert players[civilian].retry_reasons[1] == (
+        "the clue is too close to the secret word"
+    )
+    assert judge.judged == [("zebra", WORD)]
+
+
 async def test_invalid_vote_falls_back_to_an_abstention() -> None:
     game = new_game(clue_rounds=1, discussion_rounds=0)
     players = scripted_players(game)
