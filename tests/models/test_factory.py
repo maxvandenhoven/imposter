@@ -12,7 +12,10 @@ from imposter.models.catalog import (
     ModelVia,
 )
 from imposter.models.factory import (
+    MODEL_CALL_RETRIES,
+    MODEL_CALL_TIMEOUT_SECONDS,
     PHASE_MAX_OUTPUT_TOKENS,
+    RETRY_STATUS_CODES,
     THINKING_TOKENS,
     adk_model,
     generate_content_config,
@@ -43,7 +46,15 @@ def test_adk_model_builds_gemini_on_vertex_in_the_entry_location() -> None:
 
     assert isinstance(model, Gemini)
     assert model.model == "gemini-x"
-    assert model.client_kwargs == {"vertexai": True, "location": "us-central1"}
+    assert model.client_kwargs is not None
+    assert model.client_kwargs["vertexai"] is True
+    assert model.client_kwargs["location"] == "us-central1"
+    assert (
+        model.client_kwargs["http_options"].timeout == MODEL_CALL_TIMEOUT_SECONDS * 1000
+    )
+    assert model.retry_options is not None
+    assert model.retry_options.attempts == MODEL_CALL_RETRIES + 1
+    assert model.retry_options.http_status_codes == RETRY_STATUS_CODES
 
 
 def test_adk_model_builds_litellm_with_project_and_location(
@@ -57,6 +68,8 @@ def test_adk_model_builds_litellm_with_project_and_location(
     assert model.model == "vertex_ai/claude-x"
     assert model._additional_args["vertex_project"] == "sandbox"
     assert model._additional_args["vertex_location"] == "us-central1"
+    assert model._additional_args["timeout"] == MODEL_CALL_TIMEOUT_SECONDS
+    assert model._additional_args["num_retries"] == MODEL_CALL_RETRIES
 
 
 @pytest.mark.parametrize("phase", list(PHASE_MAX_OUTPUT_TOKENS))

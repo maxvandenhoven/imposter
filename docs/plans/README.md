@@ -137,7 +137,7 @@ imposter/
 ├─ docs/plans/                 # this folder
 ├─ src/imposter/
 │  ├─ config.py                # GameConfig, PlayerConfig, SecretWord and the shared enums
-│  ├─ utils/                   # names.py, phases.py, retry.py, tally.py, text.py (plain functions)
+│  ├─ utils/                   # names.py, phases.py, tally.py, text.py (functions on plain values)
 │  ├─ engine/                  # game.py (Game), events.py, views.py
 │  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompt.py, prompts/
 │  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects)

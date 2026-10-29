@@ -20,7 +20,7 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `src/imposter/config.py` — the game options and the shared enums (`GameConfig`,
   `PlayerConfig`, `SecretWord`, `GamePhase`, ...), used across the package
 - `src/imposter/utils/` — small functions on plain values, used across the package (word
-  handling, vote tally, seat names, phase flow, model call retries)
+  handling, vote tally, seat names, phase flow)
 - `src/imposter/engine/` — pure game rules: the `Game` class (event log, queries,
   actions, player views), events and views (no ADK or LLM dependency)
 - `src/imposter/players/` — `PlayerProtocol`, ADK player, fake players, prompt renderer

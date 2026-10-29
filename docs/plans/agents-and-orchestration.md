@@ -112,10 +112,13 @@ class PlayerProtocol(Protocol):
 - A short fixed `static_instruction` (`prompts/system.md`) is the system instruction,
   which makes ADK send the rendered instruction as user content. Claude Sonnet refuses
   the game instruction as a system prompt but plays fine with it as a user message.
-- Output: native `output_schema` for models whose catalog entry has
-  `supports_structured_output: true` (Gemini; check Claude via LiteLLM). Otherwise the
-  prompt asks for JSON matching the schema, the player parses it with pydantic, and on a
-  validation error retries once with the error message. A second failure produces the
+- Output: every agent has the response type as `output_schema` and an `output_key`, so
+  ADK validates the answer and stores the parsed result in session state. Models whose
+  catalog entry has `supports_structured_output: false` get the schema removed from the
+  request by a `before_model_callback` and are asked for JSON in the task instead. On a
+  validation error the player asks once more with the error message (ADK has no
+  re-prompt for schema errors). An `after_model_callback` records the tokens of every
+  call, including calls whose answer was invalid. A second failure produces the
   phase fallback (`pass` clue, empty statement, abstain vote, empty guess) and a
   `player_error` event. Claude Sonnet and `gpt-oss` use JSON in the prompt (see
   `models-and-judge.md`).
@@ -171,9 +174,9 @@ the word.
 - Clues, discussion and guesses are sequential; votes and debrief run with
   `asyncio.gather`.
 - Every LLM call: 60 s timeout, up to 2 retries with exponential backoff and jitter on 429
-  and 5xx (`utils/retry.py`). ADK 2.x turns a failed model call into an error event whose
-  code is the API status (`RESOURCE_EXHAUSTED`) or the LiteLLM exception name
-  (`RateLimitError`), so these names count as transient too. After the last failure: phase fallback and a `player_error` event; the turn
+  and 5xx. The model clients do this (`models/factory.py`): `Gemini(retry_options=...)`
+  with an HTTP timeout, and `LiteLlm(num_retries=..., timeout=...)`. Below ADK the status
+  code is still known, so only transient errors are retried. After the last failure: phase fallback and a `player_error` event; the turn
   span gets error status. The game continues.
 - `max_output_tokens` per phase (clue small, discussion and debrief larger) from config.
 - Per-game token budget (default 200k, input + output + thinking). When exceeded, the

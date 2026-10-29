@@ -102,22 +102,3 @@ def redact_word(text: str, word: str) -> str:
     pattern = re.compile(rf"\b(?:{alternatives})\b", re.IGNORECASE)
 
     return pattern.sub(REDACTION, text)
-
-
-def json_object_text(text: str) -> str:
-    """Cut the JSON object out of a model answer that may wrap it in fences or prose.
-
-    Args:
-        text: The raw answer of a model.
-
-    Returns:
-        The text from the first `{` to the last `}`, or the stripped answer when it has
-        no braces, so that parsing it reports the error.
-    """
-    start = text.find("{")
-    end = text.rfind("}")
-
-    if start == -1 or end < start:
-        return text.strip()
-
-    return text[start : end + 1]

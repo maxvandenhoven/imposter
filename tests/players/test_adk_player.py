@@ -1,7 +1,6 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 
-import litellm
 import pytest
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import errors, types
@@ -24,20 +23,6 @@ from imposter.players.base import (
 WORD = "giraffe"
 
 
-def gemini_error(code: int, status: str) -> errors.APIError:
-    """Build the error `google-genai` raises for an HTTP status."""
-    error_type = errors.ClientError if code < 500 else errors.ServerError
-
-    return error_type(code, {"error": {"code": code, "status": status, "message": "x"}})
-
-
-def litellm_rate_limit() -> litellm.RateLimitError:
-    """Build the error LiteLLM raises for a rate limit."""
-    return litellm.RateLimitError(
-        message="slow down", llm_provider="vertex_ai", model="m"
-    )
-
-
 class FakeLlm(BaseLlm):
     """An ADK model that replays canned replies and records every request.
 
@@ -53,7 +38,7 @@ class FakeLlm(BaseLlm):
     async def generate_content_async(
         self, llm_request: LlmRequest, stream: bool = False
     ) -> AsyncGenerator[LlmResponse]:
-        self.requests.append(llm_request)
+        self.requests.append(llm_request.model_copy(deep=True))
         reply = self.replies.pop(0)
 
         if isinstance(reply, Exception):
@@ -102,7 +87,6 @@ def new_player(
     replies: list[Any],
     structured: bool = True,
     role: PlayerRole | None = None,
-    max_retries: int = 2,
 ) -> tuple[AdkPlayer, FakeLlm, PlayerView]:
     """Build a player for the current seat, or the first seat of a role, and its view."""
     seat = game.pending_seats[0]
@@ -111,14 +95,7 @@ def new_player(
         seat = next(s.seat for s in game.seats if s.role is role)
 
     model = FakeLlm(replies=replies)
-    player = AdkPlayer(
-        entry=entry(structured=structured),
-        seat=seat,
-        model=model,
-        timeout_seconds=1,
-        max_retries=max_retries,
-        backoff_seconds=0,
-    )
+    player = AdkPlayer(entry=entry(structured=structured), seat=seat, model=model)
 
     return player, model, game.view_for(seat)
 
@@ -180,17 +157,18 @@ async def test_turns_send_no_conversation_history() -> None:
     )
 
     await player.take_turn(view)
-    await player.take_turn(view, retry_reason="the clue was already given")
+    response = await player.take_turn(view, retry_reason="the clue was already given")
 
     first, second = model.requests
+    assert response.output == ClueResponse(clue="spots")
     assert len(second.contents) == len(first.contents)
     assert "neck" not in request_text(second)
     assert "rejected: the clue was already given" in request_text(second)
 
 
-async def test_json_in_prompt_turn_parses_fenced_json() -> None:
+async def test_json_in_prompt_turn_sends_no_schema_and_parses_fenced_json() -> None:
     game = new_game()
-    reply = 'Here you go:\n```json\n{"clue": "neck", "private_reasoning": "tall"}\n```'
+    reply = '```json\n{"clue": "neck", "private_reasoning": "tall"}\n```'
     player, model, view = new_player(game=game, replies=[reply], structured=False)
 
     response = await player.take_turn(view)
@@ -198,13 +176,14 @@ async def test_json_in_prompt_turn_parses_fenced_json() -> None:
     assert response.output == ClueResponse(clue="neck", private_reasoning="tall")
     request = model.requests[0]
     assert request.config.response_schema is None
+    assert request.config.response_mime_type is None
     assert "Answer with only a JSON object" in request_text(request)
 
 
-async def test_invalid_answer_is_retried_once_with_the_error() -> None:
+async def test_answer_that_misses_the_schema_is_asked_again_with_the_error() -> None:
     game = new_game()
     player, model, view = new_player(
-        game=game, replies=["neck", '{"clue": "neck"}'], structured=False
+        game=game, replies=['{"hint": "neck"}', '{"clue": "neck"}'], structured=False
     )
 
     response = await player.take_turn(view)
@@ -212,10 +191,11 @@ async def test_invalid_answer_is_retried_once_with_the_error() -> None:
     assert response.output == ClueResponse(clue="neck")
     assert response.error is None
     assert response.usage is not None and response.usage.input_tokens == 200
-    assert "not a valid JSON object" in request_text(model.requests[1])
+    assert "did not match the JSON schema" in request_text(model.requests[1])
+    assert "clue" in request_text(model.requests[1])
 
 
-async def test_second_invalid_answer_gives_up_with_an_error() -> None:
+async def test_second_answer_that_misses_the_schema_gives_up_with_an_error() -> None:
     game = new_game()
     player, _, view = new_player(
         game=game, replies=['{"hint": "neck"}', "still no json"], structured=False
@@ -225,51 +205,22 @@ async def test_second_invalid_answer_gives_up_with_an_error() -> None:
 
     assert response.output is None
     assert response.error is not None
-    assert response.error.startswith("invalid answer, falling back:")
+    assert response.error.startswith("no valid answer: ValidationError")
     assert response.usage is not None and response.usage.output_tokens == 20
 
 
-async def test_transient_errors_are_retried() -> None:
+async def test_model_errors_give_up_without_asking_again() -> None:
     game = new_game()
-    player, model, view = new_player(
-        game=game,
-        replies=[
-            gemini_error(429, "RESOURCE_EXHAUSTED"),
-            litellm_rate_limit(),
-            gemini_error(503, "UNAVAILABLE"),
-            '{"clue": "neck"}',
-        ],
-        max_retries=3,
+    error = errors.ClientError(
+        429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "quota"}}
     )
-
-    response = await player.take_turn(view)
-
-    assert response.output == ClueResponse(clue="neck")
-    assert len(model.requests) == 4
-
-
-async def test_persistent_errors_give_up_with_an_error() -> None:
-    game = new_game()
-    player, model, view = new_player(game=game, replies=[litellm_rate_limit()] * 3)
+    player, model, view = new_player(game=game, replies=[error])
 
     response = await player.take_turn(view)
 
     assert response.output is None
-    assert response.usage is None
     assert response.error is not None
-    assert "error RateLimitError" in response.error
-    assert len(model.requests) == 3
-
-
-async def test_other_errors_are_not_retried() -> None:
-    game = new_game()
-    player, model, view = new_player(
-        game=game, replies=[gemini_error(400, "INVALID_ARGUMENT")]
-    )
-
-    response = await player.take_turn(view)
-
-    assert response.output is None
+    assert response.error.startswith("no valid answer: RESOURCE_EXHAUSTED")
     assert len(model.requests) == 1
 
 
@@ -281,18 +232,19 @@ async def test_error_responses_give_up_with_an_error() -> None:
     response = await player.take_turn(view)
 
     assert response.output is None
-    assert response.error is not None
-    assert "error SAFETY: Blocked" in response.error
+    assert response.error == "no valid answer: SAFETY: Blocked"
 
 
-async def test_each_phase_uses_its_response_type() -> None:
-    game = new_game()
-    player, _, _ = new_player(game=game, replies=[])
+async def test_each_phase_has_an_agent_with_its_response_type() -> None:
+    player, _, _ = new_player(game=new_game(), replies=[])
+    agents = {phase: runner.agent for phase, runner in player.runners.items()}
 
-    assert player.agents.keys() == PHASE_RESPONSE_TYPES.keys()
-    assert player.agents[GamePhase.VOTE].output_schema is VoteResponse
-    assert player.agents[GamePhase.DISCUSSION].output_schema is DiscussionResponse
-    assert player.agents[GamePhase.CLUE].include_contents == "none"
+    assert agents.keys() == PHASE_RESPONSE_TYPES.keys()
+    assert getattr(agents[GamePhase.VOTE], "output_schema", None) is VoteResponse
+    assert (
+        getattr(agents[GamePhase.DISCUSSION], "output_schema", None) is DiscussionResponse
+    )
+    assert getattr(agents[GamePhase.CLUE], "include_contents", None) == "none"
 
 
 async def test_view_of_another_seat_is_rejected() -> None:
