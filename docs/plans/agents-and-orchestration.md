@@ -7,9 +7,10 @@
 - Vertex AI mode via environment: `GOOGLE_GENAI_USE_VERTEXAI=TRUE`,
   `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global`. Credentials are ADC locally and
   the Cloud Run service account when deployed. No API keys.
-- `src/imposter/agent.py` exposes a `root_agent` (a `GameRunnerAgent` with a default config) so
-  `adk web src/imposter` works for poking at the agents during development. Single player
-  agents can be tried there as well.
+- `src/imposter/agent.py` exposes a `root_agent` (a `GameRunnerAgent` with a default
+  request) so `adk web src` (`make adk-web`) lists the `imposter` app and plays one game
+  per new session. `adk web` takes the directory that contains the agent packages, so it
+  is `src`, not `src/imposter`.
 - Before writing code, read the ADK cheatsheet (the `google-agents-cli-adk-code` skill) and
   check exact signatures in the installed package. The custom layout here replaces
   `agents-cli scaffold`; borrow from scaffolded templates where useful (telemetry setup,
@@ -52,19 +53,31 @@ and the ADK agent.
 ## GameRunnerAgent (custom `BaseAgent`)
 
 `orchestration/runner_agent.py` defines `GameRunnerAgent(BaseAgent)`, the ADK face of a
-`GameRunner`. Its `_run_async_impl` plays the game step by step with the runner, wraps
-phases and turns in spans, yields an ADK `Event` for every new engine event (so `adk web`
-and the ADK runner see progress) and publishes each engine event to the
-`EventBusProtocol` port:
+`GameRunner`. Its `_run_async_impl` plays the game step by step with the runner, yields
+an ADK `Event` for every new engine event (the event as JSON text, so `adk web` and the
+ADK runner see progress) and publishes each engine event to the `EventBusProtocol` port.
+Phase and turn spans follow with the tracing work package.
 
 ```
-while not game.is_over:
-    seen = len(game.events)
-    with phase_span(game):
+game = setup.create_game(request from session state, game_id = session id)
+runner = setup.runner_for(game)
+try:
+    loop:
+        publish and yield the events not seen yet
+        if game.is_over: break
         await runner.play_step(game)
-    for event in game.events[seen:]:
-        yield and publish the event
+finally:
+    abort the game if it is not over, publish the rest, close the bus
 ```
+
+The `finally` block covers cancellation: when the task of the run is cancelled (for
+example after an SSE disconnect), the game ends with a `game_aborted` event and
+subscribers see the end of the stream. A second run in a session whose game was already
+played yields a single message and plays nothing.
+
+`orchestration/setup.py` holds `GameRequest` (the `GameConfig` plus the `WordOptions`)
+and `GameSetup`, which chooses the secret word, creates the `Game` and seats an
+`AdkPlayer` for every seat with the judge. Tests use a subclass that seats fake players.
 
 The `GameRunnerAgent` holds no game rules: legality, tallying and outcome live in the
 `Game`, and the turn logic in the `GameRunner`. It adds only what ADK, telemetry and the
@@ -73,7 +86,10 @@ event bus need. The names say what each part is: the `Game` is the game itself, 
 
 `orchestration/adk_runner.py` wires ADK's own `Runner` with the `GameRunnerAgent`, an
 `InMemorySessionService` (behind ADK's `BaseSessionService`, swappable later), and creates
-one session per game (`session_id = game_id`). Game config is passed in the initial state.
+one session per game (`session_id = game_id`). The `GameRequest` is passed in the initial
+state under `game:request`. `run_game(request=..., setup=..., bus=..., store=...)` is the
+coroutine the CLI uses and the API will use: subscribe to the bus with the game id to
+follow the game while it runs.
 
 ADK's graph `Workflow` API (2.x) was considered; the imperative `BaseAgent` reads more
 naturally for configurable round counts and per-player fan-out (README D32).
@@ -122,10 +138,12 @@ class PlayerProtocol(Protocol):
   phase fallback (`pass` clue, empty statement, abstain vote, empty guess) and a
   `player_error` event. Claude Sonnet and `gpt-oss` use JSON in the prompt (see
   `models-and-judge.md`).
-- The agent is called with a fresh user message per turn (the task). For now each
-  `AdkPlayer` runs its agents with its own ADK `Runner` and `InMemorySessionService`, one
-  session per game. WP 06 moves the calls into the runner and session of the
-  `GameRunnerAgent`, so ADK spans and events nest under the game.
+- The agent is called with a fresh user message per turn (the task). Each `AdkPlayer`
+  runs its agents with its own ADK `Runner` and `InMemorySessionService`, with one
+  session per game and phase (ADK warns about events from agents its runner does not
+  know). The players are not sub-agents of the `GameRunnerAgent`: that would tie
+  `PlayerProtocol` to ADK's invocation context. Their ADK spans still nest under the
+  game, because OpenTelemetry context travels with the asyncio task (checked in WP 07).
 
 ### Structured responses
 
@@ -189,12 +207,15 @@ the word.
 `ports/` contains protocols and in-memory adapters, so persistence can be added without
 touching the engine or orchestration:
 
-- `GameStoreProtocol`: `create(config) -> game_id`, `get(game_id)`, `update(game_id,
-  ...)`, `list_recent()`. Adapter `InMemoryGameStore`, a dict.
-- `EventBusProtocol`: `publish(game_id, event)`, `subscribe(game_id, from_seq=0) ->
-  AsyncIterator[GameEvent]` which first replays buffered events then tails new ones,
-  `close(game_id)`. Adapter `InMemoryEventBus`, a per-game buffer plus
-  `asyncio.Condition`.
+- `GameStoreProtocol`: `save(game)`, `get(game_id) -> Game | None`,
+  `list_recent(limit)`. Adapter `InMemoryGameStore`, a dict. A `Game` changes in place, so
+  the in-memory store saves it once at creation. A persistent adapter would save it after
+  every step, or store the event log instead.
+- `EventBusProtocol`: `publish(game_id=..., event=...)`, `subscribe(game_id=...,
+  from_seq=0) -> AsyncIterator[GameEvent]` which first replays buffered events then tails
+  new ones, `close(game_id)`. Adapter `InMemoryEventBus`, a per-game buffer plus an
+  `asyncio.Event` that is set and replaced on every change. `publish` and `close` are
+  synchronous, so the agent can call them in its `finally` block after a cancellation.
 - ADK `BaseSessionService`: `InMemorySessionService` now; `DatabaseSessionService` or
   Vertex AI sessions later.
 

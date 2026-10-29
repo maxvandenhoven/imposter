@@ -10,3 +10,6 @@ src/imposter/web/tailwind.css
 *.tfstate
 *.tfstate.*
 terraform.tfvars
+
+# Local ADK developer UI data (`adk web`).
+.adk/

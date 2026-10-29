@@ -20,7 +20,7 @@ APP_NAME = "imposter"
 """The ADK app name of the player runners."""
 
 USER_ID = "imposter"
-"""The ADK user of the player sessions, one session per game."""
+"""The ADK user of the player sessions, one session per game and phase."""
 
 ANSWER_ATTEMPTS = 2
 """Model calls per turn: the first answer plus one retry when it does not match the
@@ -268,11 +268,12 @@ class AdkPlayer:
         answer = error_code = error_message = None
 
         # A failed run yields an error event and then raises, so the error is already
-        # known when the exception arrives.
+        # known when the exception arrives. Each phase has a session of its own, because
+        # ADK warns about events in a session from agents its runner does not know.
         try:
             async for event in self.runners[view.phase].run_async(
                 user_id=USER_ID,
-                session_id=view.game_id,
+                session_id=f"{view.game_id}-{view.phase}",
                 new_message=types.Content(role="user", parts=[types.Part(text=task)]),
                 state_delta={self.view_state_key: view.model_dump(mode="json")},
             ):
