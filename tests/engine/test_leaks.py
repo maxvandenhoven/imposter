@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from imposter.engine.config import (
+from imposter.config import (
     GameConfig,
     GamePhase,
     IdentityMode,
@@ -15,11 +15,11 @@ from imposter.engine.config import (
     PlayerRole,
     SecretWord,
 )
-from imposter.engine.events import EventVisibility, OutcomeEvent
-from imposter.engine.state import GameState
+from imposter.engine.events import EventVisibility, OutcomeEvent, public_projection
+from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
+from imposter.orchestration.runner import GameRunner
 from imposter.players.base import TurnUsage
-from imposter.players.driver import GameDriver
 from imposter.players.fake import RandomPlayer
 
 SECRET_WORDS = ("giraffe", "volcano", "trumpet", "lantern", "glacier", "pretzel")
@@ -37,11 +37,11 @@ class PlayedGame:
     """A finished random game and every view its players received.
 
     Attributes:
-        state: The finished game.
+        game: The finished game.
         views: Every view handed to a player, including retries.
     """
 
-    state: GameState
+    game: Game
     views: list[PlayerView]
 
 
@@ -51,7 +51,6 @@ def played_games(draw: st.DrawFn) -> PlayedGame:
     player_count = draw(st.integers(min_value=3, max_value=8))
     index = draw(st.integers(min_value=0, max_value=len(SECRET_WORDS) - 1))
     config = GameConfig(
-        category="things",
         players=[
             PlayerConfig(model_id=f"model-{draw(st.integers(min_value=0, max_value=2))}")
             for _ in range(player_count)
@@ -66,20 +65,18 @@ def played_games(draw: st.DrawFn) -> PlayedGame:
         seed=draw(st.integers()),
     )
     secret = SecretWord(word=SECRET_WORDS[index], category="things", hint=HINTS[index])
-    state = GameState.create(config=config, secret=secret)
+    game = Game.create(config=config, secret=secret)
     blunder_rate = draw(st.floats(min_value=0, max_value=0.5))
     seed = draw(st.integers())
     usage = TurnUsage(model_id="random", input_tokens=10)
-    players = {
-        seat.seat: RandomPlayer(
-            seat=seat.seat, seed=seed + seat.seat, blunder_rate=blunder_rate, usage=usage
-        )
-        for seat in state.seats
-    }
-    asyncio.run(GameDriver(state=state, players=players).run())
+    players = [
+        RandomPlayer(seed=seed + seat.seat, blunder_rate=blunder_rate, usage=usage)
+        for seat in game.seats
+    ]
+    asyncio.run(GameRunner(players=players).play(game))
 
     return PlayedGame(
-        state=state, views=[view for player in players.values() for view in player.views]
+        game=game, views=[view for player in players for view in player.views]
     )
 
 
@@ -89,28 +86,28 @@ def mentions(text: str, word: str) -> bool:
 
 
 @settings(max_examples=150, deadline=None)
-@given(game=played_games())
-def test_games_with_random_players_finish(game: PlayedGame) -> None:
-    assert game.state.phase is GamePhase.DONE
+@given(played=played_games())
+def test_games_with_random_players_finish(played: PlayedGame) -> None:
+    assert played.game.phase is GamePhase.DONE
 
 
 @settings(max_examples=150, deadline=None)
-@given(game=played_games())
+@given(played=played_games())
 def test_imposter_views_never_contain_the_word_before_the_reveal(
-    game: PlayedGame,
+    played: PlayedGame,
 ) -> None:
-    word = game.state.secret.word
+    word = played.game.secret.word
 
-    for view in game.views:
+    for view in played.views:
         if view.role is PlayerRole.IMPOSTER and view.reveal is None:
             assert view.word is None
             assert not mentions(view.model_dump_json(), word)
 
 
 @settings(max_examples=150, deadline=None)
-@given(game=played_games())
-def test_views_never_contain_another_seats_reasoning(game: PlayedGame) -> None:
-    for view in game.views:
+@given(played=played_games())
+def test_views_never_contain_another_seats_reasoning(played: PlayedGame) -> None:
+    for view in played.views:
         seats = {int(seat) for seat in MARKER_PATTERN.findall(view.model_dump_json())}
 
         assert seats <= {view.seat}
@@ -120,9 +117,9 @@ def test_views_never_contain_another_seats_reasoning(game: PlayedGame) -> None:
 
 
 @settings(max_examples=150, deadline=None)
-@given(game=played_games())
-def test_views_contain_no_votes_before_they_are_revealed(game: PlayedGame) -> None:
-    for view in game.views:
+@given(played=played_games())
+def test_views_contain_no_votes_before_they_are_revealed(played: PlayedGame) -> None:
+    for view in played.views:
         if view.phase in (GamePhase.CLUE, GamePhase.DISCUSSION, GamePhase.VOTE):
             assert view.vote_result is None
             assert all(entry.phase is not GamePhase.VOTE for entry in view.scratchpad)
@@ -130,13 +127,13 @@ def test_views_contain_no_votes_before_they_are_revealed(game: PlayedGame) -> No
 
 
 @settings(max_examples=150, deadline=None)
-@given(game=played_games())
-def test_public_projection_has_no_private_fields(game: PlayedGame) -> None:
-    word = game.state.secret.word
-    outcome_seq = next(e.seq for e in game.state.events if isinstance(e, OutcomeEvent))
+@given(played=played_games())
+def test_public_projection_has_no_private_fields(played: PlayedGame) -> None:
+    word = played.game.secret.word
+    outcome_seq = played.game.events_of_type(OutcomeEvent)[0].seq
 
-    for event in game.state.events:
-        projection = event.public_projection()
+    for event in played.game.events:
+        projection = public_projection(event)
 
         if event.visibility is EventVisibility.PRIVATE:
             assert projection is None

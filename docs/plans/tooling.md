@@ -26,10 +26,12 @@ Same rules as hive (see its `docs/plans/tooling.md` and `CLAUDE.md`), summarised
 | Comments start with a capital letter and end with a period at 5+ words | `scripts/tooling/check_comments.py` |
 | Single backticks for inline code in docstrings | review |
 | No `print`, use `logging` | ruff `T20` |
+| Exception messages start with a capital letter and end with a period | review |
 | No manual line splitting or magic trailing commas | `skip-magic-trailing-comma = true` |
 | Pytest fixtures state their scope explicitly | review |
-| Behaviour is a method on the type that owns the data | review |
+| Simple code with objects where state or shared logic lives: behaviour is a method on the object whose state it reads or changes, objects change in place, plain functions only for logic on plain values. Data models and enums hold no behaviour. I/O at the edges | review |
 | Specific, domain-prefixed names (`GameEvent`, `PlayerView`, `JudgeVerdict`) | review |
+| Base classes start with `Base`, protocols end with `Protocol`, ADK agents end with `Agent` | review |
 | Public by default; underscore only when hiding matters | review |
 | Blank lines around compound statements and before a multi-step `return` | review |
 | Keyword arguments for own calls with 2+ arguments | review |

@@ -108,7 +108,7 @@ class ModelCandidate:
         choice = response.choices[0] if isinstance(response, ModelResponse) else None
 
         if not isinstance(choice, Choices):
-            message = f"Unexpected LiteLLM response: {type(response).__name__}"
+            message = f"Unexpected LiteLLM response: {type(response).__name__}."
             raise TypeError(message)
 
         return (choice.message.content or "").strip()

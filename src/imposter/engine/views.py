@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from imposter.engine.config import GameOutcome, GamePhase, PlayerRole
+from imposter.config import GameOutcome, GamePhase, PlayerRole
 from imposter.engine.events import PublicSeat, PublicVote
 
 
@@ -37,7 +37,7 @@ class PublicClue(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    round: int
+    round: int | None
     seat: int
     clue: str | None
 
@@ -54,7 +54,7 @@ class PublicStatement(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    round: int
+    round: int | None
     seat: int
     statement: str
     truncated: bool
@@ -131,7 +131,7 @@ class ScratchpadEntry(BaseModel):
 class PlayerView(BaseModel):
     """Everything one seat may know at a point in the game, and nothing else.
 
-    Built by `GameState.view_for`. The leak tests check the invariants of `game-rules.md`
+    Built by `Game.view_for`. The leak tests check the invariants of `game-rules.md`
     §Views on these objects.
 
     Attributes:
@@ -172,18 +172,14 @@ class PlayerView(BaseModel):
     reveal: GameReveal | None
     scratchpad: list[ScratchpadEntry]
 
-    def name_of(self, seat: int) -> str:
-        """Get the display name of a seat.
 
-        Args:
-            seat: The seat.
+def other_players(view: PlayerView) -> list[PublicSeat]:
+    """List every seat except the viewer's own, the valid vote targets.
 
-        Returns:
-            The display name of the seat.
-        """
-        return self.players[seat].name
+    Args:
+        view: The view of a seat.
 
-    @property
-    def other_players(self) -> list[PublicSeat]:
-        """All seats except this one, the valid vote targets."""
-        return [player for player in self.players if player.seat != self.seat]
+    Returns:
+        The other seats, in seat order.
+    """
+    return [player for player in view.players if player.seat != view.seat]

@@ -1,8 +1,8 @@
-from typing import Protocol, Self
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from imposter.engine.config import GamePhase
+from imposter.config import GamePhase
 from imposter.engine.views import PlayerView
 
 
@@ -97,57 +97,12 @@ class TurnUsage(BaseModel):
     thinking_tokens: int = Field(default=0, ge=0)
 
 
-class PlayerTask(BaseModel):
-    """What a player is asked to do in one turn, besides what its view shows.
-
-    Attributes:
-        phase: The phase to act in.
-        round: The round of the phase, if it has rounds.
-        statement_word_cap: The maximum number of words in a statement.
-        reasoning_word_cap: The maximum number of words of private reasoning.
-        retry_reason: Why the previous attempt in this turn was rejected, if any.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    phase: GamePhase
-    round: int | None
-    statement_word_cap: int
-    reasoning_word_cap: int
-    retry_reason: str | None = None
-
-    @classmethod
-    def for_view(cls, view: PlayerView, *, retry_reason: str | None = None) -> Self:
-        """Build the task for the phase a view was taken in.
-
-        Args:
-            view: The view of the acting seat.
-            retry_reason: Why the previous attempt was rejected, if this is a retry.
-
-        Returns:
-            The task.
-        """
-        return cls(
-            phase=view.phase,
-            round=view.round,
-            statement_word_cap=view.rules.statement_word_cap,
-            reasoning_word_cap=view.rules.reasoning_word_cap,
-            retry_reason=retry_reason,
-        )
-
-    @property
-    def response_type(self) -> type[BaseModel]:
-        """The response type expected for this task."""
-        return PHASE_RESPONSE_TYPES[self.phase]
-
-
 class PlayerResponse(BaseModel):
     """The result of one turn: the structured output plus how it was produced.
 
     Attributes:
         output: The structured output for the phase.
         usage: The tokens the turn used, if known.
-        attempts: The number of model calls the player needed, including retries.
         error: What went wrong, when the player fell back to a default output.
     """
 
@@ -155,25 +110,24 @@ class PlayerResponse(BaseModel):
 
     output: PhaseResponse
     usage: TurnUsage | None = None
-    attempts: int = Field(default=1, ge=1)
     error: str | None = None
 
 
-class Player(Protocol):
+class PlayerProtocol(Protocol):
     """A participant in a game, backed by a model, a script or chance.
 
-    Attributes:
-        seat: The seat the player sits at.
+    A player gets only the view of its own seat, so it cannot see more than the rules
+    allow. Which phase to act in and the limits are part of the view.
     """
 
-    seat: int
-
-    async def take_turn(self, view: PlayerView, task: PlayerTask) -> PlayerResponse:
-        """Act in the current phase.
+    async def take_turn(
+        self, view: PlayerView, retry_reason: str | None = None
+    ) -> PlayerResponse:
+        """Act in the phase of the view.
 
         Args:
             view: Everything the seat may know.
-            task: The phase to act in and its limits.
+            retry_reason: Why the previous attempt in this turn was rejected, if any.
 
         Returns:
             The structured output of the turn.

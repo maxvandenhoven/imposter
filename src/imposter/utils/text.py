@@ -1,25 +1,5 @@
 import re
 
-NEUTRAL_NAMES = (
-    "Alice",
-    "Bob",
-    "Chen",
-    "Dara",
-    "Emeka",
-    "Freya",
-    "Goran",
-    "Hana",
-    "Ines",
-    "Jonas",
-    "Kai",
-    "Lena",
-    "Mateo",
-    "Nadia",
-    "Omar",
-    "Priya",
-)
-"""Neutral first names for the `names` identity mode, at least `MAX_PLAYERS` of them."""
-
 REDACTION = "[redacted]"
 """The text that replaces the secret word in public statements."""
 

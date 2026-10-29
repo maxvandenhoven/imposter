@@ -4,7 +4,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from imposter.engine.config import GameOutcome, GamePhase, IdentityMode, PlayerRole
+from imposter.config import GameOutcome, GamePhase, IdentityMode
 
 
 class EventVisibility(StrEnum):
@@ -48,7 +48,7 @@ class PublicVote(BaseModel):
     target: int | None
 
 
-class GameEventBase(BaseModel):
+class BaseGameEvent(BaseModel):
     """Fields shared by every game event.
 
     Subclasses list the names of fields that must never reach the audience in
@@ -74,21 +74,9 @@ class GameEventBase(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     visibility: EventVisibility = EventVisibility.PUBLIC
 
-    def public_projection(self) -> dict[str, Any] | None:
-        """Get the event as the audience may see it.
 
-        Returns:
-            The JSON-ready event without its private fields, or `None` for a private
-            event, which the audience does not see at all.
-        """
-        if self.visibility is EventVisibility.PRIVATE:
-            return None
-
-        return self.model_dump(mode="json", exclude=set(self.private_fields))
-
-
-class GameStartedEvent(GameEventBase):
-    """The setup is fixed: seats, names and options, with the secrets as private fields.
+class GameStartedEvent(BaseGameEvent):
+    """The setup is fixed: seats, names, roles and options, with the secrets private.
 
     Attributes:
         identity_mode: How players are named.
@@ -101,10 +89,11 @@ class GameStartedEvent(GameEventBase):
         category: The category, also when it is not public (private).
         hint: The imposter hint, if any (private).
         seat_models: The model id behind each seat, in seat order (private).
+        imposters: The imposter seats (private).
     """
 
     private_fields: ClassVar[frozenset[str]] = frozenset(
-        {"word", "category", "hint", "seat_models"}
+        {"word", "category", "hint", "seat_models", "imposters"}
     )
 
     type: Literal["game_started"] = "game_started"
@@ -118,31 +107,16 @@ class GameStartedEvent(GameEventBase):
     category: str | None
     hint: str | None
     seat_models: list[str]
+    imposters: list[int]
 
 
-class RoleAssignedEvent(GameEventBase):
-    """One seat learns its role.
-
-    Attributes:
-        seat: The seat.
-        role: The role of the seat (private).
-    """
-
-    private_fields: ClassVar[frozenset[str]] = frozenset({"role"})
-
-    type: Literal["role_assigned"] = "role_assigned"
-    visibility: EventVisibility = EventVisibility.PRIVATE
-    seat: int
-    role: PlayerRole
-
-
-class PhaseStartedEvent(GameEventBase):
+class PhaseStartedEvent(BaseGameEvent):
     """A phase or round started; `phase` and `round` name it."""
 
     type: Literal["phase_started"] = "phase_started"
 
 
-class TurnStartedEvent(GameEventBase):
+class TurnStartedEvent(BaseGameEvent):
     """A seat is asked to act.
 
     Attributes:
@@ -153,7 +127,7 @@ class TurnStartedEvent(GameEventBase):
     seat: int
 
 
-class ClueGivenEvent(GameEventBase):
+class ClueGivenEvent(BaseGameEvent):
     """A seat gave its clue for the round.
 
     Attributes:
@@ -177,7 +151,7 @@ class ClueGivenEvent(GameEventBase):
     reasoning_truncated: bool = False
 
 
-class StatementMadeEvent(GameEventBase):
+class StatementMadeEvent(BaseGameEvent):
     """A seat made its public statement in a discussion round.
 
     Attributes:
@@ -200,7 +174,7 @@ class StatementMadeEvent(GameEventBase):
     reasoning_truncated: bool = False
 
 
-class VoteCastEvent(GameEventBase):
+class VoteCastEvent(BaseGameEvent):
     """A seat cast its secret vote, kept private until the votes are revealed.
 
     Attributes:
@@ -222,7 +196,7 @@ class VoteCastEvent(GameEventBase):
     reasoning_truncated: bool = False
 
 
-class VotesRevealedEvent(GameEventBase):
+class VotesRevealedEvent(BaseGameEvent):
     """All votes are revealed and tallied.
 
     Attributes:
@@ -237,12 +211,15 @@ class VotesRevealedEvent(GameEventBase):
     caught: list[int]
 
 
-class GuessMadeEvent(GameEventBase):
-    """An imposter guessed the word.
+class GuessMadeEvent(BaseGameEvent):
+    """An imposter guessed the word, and the guess was judged.
 
     Attributes:
         seat: The imposter seat.
         guess: The guess, empty when the imposter gave none.
+        correct: Whether the guess counts as the word.
+        judged_by: `exact` for a match after normalisation, `judge` when the judge
+            decided, `none` when there was no exact match and no judge verdict.
         private_reasoning: The reasoning of the seat (private).
         reasoning_truncated: Whether the reasoning was cut to the cap (private).
     """
@@ -254,27 +231,13 @@ class GuessMadeEvent(GameEventBase):
     type: Literal["guess_made"] = "guess_made"
     seat: int
     guess: str
+    correct: bool
+    judged_by: Literal["exact", "judge", "none"]
     private_reasoning: str
     reasoning_truncated: bool = False
 
 
-class GuessJudgedEvent(GameEventBase):
-    """A guess was judged against the secret word.
-
-    Attributes:
-        seat: The imposter seat.
-        correct: Whether the guess counts as the word.
-        method: `exact` for a match after normalisation, `judge` when the injected judge
-            decided, `none` when there was no exact match and no judge verdict.
-    """
-
-    type: Literal["guess_judged"] = "guess_judged"
-    seat: int
-    correct: bool
-    method: Literal["exact", "judge", "none"]
-
-
-class OutcomeEvent(GameEventBase):
+class OutcomeEvent(BaseGameEvent):
     """The winner is decided and the secrets are revealed.
 
     Attributes:
@@ -291,7 +254,7 @@ class OutcomeEvent(GameEventBase):
     caught: list[int]
 
 
-class ReflectionEvent(GameEventBase):
+class ReflectionEvent(BaseGameEvent):
     """A seat reflected on its play after the reveal.
 
     Attributes:
@@ -304,7 +267,7 @@ class ReflectionEvent(GameEventBase):
     reflection: str
 
 
-class PlayerErrorEvent(GameEventBase):
+class PlayerErrorEvent(BaseGameEvent):
     """A player failed to produce a valid action; a fallback may have been used.
 
     Attributes:
@@ -318,7 +281,7 @@ class PlayerErrorEvent(GameEventBase):
     message: str
 
 
-class UsageEvent(GameEventBase):
+class UsageEvent(BaseGameEvent):
     """Tokens used by one turn.
 
     Attributes:
@@ -340,7 +303,7 @@ class UsageEvent(GameEventBase):
     total_tokens: int
 
 
-class GameAbortedEvent(GameEventBase):
+class GameAbortedEvent(BaseGameEvent):
     """The game stopped before its end.
 
     Attributes:
@@ -351,7 +314,7 @@ class GameAbortedEvent(GameEventBase):
     reason: str
 
 
-class GameFinishedEvent(GameEventBase):
+class GameFinishedEvent(BaseGameEvent):
     """The game is over, including the debrief.
 
     Attributes:
@@ -364,7 +327,6 @@ class GameFinishedEvent(GameEventBase):
 
 type GameEvent = Annotated[
     GameStartedEvent
-    | RoleAssignedEvent
     | PhaseStartedEvent
     | TurnStartedEvent
     | ClueGivenEvent
@@ -372,7 +334,6 @@ type GameEvent = Annotated[
     | VoteCastEvent
     | VotesRevealedEvent
     | GuessMadeEvent
-    | GuessJudgedEvent
     | OutcomeEvent
     | ReflectionEvent
     | PlayerErrorEvent
@@ -385,3 +346,19 @@ type GameEvent = Annotated[
 
 GAME_EVENT_ADAPTER: TypeAdapter[GameEvent] = TypeAdapter(GameEvent)
 """Validates and serialises a single `GameEvent`, for example from an export file."""
+
+
+def public_projection(event: BaseGameEvent) -> dict[str, Any] | None:
+    """Get an event as the audience may see it.
+
+    Args:
+        event: The event.
+
+    Returns:
+        The JSON-ready event without its private fields, or `None` for a private event,
+        which the audience does not see at all.
+    """
+    if event.visibility is EventVisibility.PRIVATE:
+        return None
+
+    return event.model_dump(mode="json", exclude=set(event.private_fields))

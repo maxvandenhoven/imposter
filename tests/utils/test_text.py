@@ -1,6 +1,6 @@
 import pytest
 
-from imposter.engine.rules import (
+from imposter.utils.text import (
     REDACTION,
     clean_word,
     is_single_word,

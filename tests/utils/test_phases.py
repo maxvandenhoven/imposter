@@ -1,15 +1,14 @@
-from imposter.engine.config import GameConfig, GamePhase, PlayerConfig
-from imposter.engine.phases import PhaseStep
+from imposter.config import GameConfig, GamePhase, PlayerConfig
+from imposter.utils.phases import TERMINAL_PHASES, next_phase
 
 
 def flow(config: GameConfig) -> list[tuple[GamePhase, int | None]]:
-    """List every step from setup to done."""
-    step = PhaseStep(phase=GamePhase.SETUP)
-    steps = [(step.phase, step.round)]
+    """List every phase and round from setup to done."""
+    steps: list[tuple[GamePhase, int | None]] = [(GamePhase.SETUP, None)]
 
-    while not step.is_terminal:
-        step = step.following(config)
-        steps.append((step.phase, step.round))
+    while steps[-1][0] not in TERMINAL_PHASES:
+        phase, round_ = steps[-1]
+        steps.append(next_phase(phase=phase, round_=round_, config=config))
 
     return steps
 
@@ -17,7 +16,6 @@ def flow(config: GameConfig) -> list[tuple[GamePhase, int | None]]:
 def config_with(*, clue_rounds: int, discussion_rounds: int) -> GameConfig:
     """Build a config with the given numbers of rounds."""
     return GameConfig(
-        category="animals",
         players=[PlayerConfig(model_id="model")] * 3,
         clue_rounds=clue_rounds,
         discussion_rounds=discussion_rounds,
@@ -48,10 +46,8 @@ def test_flow_without_discussion_goes_from_clues_to_vote() -> None:
     ]
 
 
-def test_terminal_steps_follow_themselves() -> None:
+def test_terminal_phases_follow_themselves() -> None:
     config = config_with(clue_rounds=1, discussion_rounds=0)
-    aborted = PhaseStep(phase=GamePhase.ABORTED)
 
-    assert aborted.following(config) == aborted
-    assert aborted.is_terminal
-    assert not aborted.is_sequential
+    for phase in TERMINAL_PHASES:
+        assert next_phase(phase=phase, round_=None, config=config) == (phase, None)

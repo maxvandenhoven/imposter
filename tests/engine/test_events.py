@@ -1,24 +1,28 @@
-from imposter.engine.config import GamePhase, PlayerRole
+from imposter.config import GamePhase
 from imposter.engine.events import (
     GAME_EVENT_ADAPTER,
     ClueGivenEvent,
     EventVisibility,
-    RoleAssignedEvent,
+    VoteCastEvent,
+    public_projection,
 )
 
 
-def test_public_projection_drops_private_fields() -> None:
-    event = ClueGivenEvent(
+def clue_event(*, clue: str | None) -> ClueGivenEvent:
+    """Build a clue event with private reasoning."""
+    return ClueGivenEvent(
         game_id="game",
         seq=3,
         phase=GamePhase.CLUE,
         round=1,
         seat=0,
-        clue="stripes",
+        clue=clue,
         private_reasoning="secret plan",
     )
 
-    projection = event.public_projection()
+
+def test_public_projection_drops_private_fields() -> None:
+    projection = public_projection(clue_event(clue="stripes"))
 
     assert projection is not None
     assert projection["clue"] == "stripes"
@@ -27,25 +31,20 @@ def test_public_projection_drops_private_fields() -> None:
 
 
 def test_private_events_have_no_public_projection() -> None:
-    event = RoleAssignedEvent(
-        game_id="game", seq=1, phase=GamePhase.SETUP, seat=0, role=PlayerRole.IMPOSTER
-    )
-
-    assert event.visibility is EventVisibility.PRIVATE
-    assert event.public_projection() is None
-
-
-def test_events_round_trip_through_the_discriminated_union() -> None:
-    event = ClueGivenEvent(
+    event = VoteCastEvent(
         game_id="game",
-        seq=3,
-        phase=GamePhase.CLUE,
-        round=1,
+        seq=1,
+        phase=GamePhase.VOTE,
         seat=0,
-        clue=None,
+        target=1,
         private_reasoning="",
     )
 
-    parsed = GAME_EVENT_ADAPTER.validate_json(event.model_dump_json())
+    assert event.visibility is EventVisibility.PRIVATE
+    assert public_projection(event) is None
 
-    assert parsed == event
+
+def test_events_round_trip_through_the_discriminated_union() -> None:
+    event = clue_event(clue=None)
+
+    assert GAME_EVENT_ADAPTER.validate_json(event.model_dump_json()) == event

@@ -1,11 +1,7 @@
-import random
-from collections import Counter
 from enum import StrEnum
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-
-from imposter.engine.rules import NEUTRAL_NAMES
 
 MIN_PLAYERS = 3
 """The smallest number of seats in a game."""
@@ -20,43 +16,6 @@ class IdentityMode(StrEnum):
     SEAT = "seat"
     NAMES = "names"
     MODELS = "models"
-
-    def seat_names(self, players: "list[PlayerConfig]", rng: random.Random) -> list[str]:
-        """Name the seats of a game under this identity mode.
-
-        Args:
-            players: The players in seat order.
-            rng: The random number generator of the game, used to pick neutral names.
-
-        Returns:
-            The display name of each seat, in seat order.
-        """
-        match self:
-            case IdentityMode.SEAT:
-                return [f"Player {seat + 1}" for seat in range(len(players))]
-            case IdentityMode.NAMES:
-                return rng.sample(NEUTRAL_NAMES, k=len(players))
-            case IdentityMode.MODELS:
-                labels = [player.model_label for player in players]
-                totals = Counter(labels)
-                seen: Counter[str] = Counter()
-                names = []
-
-                for label in labels:
-                    seen[label] += 1
-                    names.append(
-                        f"{label} #{seen[label]}" if totals[label] > 1 else label
-                    )
-
-                return names
-
-
-class WordMode(StrEnum):
-    """How the secret word is chosen at setup."""
-
-    RANDOM = "random"
-    TYPED = "typed"
-    GENERATED = "generated"
 
 
 class GamePhase(StrEnum):
@@ -105,21 +64,16 @@ class PlayerConfig(BaseModel):
     model_display_name: str | None = None
     persona: str | None = None
 
-    @property
-    def model_label(self) -> str:
-        """The name of the model shown to players in `models` identity mode."""
-        return self.model_display_name or self.model_id
-
 
 class GameConfig(BaseModel):
-    """The options chosen on the setup screen, with the defaults of `game-rules.md`.
+    """The game options chosen on the setup screen, with the defaults of `game-rules.md`.
+
+    How the secret word is chosen is not part of the config: the caller resolves it into
+    a `SecretWord` before the game is created.
 
     Attributes:
-        word_mode: How the secret word is chosen.
-        word: The typed secret word, required in `typed` word mode.
-        category: The word category, required in `random` word mode.
         players: The seats of the game, 3 to 8.
-        imposter_count: The number of imposters, at most `floor((players - 1) / 2)`.
+        imposter_count: The number of imposters, at most `max_imposters`.
         identity_mode: How players are named.
         public_category: Whether every player, including imposters, learns the category.
         imposter_hint: Whether imposters get a related hint word.
@@ -134,9 +88,6 @@ class GameConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    word_mode: WordMode = WordMode.RANDOM
-    word: str | None = None
-    category: str | None = None
     players: list[PlayerConfig] = Field(min_length=MIN_PLAYERS, max_length=MAX_PLAYERS)
     imposter_count: int = Field(default=1, ge=1)
     identity_mode: IdentityMode = IdentityMode.NAMES
@@ -150,42 +101,30 @@ class GameConfig(BaseModel):
     temperature: float | None = Field(default=None, ge=0, le=2)
     seed: int | None = None
 
-    @property
-    def max_imposters(self) -> int:
-        """The largest allowed number of imposters for the number of seats."""
-        return (len(self.players) - 1) // 2
-
     @model_validator(mode="after")
-    def check_consistency(self) -> Self:
-        """Check the options that depend on each other.
+    def check_imposter_count(self) -> Self:
+        """Check that the imposters are a minority among the seats.
 
         Returns:
             The validated config.
 
         Raises:
-            ValueError: When there are too many imposters or the word mode lacks its
-                required word or category.
+            ValueError: When there are too many imposters for the number of seats.
         """
-        if self.imposter_count > self.max_imposters:
+        allowed = max_imposters(len(self.players))
+
+        if self.imposter_count > allowed:
             message = (
-                f"{len(self.players)} players allow at most {self.max_imposters} "
-                f"imposters, got {self.imposter_count}"
+                f"A game with {len(self.players)} players allows at most {allowed} "
+                f"imposters, got {self.imposter_count}."
             )
-            raise ValueError(message)
-
-        if self.word_mode is WordMode.TYPED and not self.word:
-            message = "typed word mode requires a word"
-            raise ValueError(message)
-
-        if self.word_mode is WordMode.RANDOM and not self.category:
-            message = "random word mode requires a category"
             raise ValueError(message)
 
         return self
 
 
 class SecretWord(BaseModel):
-    """The secret word fixed at setup, after the word mode has been resolved.
+    """The secret word fixed at setup.
 
     Attributes:
         word: The secret word civilians learn.
@@ -198,3 +137,15 @@ class SecretWord(BaseModel):
     word: str = Field(min_length=1)
     category: str | None = None
     hint: str | None = None
+
+
+def max_imposters(player_count: int) -> int:
+    """Get the largest allowed number of imposters for a number of seats.
+
+    Args:
+        player_count: The number of seats.
+
+    Returns:
+        The largest number of imposters that is still less than half of the others.
+    """
+    return (player_count - 1) // 2
