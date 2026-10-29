@@ -35,6 +35,7 @@ Same rules as hive (see its `docs/plans/tooling.md` and `CLAUDE.md`), summarised
 | Keyword arguments for own calls with 2+ arguments | review |
 | No em-dashes or semicolons in prose (docs, comments, docstrings, commit messages, PR and issue text). Use a period, a comma or a colon instead | review |
 | Documentation is written in complete, flowing sentences, including list items and table explanations, not terse fragments | review |
+| Top-level docs (`README.md`, `docs/*.md`) stand on their own: no references to work packages, issues, PRs or plan decisions. Parts that do not exist yet are marked as planned | review |
 
 Ruff rules: `B`, `D`, `E`, `F`, `I`, `EM`, `T20`, `RET`, `ANN`, `UP`, with the same ignores
 and per-file test ignores as hive.

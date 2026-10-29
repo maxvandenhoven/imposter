@@ -7,8 +7,9 @@ which is spent waiting.
 
 The project already exists and is shared with other work, so Terraform does not create or
 own it. Terraform only adds the app's own resources and labels each of them
-`app=imposter`. For now those resources are APIs, and WP 12 adds Cloud Run and the
-services around it. When you have finished this guide, you will have the following:
+`app=imposter`. For now those resources are APIs. Cloud Run and the services around it
+will follow once the app is deployed. When you have finished this guide, you will have
+the following:
 
 - A versioned GCS bucket `<project id>-imposter-tfstate` in `europe-west4` holds the
   Terraform state.
@@ -45,8 +46,9 @@ and shows how the pieces connect.
 - **Terraform 1.9 or later:** Follow <https://developer.hashicorp.com/terraform/install>.
   On Debian or Ubuntu, use the HashiCorp apt repository. Check the installation with
   `terraform version`.
-- **uv and the Python environment:** Run `make sync`, as described in the root
-  `CLAUDE.md`.
+- **uv and the Python environment:** Install uv by following
+  <https://docs.astral.sh/uv/getting-started/installation/>, then run `make sync` in the
+  repository to install the Python dependencies.
 
 Once Terraform is installed, `make check` also runs `terraform fmt -check` and
 `terraform validate`. Without Terraform, it skips those two checks.
@@ -85,8 +87,9 @@ as `TF_VAR_project_id`.
 Next, check that the project is linked to billing and that you have enough rights in it.
 `gcloud billing projects describe <project id>` should show `billingEnabled: true`. The
 *Owner* role is the simplest choice. Without it, you need at least *Service Usage Admin*
-and *Storage Admin*, and for WP 12 also the admin roles for Cloud Run, Artifact Registry,
-IAM service accounts and IAP. The following command lists the roles you have:
+and *Storage Admin*. Deploying the app later also needs the admin roles for Cloud Run,
+Artifact Registry, IAM service accounts and IAP. The following command lists the roles
+you have:
 
 ```
 gcloud projects get-iam-policy <project id> --flatten=bindings \
@@ -127,8 +130,8 @@ stores the state under the prefix `imposter`. To use a different bucket, set
 `TF_STATE_BUCKET=<bucket>`. For now, Terraform only enables the APIs listed in
 `infra/apis.tf`, including `aiplatform` for Vertex AI. In a shared project some of them
 are probably enabled already, which is fine. Terraform never disables them, not even on
-`terraform destroy`, because other work in the project may depend on them. WP 12 adds the
-service account, Artifact Registry, Cloud Run, IAP and the budget.
+`terraform destroy`, because other work in the project may depend on them. Deploying the
+app later adds a service account, Artifact Registry, Cloud Run, IAP and a budget.
 
 Optional settings such as the region and the labels go in `infra/terraform.tfvars`. See
 `infra/terraform.tfvars.example` for the available settings.
@@ -184,8 +187,8 @@ tries the location `global` first and then the fallback region `us-central1`, wh
 can change with `--fallback-location`. Each output line says `OK` with the location that
 answered, or `FAIL` with the errors. The script exits with 0 when at least one Gemini
 model and one Claude model answer. To check a single model, pass `--model <id>`, which
-you can repeat for several models. Record the results in the *Verified model IDs* table
-of `docs/plans/models-and-judge.md`.
+you can repeat for several models. A model that keeps failing after the fixes below
+cannot be used in this project and should be left out of the app's model catalog.
 
 The following table explains the common errors and how to fix them:
 
@@ -209,7 +212,7 @@ filter on *Service: Vertex AI API* and search for the model name, for example `c
 `global` location or the fallback region. If a value is very low or 0, select it and
 click **Edit quota** to request an increase. Small increases are often approved within
 minutes, while larger ones can take days. The app retries calls with backoff when it gets
-a 429 error (D28), so modest quotas are fine for a demo.
+a 429 error, so modest quotas are fine for a demo.
 
 ## Done
 

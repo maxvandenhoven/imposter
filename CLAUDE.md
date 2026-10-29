@@ -73,6 +73,9 @@ See `docs/plans/tooling.md` for the full rules and how each one is enforced.
 - Write documentation in complete, flowing sentences, including list items and the
   explanation cells of tables. Avoid terse fragments such as "What the app creates, and
   why." or "Region: `europe-west4`."
+- Top-level documentation (`README.md` and `docs/*.md`, not `docs/plans/`) stands on its
+  own and describes the system, not how it was built. Do not refer to work packages,
+  issues, PRs or plan decisions (`D17`). Mark parts that do not exist yet as planned.
 - Line length: 90 characters for code, docstrings and comments.
 - Type annotations on every function and method, including private ones and tests (ruff
   `ANN`, no test exemptions). Test functions return `-> None`.
