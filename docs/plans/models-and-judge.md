@@ -96,8 +96,15 @@ traces can be filtered to compare behaviour.
 
 ## Words
 
-- `words/categories/*.yaml`: built-in categories (animals, food, places, objects, jobs,
-  sports, movies, nature, music, technology), 30–50 common words each.
+- `words/categories/*.yaml`: built-in categories, 30–50 words each. Since playtest 1
+  (`playtests.md`) they lean abstract and esoteric rather than concrete, so a single clue
+  does not give the word away: for example emotions and moods, abstract concepts
+  (justice, nostalgia), sensations and textures, sounds, rituals and customs,
+  philosophical ideas, natural phenomena, crafts and techniques, historical eras, and
+  idioms or figures of speech. A few concrete categories (animals, food, objects) stay
+  for easy games.
+- The category is hidden from every player by default (`public_category` off), and can
+  be turned on per game.
 - Modes: typed (with optional category), random from a category, generated.
 - Generator: Gemini Flash-Lite with structured output `{word, category, hint}` and the
   list of recently used words (in memory) to avoid repeats. Traced as part of `setup`.

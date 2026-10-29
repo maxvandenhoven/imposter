@@ -24,6 +24,8 @@ OUTCOME_TEXTS: dict[GameOutcome, str] = {
     GameOutcome.IMPOSTER_WINS: "the imposter was not caught and wins",
     GameOutcome.IMPOSTER_STEALS: "the imposter was caught but guessed the word and wins",
     GameOutcome.CIVILIANS_WIN: "the civilians win",
+    GameOutcome.CIVILIAN_SAID_WORD: "a civilian said the word, so the imposters win",
+    GameOutcome.IMPOSTER_SAID_WORD: "an imposter said the word, so the civilians win",
 }
 """How the outcome is told in the reveal."""
 

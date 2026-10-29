@@ -156,7 +156,7 @@ class StatementMadeEvent(BaseGameEvent):
 
     Attributes:
         seat: The seat.
-        statement: The statement, truncated and with the secret word redacted.
+        statement: The statement, truncated to the cap.
         truncated: Whether the statement was cut to the cap.
         private_reasoning: The reasoning of the seat (private).
         reasoning_truncated: Whether the reasoning was cut to the cap (private).
@@ -237,6 +237,30 @@ class GuessMadeEvent(BaseGameEvent):
     reasoning_truncated: bool = False
 
 
+class SecretWordSaidEvent(BaseGameEvent):
+    """A seat said the secret word in a clue or statement, which ends the game at once.
+
+    The public part names only the seat. What it said is private until the outcome
+    event, which follows immediately and reveals the word anyway.
+
+    Attributes:
+        seat: The seat that said the word.
+        text: The clue or statement that said the word (private).
+        private_reasoning: The reasoning of the seat (private).
+        reasoning_truncated: Whether the reasoning was cut to the cap (private).
+    """
+
+    private_fields: ClassVar[frozenset[str]] = frozenset(
+        {"text", "private_reasoning", "reasoning_truncated"}
+    )
+
+    type: Literal["secret_word_said"] = "secret_word_said"
+    seat: int
+    text: str
+    private_reasoning: str
+    reasoning_truncated: bool = False
+
+
 class OutcomeEvent(BaseGameEvent):
     """The winner is decided and the secrets are revealed.
 
@@ -245,6 +269,7 @@ class OutcomeEvent(BaseGameEvent):
         word: The secret word.
         imposters: The imposter seats.
         caught: The caught seats.
+        word_said_by: The seat that said the secret word and ended the game, if any.
     """
 
     type: Literal["outcome"] = "outcome"
@@ -252,6 +277,7 @@ class OutcomeEvent(BaseGameEvent):
     word: str
     imposters: list[int]
     caught: list[int]
+    word_said_by: int | None = None
 
 
 class ReflectionEvent(BaseGameEvent):
@@ -334,6 +360,7 @@ type GameEvent = Annotated[
     | VoteCastEvent
     | VotesRevealedEvent
     | GuessMadeEvent
+    | SecretWordSaidEvent
     | OutcomeEvent
     | ReflectionEvent
     | PlayerErrorEvent

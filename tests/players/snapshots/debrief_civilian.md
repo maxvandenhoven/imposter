@@ -4,12 +4,17 @@ You are playing Imposter, a social deduction word game with 5 players.
 
 Every player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.
 
+Two rules matter more than any other:
+
+- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.
+- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.
+
 The game is played in phases:
 
-1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue. A clue must not be the secret word, must not contain it and must not repeat an earlier clue. A clue that breaks these rules is replaced by a pass.
-2. Discussion: there is 1 round. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question. Saying the secret word in a statement is not allowed, it is redacted.
+1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.
+2. Discussion: there is 1 round. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.
 3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.
-4. Guess: every imposter makes one guess at the secret word.
+4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.
 5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.
 6. Debrief: the word and the roles are revealed, and every player reflects on how they played.
 
@@ -19,7 +24,7 @@ With every action you also record private reasoning of at most 60 words. Nobody 
 
 You are Dave, a civilian. The secret word is "giraffe".
 
-Your goal is to find the imposter. Prove that you know the word without making it guessable for the imposter: give clues that fit the word but are not too obvious, and watch for clues and statements that are vague, off or copied from others.
+Your goal is to find the imposter. Prove that you know the word without making it guessable for the imposter: give clues that fit the word but are not too obvious, and watch for clues and statements that are vague, off or copied from others. Never say the secret word itself, not in a clue and not in a statement: your side would lose at once.
 
 # The game so far
 

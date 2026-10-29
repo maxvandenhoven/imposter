@@ -13,18 +13,19 @@ from imposter.config import (
 )
 from imposter.engine.events import (
     ClueGivenEvent,
+    EventVisibility,
     GameAbortedEvent,
     GameFinishedEvent,
     GameStartedEvent,
     GuessMadeEvent,
     OutcomeEvent,
     PhaseStartedEvent,
+    SecretWordSaidEvent,
     StatementMadeEvent,
     VotesRevealedEvent,
 )
 from imposter.engine.game import Game, InvalidActionError
 from imposter.engine.views import other_players
-from imposter.utils.text import REDACTION
 
 WORD = "giraffe"
 
@@ -167,13 +168,7 @@ class TestTurns:
 
 class TestClues:
     @pytest.mark.parametrize(
-        ("clue", "reason"),
-        [
-            ("long neck", "exactly one word"),
-            ("", "exactly one word"),
-            ("Giraffes", "must not be or contain"),
-            ("babygiraffe", "must not be or contain"),
-        ],
+        ("clue", "reason"), [("long neck", "exactly one word"), ("", "exactly one word")]
     )
     def test_code_checks_reject_invalid_clues(self, clue: str, reason: str) -> None:
         game = new_game()
@@ -194,14 +189,24 @@ class TestClues:
         assert rejection is not None
         assert "already given" in rejection.reason
 
-    def test_imposter_saying_the_word_is_not_told_why(self) -> None:
-        game = new_game()
+    def test_own_earlier_clue_cannot_be_repeated(self) -> None:
+        game = new_game(player_count=3)
 
-        rejection = game.clue_rejection(seat=game.imposters[0], clue=WORD)
+        for seat in range(3):
+            give_clue(game, seat=seat, clue=f"clue{seat}")
+
+        rejection = game.clue_rejection(seat=0, clue="Clue0")
 
         assert rejection is not None
-        assert WORD not in rejection.reason
-        assert not rejection.retryable
+        assert "already given" in rejection.reason
+        assert rejection.retryable
+
+    @pytest.mark.parametrize("clue", [WORD, "Giraffes", "babygiraffe", "the giraffe"])
+    def test_clue_that_says_the_word_is_not_rejected(self, clue: str) -> None:
+        game = new_game()
+
+        assert game.clue_says_word(clue)
+        assert game.clue_rejection(seat=0, clue=clue) is None
 
     def test_submitting_an_invalid_clue_raises(self) -> None:
         game = new_game()
@@ -238,7 +243,7 @@ class TestClues:
 
 
 class TestStatements:
-    def test_statement_is_truncated_and_redacted(self) -> None:
+    def test_statement_is_truncated(self) -> None:
         game = new_game(clue_rounds=1, statement_word_cap=4)
 
         for seat in range(4):
@@ -246,14 +251,113 @@ class TestStatements:
 
         game.start_turn(0)
         game.submit_statement(
-            seat=0, statement="Giraffes are tall animals indeed.", private_reasoning=""
+            seat=0, statement="Long necks are tall indeed.", private_reasoning=""
         )
 
         event = game.events_of_type(StatementMadeEvent)[0]
 
-        assert event.statement == f"{REDACTION} are tall animals"
+        assert event.statement == "Long necks are tall"
         assert event.truncated
         assert game.view_for(1).statements[0].statement == event.statement
+
+    def test_word_after_the_cap_is_not_said(self) -> None:
+        game = new_game(clue_rounds=1, statement_word_cap=2)
+
+        for seat in range(4):
+            give_clue(game, seat=seat, clue=f"clue{seat}")
+
+        game.start_turn(0)
+        game.submit_statement(
+            seat=0, statement="Long necks, like a giraffe.", private_reasoning=""
+        )
+
+        assert game.phase is GamePhase.DISCUSSION
+        assert game.events_of_type(StatementMadeEvent)[0].statement == "Long necks,"
+
+
+class TestSecretWordSaid:
+    def test_civilian_clue_with_the_word_ends_the_game_for_the_civilians(self) -> None:
+        game = new_game()
+        civilian = next(s.seat for s in game.seats if s.role is PlayerRole.CIVILIAN)
+
+        for seat in range(civilian):
+            give_clue(game, seat=seat, clue=f"clue{seat}")
+
+        give_clue(game, seat=civilian, clue="Giraffes!", reasoning="oops")
+
+        said = game.events_of_type(SecretWordSaidEvent)[0]
+        outcome = game.events_of_type(OutcomeEvent)[0]
+
+        assert (said.seat, said.text, said.private_reasoning) == (
+            civilian,
+            "Giraffes!",
+            "oops",
+        )
+        assert outcome.outcome is GameOutcome.CIVILIAN_SAID_WORD
+        assert outcome.word_said_by == civilian
+        assert outcome.seq == said.seq + 2
+        assert game.phase is GamePhase.DEBRIEF
+        assert game.pending_seats == [0, 1, 2, 3]
+        assert all(e.seat != civilian for e in game.events_of_type(ClueGivenEvent))
+
+    def test_imposter_clue_containing_the_word_ends_the_game_for_the_imposter(
+        self,
+    ) -> None:
+        game = new_game()
+        imposter = game.imposters[0]
+
+        for seat in range(imposter):
+            give_clue(game, seat=seat, clue=f"clue{seat}")
+
+        give_clue(game, seat=imposter, clue="babygiraffe")
+
+        assert game.outcome is GameOutcome.IMPOSTER_SAID_WORD
+
+    def test_statement_with_the_word_ends_the_game(self) -> None:
+        game = new_game(clue_rounds=1)
+
+        for seat in range(4):
+            give_clue(game, seat=seat, clue=f"clue{seat}")
+
+        imposter = game.imposters[0]
+
+        for seat in range(imposter):
+            game.start_turn(seat)
+            game.submit_statement(seat=seat, statement="Hm.", private_reasoning="")
+
+        game.start_turn(imposter)
+        game.submit_statement(
+            seat=imposter, statement="Surely it is a GIRAFFE.", private_reasoning=""
+        )
+
+        assert game.outcome is GameOutcome.IMPOSTER_SAID_WORD
+        assert len(game.events_of_type(StatementMadeEvent)) == imposter
+
+    def test_said_word_stays_private_until_the_outcome(self) -> None:
+        game = new_game()
+        give_clue(game, seat=0, clue=WORD)
+
+        said = game.events_of_type(SecretWordSaidEvent)[0]
+
+        assert said.visibility is EventVisibility.PUBLIC
+        assert said.private_fields == {"text", "private_reasoning", "reasoning_truncated"}
+
+    def test_debrief_follows_and_reveals_who_said_it(self) -> None:
+        game = new_game()
+        give_clue(game, seat=0, clue=WORD)
+
+        for seat in game.pending_seats:
+            game.start_turn(seat)
+
+        for seat in range(4):
+            game.submit_reflection(seat=seat, reflection="Oops.")
+
+        reveal = game.view_for(1).reveal
+
+        assert reveal is not None
+        assert reveal.word_said_by == 0
+        assert reveal.guesses == []
+        assert game.phase is GamePhase.DONE
 
 
 class TestVotes:

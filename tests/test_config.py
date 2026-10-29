@@ -14,7 +14,7 @@ def test_defaults_match_the_game_rules() -> None:
 
     assert config.imposter_count == 1
     assert config.identity_mode is IdentityMode.NAMES
-    assert config.public_category
+    assert not config.public_category
     assert not config.imposter_hint
     assert (config.clue_rounds, config.discussion_rounds) == (2, 2)
     assert (config.statement_word_cap, config.reasoning_word_cap) == (100, 60)

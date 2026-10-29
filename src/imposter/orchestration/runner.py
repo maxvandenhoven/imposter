@@ -172,7 +172,12 @@ class GameRunner:
             case GamePhase.CLUE, ClueResponse(clue=clue):
                 rejection = game.clue_rejection(seat=seat, clue=clue)
 
-                if rejection is not None or self.clue_judge is None:
+                # A clue that says the word is accepted: submitting it ends the game.
+                if (
+                    rejection is not None
+                    or self.clue_judge is None
+                    or game.clue_says_word(clue)
+                ):
                     return rejection
 
                 if await self.clue_judge(clue, game.secret.word):

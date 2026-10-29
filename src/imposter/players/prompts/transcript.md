@@ -34,6 +34,9 @@ Caught: {% for seat in view.vote_result.caught %}{{ names[seat] }}{{ ", " if not
 
 ## Reveal
 
+{% if view.reveal.word_said_by is not none %}
+{{ names[view.reveal.word_said_by] }} said the secret word, which ended the game at once.
+{% endif %}
 The secret word was "{{ view.reveal.word }}". The {{ "imposter was" if view.reveal.imposters | length == 1 else "imposters were" }} {% for seat in view.reveal.imposters %}{{ names[seat] }}{{ ", " if not loop.last }}{% endfor %}.
 {% for guess in view.reveal.guesses %}
 {{ names[guess.seat] }} guessed "{{ guess.guess }}", which was {{ "right" if guess.correct else "wrong" }}.

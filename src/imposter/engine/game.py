@@ -25,6 +25,7 @@ from imposter.engine.events import (
     PublicSeat,
     PublicVote,
     ReflectionEvent,
+    SecretWordSaidEvent,
     StatementMadeEvent,
     TurnStartedEvent,
     UsageEvent,
@@ -52,8 +53,8 @@ from imposter.utils.tally import caught_seats, count_votes, decide_outcome
 from imposter.utils.text import (
     clean_word,
     is_single_word,
+    mentions_word,
     normalize_word,
-    redact_word,
     truncate_words,
 )
 
@@ -350,23 +351,18 @@ class Game:
             clue: The raw clue.
 
         Returns:
-            Why the clue is rejected, or `None` when it passes the code checks.
+            Why the clue is rejected, or `None` when it passes the code checks. A clue
+            that says the secret word is not rejected: submitting it ends the game.
         """
+        if self.clue_says_word(clue):
+            return None
+
         cleaned = clean_word(clue)
 
         if not is_single_word(cleaned):
             return ActionRejection(reason="the clue must be exactly one word")
 
         normalized = normalize_word(cleaned)
-
-        if normalize_word(self.secret.word) in normalized:
-            if self.seats[seat].role is PlayerRole.IMPOSTER:
-                return ActionRejection(reason="the clue is not allowed", retryable=False)
-
-            return ActionRejection(
-                reason="the clue must not be or contain the secret word"
-            )
-
         given = {
             normalize_word(event.clue)
             for event in self.events_of_type(ClueGivenEvent)
@@ -377,6 +373,28 @@ class Game:
             return ActionRejection(reason=f'"{cleaned}" was already given as a clue')
 
         return None
+
+    def clue_says_word(self, clue: str) -> bool:
+        """Check whether a clue says the secret word: is it, or contains it.
+
+        Args:
+            clue: The raw clue.
+
+        Returns:
+            `True` when the normalised clue contains the normalised secret word.
+        """
+        return normalize_word(self.secret.word) in normalize_word(clue)
+
+    def statement_says_word(self, statement: str) -> bool:
+        """Check whether a statement says the secret word as a whole word.
+
+        Args:
+            statement: The statement.
+
+        Returns:
+            `True` when the statement contains the word or a simple plural of it.
+        """
+        return mentions_word(text=statement, word=self.secret.word)
 
     def vote_rejection(self, *, voter: int, vote_for: str) -> ActionRejection | None:
         """Check that a vote names another player.
@@ -448,6 +466,8 @@ class Game:
     ) -> None:
         """Record the clue of a seat for the current round.
 
+        A clue that says the secret word ends the game (`end_by_secret_word`).
+
         Args:
             seat: The seat.
             clue: The clue, or `None` to pass. It must pass `clue_rejection`.
@@ -459,6 +479,12 @@ class Game:
             InvalidActionError: When it is not the seat's turn or the clue is invalid.
         """
         self.check_turn(seat=seat, phase=GamePhase.CLUE)
+
+        if clue is not None and self.clue_says_word(clue):
+            self.end_by_secret_word(
+                seat=seat, text=clue, private_reasoning=private_reasoning
+            )
+            return
 
         if clue is not None:
             rejection = self.clue_rejection(seat=seat, clue=clue)
@@ -485,7 +511,8 @@ class Game:
     ) -> None:
         """Record the statement of a seat for the current discussion round.
 
-        The statement is truncated to the cap and the secret word is redacted from it.
+        The statement is truncated to the cap. A statement that says the secret word ends
+        the game (`end_by_secret_word`).
 
         Args:
             seat: The seat.
@@ -499,11 +526,18 @@ class Game:
         statement, truncated = truncate_words(
             statement, cap=self.config.statement_word_cap
         )
+
+        if self.statement_says_word(statement):
+            self.end_by_secret_word(
+                seat=seat, text=statement, private_reasoning=private_reasoning
+            )
+            return
+
         reasoning, reasoning_truncated = self.truncate_reasoning(private_reasoning)
         self.emit(
             StatementMadeEvent,
             seat=seat,
-            statement=redact_word(text=statement, word=self.secret.word),
+            statement=statement,
             truncated=truncated,
             private_reasoning=reasoning,
             reasoning_truncated=reasoning_truncated,
@@ -603,6 +637,29 @@ class Game:
         self.check_turn(seat=seat, phase=GamePhase.DEBRIEF)
         self.emit(ReflectionEvent, seat=seat, reflection=reflection.strip())
         self.finish_turn()
+
+    def end_by_secret_word(self, *, seat: int, text: str, private_reasoning: str) -> None:
+        """End the game because a seat said the secret word, which loses it for its side.
+
+        The remaining clue, discussion, vote and guess phases are skipped: the outcome is
+        decided at once and the debrief follows.
+
+        Args:
+            seat: The seat that said the word.
+            text: The clue or statement that said it.
+            private_reasoning: The reasoning of the seat, truncated to the cap.
+        """
+        reasoning, reasoning_truncated = self.truncate_reasoning(private_reasoning)
+        self.emit(
+            SecretWordSaidEvent,
+            seat=seat,
+            text=text,
+            private_reasoning=reasoning,
+            reasoning_truncated=reasoning_truncated,
+        )
+        self.emit(PhaseStartedEvent, phase=GamePhase.OUTCOME, round=None)
+        self.reveal_outcome()
+        self.advance()
 
     def record_usage(
         self,
@@ -772,9 +829,9 @@ class Game:
         Returns:
             The word, roles, guesses and outcome, or `None` before the outcome.
         """
-        outcome = self.outcome
+        outcomes = self.events_of_type(OutcomeEvent)
 
-        if outcome is None:
+        if not outcomes:
             return None
 
         return GameReveal(
@@ -785,7 +842,8 @@ class Game:
                 PublicGuess(seat=event.seat, guess=event.guess, correct=event.correct)
                 for event in self.events_of_type(GuessMadeEvent)
             ],
-            outcome=outcome,
+            outcome=outcomes[-1].outcome,
+            word_said_by=outcomes[-1].word_said_by,
         )
 
     def emit(self, event_type: type[BaseGameEvent], **fields: Any) -> None:
@@ -879,19 +937,29 @@ class Game:
         """Decide the winner and reveal the word and the imposters."""
         revealed = self.votes_revealed
         caught = revealed.caught if revealed else []
-        outcome = decide_outcome(
-            imposters=self.imposters,
-            caught=caught,
-            correct_guessers=[
-                event.seat
-                for event in self.events_of_type(GuessMadeEvent)
-                if event.correct
-            ],
-        )
+        said = self.events_of_type(SecretWordSaidEvent)
+        word_said_by = said[0].seat if said else None
+
+        if word_said_by is None:
+            outcome = decide_outcome(
+                imposters=self.imposters,
+                caught=caught,
+                correct_guessers=[
+                    event.seat
+                    for event in self.events_of_type(GuessMadeEvent)
+                    if event.correct
+                ],
+            )
+        elif self.seats[word_said_by].role is PlayerRole.IMPOSTER:
+            outcome = GameOutcome.IMPOSTER_SAID_WORD
+        else:
+            outcome = GameOutcome.CIVILIAN_SAID_WORD
+
         self.emit(
             OutcomeEvent,
             outcome=outcome,
             word=self.secret.word,
             imposters=self.imposters,
             caught=caught,
+            word_said_by=word_said_by,
         )

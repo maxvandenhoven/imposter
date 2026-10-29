@@ -36,7 +36,7 @@ are resolved into a `SecretWord` (word, category, hint) before the game is creat
 | Players | 3–8 seats, each a catalog model | The same model may appear several times |
 | Imposters | **1**, up to `floor((players - 1) / 2)` | Multi-imposter works in the engine; UI polish is future work |
 | Identity mode | `seat`, **`names`**, `models` | See `models-and-judge.md` §Identity |
-| Public category | **on**, off | Everyone, including the imposter, knows the category |
+| Public category | on, **off** | Everyone, including the imposter, knows the category. Off by default since playtest 1 (`playtests.md`): with a concrete category, one clue was enough for the imposter to infer the word. |
 | Imposter hint | **off**, on | A related word generated at setup, shown to the imposter only |
 | Clue rounds | **2** (1–3) | |
 | Discussion rounds | **2** (0–3) | |
@@ -50,8 +50,25 @@ are numbered from 0 after shuffling, so the seat number is also the turn order.
 
 ```
 SETUP → CLUE(1..C) → DISCUSSION(1..D) → VOTE → RESOLUTION → GUESS → OUTCOME → DEBRIEF → DONE
+          └──────── secret word said ────────────────────────────────▶ OUTCOME
                                                                         (ABORTED from any phase)
 ```
+
+Two rules hold in every clue and discussion turn and are stated prominently in the
+prompts:
+
+- **Never say the secret word.** A clue or statement that says the secret word ends the
+  game at once, and the speaker's side loses: the imposters win when a civilian says it
+  (`civilian_said_word`), the civilians win when an imposter says it
+  (`imposter_said_word`). The remaining clue, discussion, vote and guess phases are
+  skipped, the outcome is revealed and the debrief follows. With several imposters, any
+  imposter saying the word loses the game for the team. This replaces the earlier rule
+  that turned such a clue into a pass and redacted the word from statements (see
+  `playtests.md`, playtest 1). An imposter who believes it knows the word must give a
+  related clue instead, which is exactly what the game asks of everyone.
+- **Never repeat a clue.** A clue may not repeat any earlier clue of any player,
+  including the player's own, after normalisation. The clue task lists every word
+  already used.
 
 1. **Setup**: word, category, hint, roles, seat order and names are fixed. Event:
    `game_started`, with the word, the hint, the models and the imposters as private
@@ -69,6 +86,7 @@ SETUP → CLUE(1..C) → DISCUSSION(1..D) → VOTE → RESOLUTION → GUESS → 
    not. Guessing happens after the vote reveal, so the imposter knows whether it was
    caught.
 7. **Outcome**:
+   - Someone said the secret word: that player's side loses (see above).
    - Imposter not caught: **imposter wins**.
    - Imposter caught but guessed the word: **imposter steals the win**.
    - Imposter caught and guessed wrong: **civilians win**.
@@ -78,18 +96,18 @@ SETUP → CLUE(1..C) → DISCUSSION(1..D) → VOTE → RESOLUTION → GUESS → 
 
 ## Validation and limits
 
-- **Clue**: one word after trimming (letters, digits, internal hyphens or apostrophes),
-  not equal to and not containing the secret word after normalisation, not a repeat of an
-  earlier clue, not a trivial derivative of the word (the judge decides, see
-  `models-and-judge.md` §Judge). Code checks run first; the judge is only consulted when
-  code checks pass. An invalid clue gets one retry with the reason, then becomes `pass`.
-  Exception: when an imposter's clue is rejected because of the word (by the code checks
-  or the judge), it passes at once without a retry or a reason, since the reason would
-  reveal the word.
+- **Clue**: a clue that is or contains the secret word after normalisation (also as part
+  of a longer word or of several words) ends the game, see §Phases. Otherwise it must be
+  one word after trimming (letters, digits, internal hyphens or apostrophes), not a
+  repeat of an earlier clue (own clues included), and not a trivial derivative of the
+  word (the judge decides, see `models-and-judge.md` §Judge). Code checks run first; the
+  judge is only consulted when code checks pass. An invalid clue gets one retry with the
+  reason, then becomes `pass`. Exception: when an imposter's clue is rejected by the
+  judge for being too close to the word, it passes at once without a retry or a reason,
+  since the reason would hint at the word.
 - **Statement**: at most 100 words. Enforced in the prompt and by truncation in code
-  (with a `truncated` flag on the event). Whole-word occurrences of the secret word
-  (including simple plurals) are replaced by `[redacted]`, so a civilian who blurts out
-  the word cannot leak it to the imposter.
+  (with a `truncated` flag on the event). A statement that says the secret word as a
+  whole word (including simple plurals) after truncation ends the game, see §Phases.
 - **Private reasoning**: at most 60 words, truncated the same way.
 - **Vote**: must name another living player by its display name; an invalid vote gets one
   retry, then counts as an abstention. Self-votes are invalid.
@@ -115,7 +133,8 @@ Every state change is an `GameEvent` (pydantic, discriminated by `type`) with `g
 (one seat; shown only in god mode or after the reveal) or `system`. Main types:
 `game_started`, `phase_started`, `turn_started`, `clue_given`, `statement_made`,
 `vote_cast` (private until resolution), `votes_revealed`, `guess_made` (with the verdict
-and whether it came from an exact match or the judge), `outcome`, `reflection`,
+and whether it came from an exact match or the judge), `secret_word_said` (the seat is
+public, the text private), `outcome` (with `word_said_by`), `reflection`,
 `player_error`, `usage` (tokens and cost), `game_aborted`, `game_finished`. Private reasoning travels on the same event as the
 public action, in a private field that the public projection drops. The `outcome` event
 reveals the word publicly; before it, no public projection contains the word.

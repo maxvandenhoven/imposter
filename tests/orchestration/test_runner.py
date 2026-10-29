@@ -164,7 +164,7 @@ async def test_second_invalid_clue_becomes_a_pass() -> None:
     players = scripted_players(game)
     civilian = next(s.seat for s in game.seats if s.role is PlayerRole.CIVILIAN)
     players[civilian].script[0:1] = [
-        ClueResponse(clue=WORD, private_reasoning="oops"),
+        ClueResponse(clue="long neck", private_reasoning="oops"),
         ClueResponse(clue="two words"),
     ]
 
@@ -181,20 +181,32 @@ async def test_second_invalid_clue_becomes_a_pass() -> None:
     ]
 
 
-async def test_imposter_saying_the_word_passes_without_a_retry() -> None:
-    game = new_game()
-    players = scripted_players(game)
-    imposter = game.imposters[0]
-    players[imposter].script[0] = ClueResponse(clue=WORD)
+async def test_saying_the_word_ends_the_game_without_a_retry_or_judge() -> None:
+    judged: list[str] = []
 
-    await GameRunner(players=players).play(game)
+    async def judge(clue: str, word: str) -> bool:
+        judged.append(clue)
+        return True
 
-    clue = next(
-        e for e in game.events if isinstance(e, ClueGivenEvent) and e.seat == imposter
+    game = new_game(clue_rounds=1, discussion_rounds=0)
+    speaker = game.pending_seats[0]
+    players = [
+        ScriptedPlayer(script=[DebriefResponse(reflection="Over already.")])
+        for _ in game.seats
+    ]
+    players[speaker].script.insert(0, ClueResponse(clue=WORD))
+
+    await GameRunner(players=players, clue_judge=judge).play(game)
+
+    expected = (
+        GameOutcome.IMPOSTER_SAID_WORD
+        if speaker in game.imposters
+        else GameOutcome.CIVILIAN_SAID_WORD
     )
-
-    assert clue.clue is None
-    assert all(reason is None for reason in players[imposter].retry_reasons)
+    assert game.outcome is expected
+    assert judged == []
+    assert players[speaker].retry_reasons == [None, None]
+    assert errors(game) == []
     assert game.phase is GamePhase.DONE
 
 
