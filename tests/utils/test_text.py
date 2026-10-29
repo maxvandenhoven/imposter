@@ -4,6 +4,7 @@ from imposter.utils.text import (
     REDACTION,
     clean_word,
     is_single_word,
+    json_object_text,
     normalize_word,
     redact_word,
     truncate_words,
@@ -57,3 +58,16 @@ def test_redact_word_replaces_whole_words_and_plurals() -> None:
     assert redact_word(text=text, word="cherry") == (
         f"{REDACTION}, {REDACTION} and {REDACTION}, but not cherrystone."
     )
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('{"clue": "neck"}', '{"clue": "neck"}'),
+        ('```json\n{"clue": "neck"}\n```', '{"clue": "neck"}'),
+        ('Sure! {"a": {"b": 1}} Hope that helps.', '{"a": {"b": 1}}'),
+        ("  no json here ", "no json here"),
+    ],
+)
+def test_json_object_text_cuts_out_the_object(text: str, expected: str) -> None:
+    assert json_object_text(text) == expected

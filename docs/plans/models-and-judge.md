@@ -26,22 +26,42 @@ column after every run; WP 04 copies the working IDs into the catalog.
 
 | Family | Model ID | Location | Result |
 |---|---|---|---|
-| Gemini | `gemini-3.1-pro-preview` | `global` only | not yet run |
-| Gemini | `gemini-3.8-flash` | `global` | not yet run |
-| Gemini | `gemini-3.5-flash-lite` | `global` | not yet run |
-| Claude | `claude-sonnet-5-5` | `global` | not yet run |
-| Claude | `claude-haiku-5-5` | `global` | not yet run |
-| Open | `deepseek-ai/deepseek-v3.2-maas` | `global` | not yet run |
-| Open | `qwen/qwen3-235b-a22b-instruct-2507-maas` | `global` | not yet run |
-| Open | `openai/gpt-oss-120b-maas` | `global` | not yet run |
-| Open | `meta/llama-4-maverick-17b-128e-instruct-maas` | `global` | not yet run |
+| Gemini | `gemini-3.1-pro-preview` | `global` only | OK (2026-10-29), in the catalog as `gemini-pro` |
+| Gemini | `gemini-3.8-flash` | `global` | OK (2026-10-29), in the catalog as `gemini-flash` |
+| Gemini | `gemini-3.5-flash-lite` | `global` | OK (2026-10-29), in the catalog as `gemini-flash-lite` |
+| Claude | `claude-sonnet-5-5` | `global` | OK (2026-10-29), in the catalog as `claude-sonnet` |
+| Claude | `claude-haiku-5-5` | `global` | OK (2026-10-29), in the catalog as `claude-haiku` |
+| Open | `deepseek-ai/deepseek-v3.2-maas` | `global` | 404 (not enabled in the project), dropped |
+| Open | `qwen/qwen3-235b-a22b-instruct-2507-maas` | `global` | 404 (not enabled in the project), dropped |
+| Open | `openai/gpt-oss-120b-maas` | `global` | OK (2026-10-29), in the catalog as `gpt-oss` |
+| Open | `meta/llama-4-maverick-17b-128e-instruct-maas` | `global` | 404 (not enabled in the project), dropped |
+
+Findings from WP 04, also noted in `catalog.yaml`:
+
+- `gemini-3.8-flash` and `gemini-3.1-pro-preview` reject the minimal thinking level, so
+  they cannot switch thinking off and run at `thinking: low`. Flash-Lite accepts it.
+- LiteLLM implements structured output for Claude with a forced tool choice. Claude Haiku
+  accepts it, Claude Sonnet rejects it, so Sonnet gets the JSON schema in the prompt.
+  `gpt-oss` also uses JSON in the prompt.
+- Claude Sonnet refuses (`content_filter`) when the game instruction is the system
+  prompt, but answers when the same text is a user message. `AdkPlayer` therefore sends a
+  short fixed system instruction (ADK `static_instruction`) and the rendered instruction
+  as user content, for every model. Even so, in one of two full test games Sonnet
+  refused a debrief turn (`SAFETY`), which fell back to an empty reflection. The same
+  prompt with other game content passed every time, so the trigger is unclear. Sonnet is
+  left out of the `slow` test until this is understood.
+- Prices in the catalog are estimates from public price lists and third-party summaries
+  in October 2026. Check them against the Vertex AI pricing page before relying on cost
+  numbers.
+- More open models need their terms accepted in Model Garden first. Add them to
+  `scripts/check_models.py` and the catalog once they answer.
 
 ## Catalog (`models/catalog.yaml`)
 
 ```yaml
 - id: gemini-flash
   display_name: Gemini Flash
-  provider: google            # google | anthropic | meta | qwen | deepseek | mistral
+  provider: google            # google | anthropic | openai | meta | qwen | deepseek | mistral
   adk_model: gemini-<version>-flash
   via: native                 # native | litellm
   location: global
@@ -53,8 +73,11 @@ column after every run; WP 04 copies the working IDs into the catalog.
 ```
 
 Starting lineup: latest Gemini Pro, Gemini Flash, Gemini Flash-Lite (also used for judge
-and word generation), Claude Sonnet, Claude Haiku, and 2–3 open models. `models/factory.py`
-turns an entry into an ADK model object and `GenerateContentConfig`.
+and word generation), Claude Sonnet, Claude Haiku, and the open models enabled in the
+project (only `gpt-oss` so far). `models/factory.py` turns an entry into an ADK model
+object (`Gemini` on Vertex AI or `LiteLlm`) and a `GenerateContentConfig` per phase:
+temperature, `max_output_tokens` (a per-phase answer budget plus room for thinking) and
+the thinking level.
 `GET /api/catalog` serves the catalog (without prices if preferred) to the setup screen.
 
 ## Identity

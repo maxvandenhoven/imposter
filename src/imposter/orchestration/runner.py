@@ -126,6 +126,10 @@ class GameRunner:
                 errors.append(response.error)
 
             output = response.output
+
+            if output is None:
+                break
+
             rejection = await self.rejection(game=game, seat=seat, output=output)
 
             if rejection is None or not rejection.retryable:

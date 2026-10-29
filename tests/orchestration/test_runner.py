@@ -290,6 +290,21 @@ async def test_player_reported_errors_and_usage_are_recorded() -> None:
     assert game.tokens_used == 12
 
 
+async def test_player_that_gives_up_gets_the_fallback_with_its_usage() -> None:
+    game = new_game(clue_rounds=1, discussion_rounds=0)
+    players = scripted_players(game)
+    usage = TurnUsage(model_id="model-0", input_tokens=10, output_tokens=2)
+    players[0].script[0] = PlayerResponse(output=None, usage=usage, error="invalid json")
+
+    await GameRunner(players=players).play(game)
+
+    assert errors(game) == ["invalid json"]
+    assert game.view_for(0).clues[0].clue is None
+    assert players[0].retry_reasons[0] is None
+    assert game.tokens_used == 12
+    assert game.phase is GamePhase.DONE
+
+
 async def test_token_budget_aborts_the_game() -> None:
     game = new_game(token_budget=50)
     usage = TurnUsage(model_id="model", input_tokens=20)

@@ -21,6 +21,7 @@ from imposter.engine.views import PlayerView
 from imposter.orchestration.runner import GameRunner
 from imposter.players.base import TurnUsage
 from imposter.players.fake import RandomPlayer
+from imposter.players.prompt import PlayerPromptRenderer
 
 SECRET_WORDS = ("giraffe", "volcano", "trumpet", "lantern", "glacier", "pretzel")
 """Secret words that appear in no name, vocabulary word or fixed text of the game."""
@@ -30,6 +31,9 @@ HINTS = ("savanna", "eruption", "brass", "candle", "frozen", "bakery")
 
 MARKER_PATTERN = re.compile(r"reasoning-seat(\d+)")
 """Finds the seat in the reasoning markers that `RandomPlayer` writes."""
+
+RENDERER = PlayerPromptRenderer()
+"""Renders the prompts a model would get for each view."""
 
 
 @dataclass(frozen=True)
@@ -78,6 +82,13 @@ def played_games(draw: st.DrawFn) -> PlayedGame:
     return PlayedGame(
         game=game, views=[view for player in players for view in player.views]
     )
+
+
+def rendered_prompt(view: PlayerView) -> str:
+    """Render everything a model gets for a view: instruction, task and JSON schema."""
+    task = RENDERER.task(view=view, retry_reason="try again", include_schema=True)
+
+    return RENDERER.instruction(view) + "\n" + task
 
 
 def mentions(text: str, word: str) -> bool:
@@ -148,3 +159,26 @@ def test_public_projection_has_no_private_fields(played: PlayedGame) -> None:
 
         if event.seq < outcome_seq:
             assert not mentions(text, word)
+
+
+@settings(max_examples=150, deadline=None)
+@given(played=played_games())
+def test_rendered_imposter_prompts_never_contain_the_word_before_the_reveal(
+    played: PlayedGame,
+) -> None:
+    word = played.game.secret.word
+
+    for view in played.views:
+        if view.role is PlayerRole.IMPOSTER and view.reveal is None:
+            assert not mentions(rendered_prompt(view), word)
+
+
+@settings(max_examples=150, deadline=None)
+@given(played=played_games())
+def test_rendered_prompts_never_contain_another_seats_reasoning(
+    played: PlayedGame,
+) -> None:
+    for view in played.views:
+        seats = {int(seat) for seat in MARKER_PATTERN.findall(rendered_prompt(view))}
+
+        assert seats <= {view.seat}

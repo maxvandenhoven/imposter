@@ -78,7 +78,7 @@ public multi-user access.
 ```
 
 Code is layered, and each layer imports only from the layers below it: `config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`,
-with `models`, `words`, `judge` and `ports` used by `orchestration` and `api`. `config.py`
+with `models` (used by `players` and above) and `words`, `judge` and `ports` used by `orchestration` and `api`. `config.py`
 and `utils/` hold the shared types and small helpers. `config`, `utils` and the engine use
 only the standard library and pydantic: no ADK or LLM dependency. A test checks the
 layers.
@@ -137,9 +137,9 @@ imposter/
 ├─ docs/plans/                 # this folder
 ├─ src/imposter/
 │  ├─ config.py                # GameConfig, PlayerConfig, SecretWord and the shared enums
-│  ├─ utils/                   # names.py, phases.py, tally.py, text.py (functions on plain values)
+│  ├─ utils/                   # names.py, phases.py, retry.py, tally.py, text.py (plain functions)
 │  ├─ engine/                  # game.py (Game), events.py, views.py
-│  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompts/
+│  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompt.py, prompts/
 │  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects)
 │  ├─ words/                   # categories/*.yaml, picker.py, generator.py
 │  ├─ judge/                   # base.py (JudgeProtocol), llm_judge.py, checks.py (cheap code checks)
