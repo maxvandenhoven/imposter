@@ -1,8 +1,11 @@
-TF_BOOTSTRAP := infra/bootstrap
+# Local settings such as `GOOGLE_CLOUD_PROJECT` (see `.env.example`).
+-include .env
+
 TF_DEV := infra/env/dev
-TF_ROOTS := $(TF_BOOTSTRAP) $(TF_DEV)
-# Read from the bootstrap state on use; set it explicitly to skip that lookup.
-TF_STATE_BUCKET ?= $(shell terraform -chdir=$(TF_BOOTSTRAP) output -raw state_bucket 2>/dev/null)
+TF_ROOTS := $(TF_DEV)
+TF_REGION ?= europe-west4
+TF_STATE_BUCKET ?= $(GOOGLE_CLOUD_PROJECT)-imposter-tfstate
+export TF_VAR_project_id := $(GOOGLE_CLOUD_PROJECT)
 
 
 .PHONY: sync
@@ -55,15 +58,24 @@ test-slow:
 	@uv run pytest -m slow
 
 
-.PHONY: tf-bootstrap
-tf-bootstrap:
-	@terraform -chdir=$(TF_BOOTSTRAP) init -input=false
-	@terraform -chdir=$(TF_BOOTSTRAP) apply
+.PHONY: tf-require-project
+tf-require-project:
+	@test -n "$(GOOGLE_CLOUD_PROJECT)" || { echo "Set GOOGLE_CLOUD_PROJECT in .env first"; exit 1; }
+
+
+.PHONY: tf-state-bucket
+tf-state-bucket: tf-require-project
+	@if gcloud storage buckets describe gs://$(TF_STATE_BUCKET) --project=$(GOOGLE_CLOUD_PROJECT) >/dev/null 2>&1; then \
+		echo "State bucket gs://$(TF_STATE_BUCKET) already exists"; \
+	else \
+		gcloud storage buckets create gs://$(TF_STATE_BUCKET) --project=$(GOOGLE_CLOUD_PROJECT) \
+			--location=$(TF_REGION) --uniform-bucket-level-access --public-access-prevention && \
+		gcloud storage buckets update gs://$(TF_STATE_BUCKET) --versioning --update-labels=app=imposter; \
+	fi
 
 
 .PHONY: tf-init
-tf-init:
-	@test -n "$(TF_STATE_BUCKET)" || { echo "No state bucket: run make tf-bootstrap first or set TF_STATE_BUCKET"; exit 1; }
+tf-init: tf-require-project
 	@terraform -chdir=$(TF_DEV) init -input=false -reconfigure -backend-config="bucket=$(TF_STATE_BUCKET)"
 
 

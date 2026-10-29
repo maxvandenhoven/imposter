@@ -1,3 +1,4 @@
-# Copy to `terraform.tfvars` (git-ignored) and fill in.
-project_id = "imposter-dev-1234"
-region     = "europe-west4"
+# Optional: copy to `terraform.tfvars` (git-ignored) to override defaults. The project ID
+# comes from `GOOGLE_CLOUD_PROJECT` in `.env`, which `make` passes as `TF_VAR_project_id`.
+# region = "europe-west4"
+# labels = { app = "imposter", env = "dev" }

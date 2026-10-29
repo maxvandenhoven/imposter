@@ -1,3 +1,6 @@
+# APIs the app needs. In a shared project some are likely enabled already; enabling is
+# idempotent, and `disable_on_destroy = false` keeps them enabled on destroy because other
+# work in the project may use them.
 locals {
   apis = [
     "aiplatform.googleapis.com",
