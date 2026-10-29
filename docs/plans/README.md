@@ -101,7 +101,7 @@ imports nothing else from the package and has no ADK or LLM dependency.
 | D14 | A game runs while its SSE connection is open (request-based billing gives CPU only during requests). The event bus buffers all events of a game, so a reconnect replays them. One game at a time per instance. | Correct CPU allocation without instance-based billing. |
 | D15 | Tracing with OpenTelemetry to Cloud Trace: `game` → `phase` → `turn` → ADK and GenAI spans. Prompt and completion content captured as Cloud Logging events, linked by trace ID. Token and cost attributes on every turn. | Cloud Trace keeps traces 30 days, a free game archive; filterable by model, role, phase, identity mode. |
 | D16 | Local development exports to Cloud Trace with ADC; a flag switches to the console exporter. | Same traces locally and deployed. |
-| D17 | The app lives in the owner's existing sandbox project, shared with other work. No Terraform bootstrap: `make tf-state-bucket` creates the state bucket with `gcloud`, and `infra/env/dev` (GCS backend) holds every app resource, labelled `app=imposter`. Only gcloud install, login, the state bucket and Model Garden click-through acceptance are manual. | The project already exists and is not ours to manage; labels and Terraform state keep the app's resources identifiable in a shared project (GCP has no resource groups). |
+| D17 | The app lives in the owner's existing sandbox project, shared with other work. No Terraform bootstrap: `make tf-state-bucket` creates the state bucket with `gcloud`, and `infra/` (one flat Terraform root, GCS backend) holds every app resource, labelled `app=imposter`. Only gcloud install, login, the state bucket and Model Garden click-through acceptance are manual. | The project already exists and is not ours to manage; labels and Terraform state keep the app's resources identifiable in a shared project (GCP has no resource groups). |
 | D18 | Deploy via `make deploy`: Cloud Build builds and pushes the image to Artifact Registry, Terraform deploys the image by digest. No CI/CD. | Reproducible deploys and one-line rollbacks without a pipeline. |
 | D19 | Tooling mirrors the hive repo: Python 3.13, uv, ruff (Google docstrings, line length 90), ty, pytest, the comment and docstring checkers, pre-commit with commitizen, Claude Code hooks. | Proven setup, consistent style. |
 | D20 | Package layout: `engine`, `players`, `models`, `words`, `judge`, `orchestration`, `ports`, `telemetry`, `api`, `web`, plus `agent.py` (for `adk web`) and `cli.py`. | Pure engine testable without LLMs; clear dependency direction. |
@@ -112,7 +112,7 @@ imports nothing else from the package and has no ADK or LLM dependency.
 | D25 | `Judge` port for guess equivalence and clue validity, implemented with Gemini Flash-Lite and structured output (`verdict`, `confidence`, `rationale`). Cheap code checks run first. | The Laya decision model in Model Garden needs a dedicated deployed endpoint (billed per hour), which conflicts with scaling to zero. |
 | D26 | Reasoning is captured at every turn (`private_reasoning`) and in a debrief after the reveal. Native model thinking is a catalog setting, off by default; thinking tokens are counted, not shown. | Compare in-the-moment reasoning with after-the-fact rationalisation. |
 | D27 | The browser buffers all events. A playback cursor supports live, step (prev/next, next phase) and autoplay; a badge shows how far behind live you are. Games can be exported and imported as JSON. | Presentable demos without backend persistence; recordings as a fallback when live APIs fail. |
-| D28 | Concurrency: clues and discussion sequential, votes and debrief in parallel. Each LLM call has a 60 s timeout and 2 retries with exponential backoff on 429/5xx, then a pass/abstain fallback with a `player_error` event. | Robust against low Model Garden quotas in a new project. |
+| D28 | Concurrency: clues and discussion sequential, votes and debrief in parallel. Each LLM call has a 60 s timeout and 2 retries with exponential backoff on 429/5xx, then a pass/abstain fallback with a `player_error` event. | Robust against low default Model Garden quotas. |
 | D29 | Cost guardrails: max 8 players, `max_output_tokens` per phase, per-game token budget (default 200k, aborts cleanly), running cost estimate in the UI, Terraform billing budget with alerts. | No surprise bills. |
 | D30 | Testing: pure engine unit tests with scripted fake players; Hypothesis leak tests (imposter never sees the word, nobody sees others' private reasoning, votes hidden before the reveal); SSE tests with fakes; one `slow` smoke game against cheap real models; a tournament CLI for model statistics. ADK's eval framework is future work. | The leak invariant is the most important property and is cheap to guarantee. |
 | D31 | Region: app resources in `europe-west4`; models on the Vertex `global` endpoint, with a per-model `location` override in the catalog. | EU app, best model availability and quota. |
@@ -148,8 +148,8 @@ imposter/
 │  └─ cli.py                   # `imposter` entry point (Typer): play, tournament, serve
 ├─ tests/                      # mirrors src/imposter/; tests/tooling/ for the checkers
 ├─ scripts/tooling/            # check_comments.py, check_docstrings.py (from hive)
-└─ infra/
-   └─ env/dev/                 # APIs, service account, Artifact Registry, Cloud Run, IAP, budget
+└─ infra/                      # one Terraform root: APIs, service account, Artifact Registry,
+                               # Cloud Run, IAP, budget (state bucket via `make tf-state-bucket`)
 ```
 
 ## 6. Milestones
@@ -160,7 +160,7 @@ imposter/
 | **M1 Headless game** | Pure engine, model catalog, ADK players, words and judge, `GameMaster`, CLI | `imposter play --word ... --players ...` plays a full game with mixed models in the terminal, including the debrief |
 | **M2 Tracing** | OpenTelemetry to Cloud Trace and Logging with the game/phase/turn hierarchy | A CLI game shows up as one readable trace with content, tokens and cost |
 | **M3 Web UI** | FastAPI + SSE, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
-| **M4 Deploy** | Dockerfile, Terraform `env/dev`, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
+| **M4 Deploy** | Dockerfile, Terraform for the app, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
 | **M5 Evaluate** | Tournament CLI and model statistics | `imposter tournament` runs N games and reports per-model win rates, detection accuracy, guess accuracy and clue leakiness |
 
 ## 7. Work packages and implementation order
@@ -182,7 +182,7 @@ issue should not be started.
 | 09 | Static frontend foundation and setup screen | M3 | 08 | #9 |
 | 10 | Live game board with audience and god mode | M3 | 09 | #10 |
 | 11 | Playback, export and import, debrief panel | M3 | 10 | #11 |
-| 12 | Dockerfile, Terraform `env/dev` and `make deploy` | M4 | 02, 08 | #12 |
+| 12 | Dockerfile, Terraform app resources and `make deploy` | M4 | 02, 08 | #12 |
 | 13 | IAP, identity on traces and cloud smoke test | M4 | 07, 11, 12 | #13 |
 | 14 | Tournament CLI and model statistics | M5 | 07 | #14 |
 

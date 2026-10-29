@@ -11,7 +11,7 @@ each labelled `app=imposter`. What you end up with:
 
 - A versioned GCS bucket `<project id>-imposter-tfstate` in `europe-west4` that holds the
   Terraform state.
-- The APIs the app needs, enabled by `infra/env/dev`.
+- The APIs the app needs, enabled by the Terraform in `infra/`.
 - Claude and a few open models enabled in Model Garden, checked with one test call each.
 
 Steps 1–3, 7 and 9 need you at the keyboard (browser logins and console clicks). The rest
@@ -93,7 +93,7 @@ is kept), uniform access, public access prevention and the label `app=imposter`.
 nothing if the bucket exists. If `storage.googleapis.com` is disabled in the project,
 enable it first with `gcloud services enable storage.googleapis.com`.
 
-## 5. Enable the APIs with Terraform (`infra/env/dev`)
+## 5. Enable the APIs with Terraform (`infra/`)
 
 ```
 make tf-plan
@@ -101,23 +101,23 @@ make tf-apply
 ```
 
 `make tf-init` (run by both) points Terraform at the state bucket, under the prefix
-`env/dev`. Set `TF_STATE_BUCKET=<bucket>` to use a different bucket. For now `env/dev`
-only enables the APIs listed in `infra/env/dev/apis.tf` (including `aiplatform` for
+`imposter`. Set `TF_STATE_BUCKET=<bucket>` to use a different bucket. For now Terraform
+only enables the APIs listed in `infra/apis.tf` (including `aiplatform` for
 Vertex AI); some are probably enabled already in a shared project, which is fine.
 Terraform never disables them, not even on `terraform destroy`, because other work in
 the project may depend on them. WP 12 adds the service account, Artifact Registry, Cloud
 Run, IAP and the budget.
 
-Optional settings (region, labels) go in `infra/env/dev/terraform.tfvars`, see
+Optional settings (region, labels) go in `infra/terraform.tfvars`, see
 `terraform.tfvars.example`.
 
 ## 6. Finding the app's resources later
 
-Every resource Terraform creates carries the labels `app=imposter` and `env=dev`, and
+Every resource Terraform creates carries the label `app=imposter`, and
 their names start with `imposter`. To list them:
 
 ```
-terraform -chdir=infra/env/dev state list                       # what Terraform manages
+terraform -chdir=infra state list                               # what Terraform manages
 gcloud asset search-all-resources --scope=projects/<project id> --query="labels.app=imposter"
 ```
 
@@ -130,7 +130,7 @@ so their cost shows under the *Vertex AI* service instead.
 Gemini works as soon as the `aiplatform` API is enabled. Claude and open models must be
 enabled once per project in the console:
 
-1. Open <https://console.cloud.google.com/vertex-ai/model-garden> with the new project
+1. Open <https://console.cloud.google.com/vertex-ai/model-garden> with the sandbox project
    selected.
 2. Search for each model below, open its model card and click **Enable**. Fill in the
    short form and accept the terms. This needs the project Owner role or the
@@ -170,7 +170,7 @@ Common errors:
 
 ## 9. Check quotas
 
-New projects get low default quotas for partner and open models, which a game with up to
+Projects get low default quotas for partner and open models, which a game with up to
 eight players can hit. In the console go to *IAM & Admin* → *Quotas & System Limits*,
 filter on *Service: Vertex AI API* and search for the model name (for example `claude` or
 `sonnet`). The relevant rows are the requests and tokens per minute per model, for the

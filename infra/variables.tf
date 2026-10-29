@@ -14,6 +14,5 @@ variable "labels" {
   type        = map(string)
   default = {
     app = "imposter"
-    env = "dev"
   }
 }

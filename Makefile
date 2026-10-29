@@ -1,8 +1,7 @@
 # Local settings such as `GOOGLE_CLOUD_PROJECT` (see `.env.example`).
 -include .env
 
-TF_DEV := infra/env/dev
-TF_ROOTS := $(TF_DEV)
+TF_DIR := infra
 TF_REGION ?= europe-west4
 TF_STATE_BUCKET ?= $(GOOGLE_CLOUD_PROJECT)-imposter-tfstate
 export TF_VAR_project_id := $(GOOGLE_CLOUD_PROJECT)
@@ -34,11 +33,9 @@ type:
 .PHONY: tf-check
 tf-check:
 	@if command -v terraform >/dev/null 2>&1; then \
-		terraform fmt -check -recursive infra && \
-		for root in $(TF_ROOTS); do \
-			terraform -chdir=$$root init -backend=false -input=false >/dev/null && \
-			terraform -chdir=$$root validate -no-color >/dev/null || exit 1; \
-		done; \
+		terraform fmt -check -recursive $(TF_DIR) && \
+		terraform -chdir=$(TF_DIR) init -backend=false -input=false >/dev/null && \
+		terraform -chdir=$(TF_DIR) validate -no-color >/dev/null; \
 	else \
 		echo "terraform not found, skipping Terraform checks"; \
 	fi
@@ -76,17 +73,17 @@ tf-state-bucket: tf-require-project
 
 .PHONY: tf-init
 tf-init: tf-require-project
-	@terraform -chdir=$(TF_DEV) init -input=false -reconfigure -backend-config="bucket=$(TF_STATE_BUCKET)"
+	@terraform -chdir=$(TF_DIR) init -input=false -reconfigure -backend-config="bucket=$(TF_STATE_BUCKET)"
 
 
 .PHONY: tf-plan
 tf-plan: tf-init
-	@terraform -chdir=$(TF_DEV) plan
+	@terraform -chdir=$(TF_DIR) plan
 
 
 .PHONY: tf-apply
 tf-apply: tf-init
-	@terraform -chdir=$(TF_DEV) apply
+	@terraform -chdir=$(TF_DIR) apply
 
 
 .PHONY: install-hooks

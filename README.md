@@ -7,4 +7,4 @@ Terraform) and tracing (OpenTelemetry, Cloud Trace).
 
 The plan, decisions and work packages live in [`docs/plans/`](docs/plans/README.md).
 
-To set up the GCP project from zero, follow [`docs/setup.md`](docs/setup.md).
+To set up the app's infrastructure in the GCP sandbox project, follow [`docs/setup.md`](docs/setup.md).

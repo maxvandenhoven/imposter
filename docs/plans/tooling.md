@@ -54,9 +54,9 @@ make play ARGS=...  # imposter play
 make build          # Cloud Build image
 make deploy         # build + terraform apply with the image digest
 make tf-state-bucket # create the Terraform state bucket once (gcloud)
-make tf-init        # terraform init for infra/env/dev with the state bucket
-make tf-plan        # terraform plan for infra/env/dev
-make tf-apply       # terraform apply for infra/env/dev
+make tf-init        # terraform init for infra with the state bucket
+make tf-plan        # terraform plan for infra
+make tf-apply       # terraform apply for infra
 make install-hooks  # pre-commit hooks (including commit-msg)
 ```
 

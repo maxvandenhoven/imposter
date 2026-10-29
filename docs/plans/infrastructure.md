@@ -17,7 +17,7 @@ GCP has no resource groups like Azure: the project is the smallest container, an
 quotas, APIs and billing are per project. Within one project the app's resources are kept
 apart by:
 
-- **Labels** `app = "imposter"`, `env = "dev"` on every resource that supports them, set
+- **Labels** `app = "imposter"` on every resource that supports them, set
   once through the providers' `default_labels`. Labels are filterable in the console
   lists, in Cloud Asset Inventory (`gcloud asset search-all-resources
   --query="labels.app=imposter"`) and in billing reports, so the app's cost can be split
@@ -50,18 +50,17 @@ summary.
 ## Terraform layout
 
 ```
-infra/
-└─ env/dev/            # backend "gcs" { prefix = "env/dev" }, bucket passed at init
-   ├─ versions.tf      # terraform and provider versions, backend
-   ├─ providers.tf     # google + google-beta, billed to the project, default labels
-   ├─ apis.tf          # google_project_service for the APIs below
-   ├─ iam.tf           # runtime service account + roles, Cloud Build SA roles
-   ├─ registry.tf      # Artifact Registry docker repo (europe-west4)
-   ├─ run.tf           # Cloud Run v2 service with IAP
-   ├─ iap.tf           # IAP access for the allowed principal
-   ├─ budget.tf        # billing budget with email alerts
-   ├─ variables.tf     # project_id, region, labels, image (digest), iap_members, ...
-   └─ terraform.tfvars.example
+infra/                 # one root; backend "gcs" { prefix = "imposter" }, bucket passed at init
+├─ versions.tf         # terraform and provider versions, backend
+├─ providers.tf        # google + google-beta, billed to the project, default labels
+├─ apis.tf             # google_project_service for the APIs below
+├─ iam.tf              # runtime service account + roles, Cloud Build SA roles
+├─ registry.tf         # Artifact Registry docker repo (europe-west4)
+├─ run.tf              # Cloud Run v2 service with IAP
+├─ iap.tf              # IAP access for the allowed principal
+├─ budget.tf           # billing budget with email alerts
+├─ variables.tf        # project_id, region, labels, image (digest), iap_members, ...
+└─ terraform.tfvars.example
 ```
 
 Providers `google` and `google-beta` (IAP on Cloud Run may need beta), versions pinned
@@ -125,8 +124,8 @@ the better filter when implementing.
 - `make build`: `gcloud builds submit --tag <region>-docker.pkg.dev/<project>/imposter/app:<git sha>`
   (builds in GCP, no local Docker needed).
 - `make deploy`: build, resolve the image digest, then
-  `terraform -chdir=infra/env/dev apply -var image=<repo>@sha256:...`.
+  `terraform -chdir=infra apply -var image=<repo>@sha256:...`.
 - Rollback: re-apply with an earlier digest.
 - `make tf-state-bucket` once, then `make tf-plan` / `make tf-apply` for infra-only
-  changes in `env/dev` (both run `make tf-init` first).
+  changes (both run `make tf-init` first).
 - `.env.example` documents the local variables; `make dev` uses ADC and the same project.
