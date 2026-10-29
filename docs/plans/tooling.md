@@ -33,6 +33,7 @@ Same rules as hive (see its `docs/plans/tooling.md` and `CLAUDE.md`), summarised
 | Public by default; underscore only when hiding matters | review |
 | Blank lines around compound statements and before a multi-step `return` | review |
 | Keyword arguments for own calls with 2+ arguments | review |
+| No em-dashes or semicolons in prose (docs, comments, docstrings, commit messages, PR and issue text). Use a period, a comma or a colon instead | review |
 
 Ruff rules: `B`, `D`, `E`, `F`, `I`, `EM`, `T20`, `RET`, `ANN`, `UP`, with the same ignores
 and per-file test ignores as hive.

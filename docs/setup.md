@@ -25,12 +25,12 @@ and shows how the pieces connect.
 | Term | Meaning |
 |---|---|
 | **Organisation** | The company root node in GCP. Policies set here apply to everything below. |
-| **Folder** | Groups projects under the organisation. The sandbox is a folder; its policies may restrict regions or services. |
+| **Folder** | Groups projects under the organisation. The sandbox is a folder, and its policies may restrict regions or services. |
 | **Project** | The unit that holds resources, enabled APIs, IAM permissions and quotas. Identified by a globally unique *project ID* (you choose it, it can never be reused) and a *project number* (assigned). |
 | **Billing account** | Pays for the projects linked to it. A project without one cannot call paid APIs such as Vertex AI. |
-| **Labels** | Key-value pairs on resources (`app=imposter`). GCP has no resource groups like Azure; the project is the smallest container. Labels are how the app's resources and costs are found in a shared project. |
+| **Labels** | Key-value pairs on resources (`app=imposter`). GCP has no resource groups like Azure. The project is the smallest container. Labels are how the app's resources and costs are found in a shared project. |
 | **API (service)** | Each GCP product has an API that must be *enabled* in a project before it can be used, for example `aiplatform.googleapis.com` for Vertex AI. |
-| **ADC** | *Application Default Credentials*: where client libraries and Terraform look for credentials. Locally that is a file written by `gcloud auth application-default login`; on Cloud Run it is the service account of the service. |
+| **ADC** | *Application Default Credentials*: where client libraries and Terraform look for credentials. Locally that is a file written by `gcloud auth application-default login`. On Cloud Run it is the service account of the service. |
 | **Quota project** | The project whose quota and billing an API call counts against when you call with your user credentials. |
 | **Model Garden** | The Vertex AI catalogue of models. Partner models (Claude) and open models served by Google (MaaS, *model as a service*) must be enabled there once per project, which accepts their terms. |
 | **Terraform state** | A JSON file in which Terraform records what it created. Lose it and Terraform no longer knows it manages those resources. |
@@ -44,7 +44,7 @@ and shows how the pieces connect.
 - **uv** and the Python environment: `make sync` (see the root `CLAUDE.md`).
 
 Once Terraform is installed, `make check` also runs `terraform fmt -check` and
-`terraform validate`; without it those checks are skipped.
+`terraform validate`. Without it those checks are skipped.
 
 ## 2. Log in twice
 
@@ -77,7 +77,7 @@ passes it to Terraform (as `TF_VAR_project_id`).
 
 Check that the project is linked to billing (`gcloud billing projects describe <project
 id>` shows `billingEnabled: true`) and that you have enough rights in it. *Owner* is
-simplest; otherwise you need at least *Service Usage Admin*, *Storage Admin* and, later
+simplest. Otherwise you need at least *Service Usage Admin*, *Storage Admin* and, later
 for WP 12, the admin roles for Cloud Run, Artifact Registry, IAM service accounts and IAP.
 `gcloud projects get-iam-policy <project id> --flatten=bindings
 --filter="bindings.members:<your email>" --format="value(bindings.role)"` lists yours.
@@ -113,7 +113,7 @@ make tf-apply
 `make tf-init` (run by both) points Terraform at the state bucket, under the prefix
 `imposter`. Set `TF_STATE_BUCKET=<bucket>` to use a different bucket. For now Terraform
 only enables the APIs listed in `infra/apis.tf` (including `aiplatform` for
-Vertex AI); some are probably enabled already in a shared project, which is fine.
+Vertex AI). Some are probably enabled already in a shared project, which is fine.
 Terraform never disables them, not even on `terraform destroy`, because other work in
 the project may depend on them. WP 12 adds the service account, Artifact Registry, Cloud
 Run, IAP and the budget.
@@ -150,7 +150,7 @@ enabled once per project in the console:
    - Open models (MaaS, look for the *API service* / *managed* variant, not a self-deployed
      one): **DeepSeek V3.2**, **Qwen3 235B**, **gpt-oss 120B**, **Llama 4 Maverick**.
 3. If a model shows no Enable button or an error, the org or sandbox may block it (org
-   policy or terms not allowed). Note it; it is dropped from the lineup.
+   policy or terms not allowed). Note it, and it is dropped from the lineup.
 
 ## 8. Check the models
 
@@ -172,11 +172,11 @@ Common errors:
 |---|---|
 | `DefaultCredentialsError` | No ADC: run step 2 again. |
 | `403 ... quota project` / `USER_PROJECT_DENIED` | Quota project not set: run step 3. |
-| `403 ... has not been used in project ... or it is disabled` | API not enabled: for `serviceusage` run `make tf-setup` (step 4); otherwise wait a few minutes after step 5, or rerun `make tf-apply`. |
+| `403 ... has not been used in project ... or it is disabled` | API not enabled: for `serviceusage` run `make tf-setup` (step 4). Otherwise wait a few minutes after step 5, or rerun `make tf-apply`. |
 | `404 ... not found` / `Publisher model ... not found` | Wrong ID, model not served in that location, or not enabled in Model Garden (step 7). |
 | `403 ... terms of service` / `not allowlisted` | Model not enabled in Model Garden (step 7) or blocked by org policy. |
 | `429 Resource exhausted` | Quota too low: see step 9. |
-| `constraints/gcp.resourceLocations` | The sandbox restricts locations; ask the admin whether `global` and `us-central1` may be used for Vertex AI. |
+| `constraints/gcp.resourceLocations` | The sandbox restricts locations. Ask the admin whether `global` and `us-central1` may be used for Vertex AI. |
 
 ## 9. Check quotas
 
@@ -185,7 +185,7 @@ eight players can hit. In the console go to *IAM & Admin* → *Quotas & System L
 filter on *Service: Vertex AI API* and search for the model name (for example `claude` or
 `sonnet`). The relevant rows are the requests and tokens per minute per model, for the
 `global` location (or the fallback region). If a value is very low (or 0), select it and
-click **Edit quota** to request an increase; small increases are often approved within
+click **Edit quota** to request an increase. Small increases are often approved within
 minutes, larger ones can take days. Calls are retried with backoff on 429 (D28), so modest
 quotas are fine for a demo.
 

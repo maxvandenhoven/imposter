@@ -8,7 +8,7 @@ Prints one line per model with OK or the error.
 Exits with 0 when at least one Gemini and one Claude model answer, otherwise 1.
 
 Usage: `uv run python scripts/check_models.py [--project ID] [--model ID ...]`. The
-project defaults to `GOOGLE_CLOUD_PROJECT`; credentials come from ADC (`gcloud auth
+project defaults to `GOOGLE_CLOUD_PROJECT`, and credentials come from ADC (`gcloud auth
 application-default login`).
 """
 
@@ -252,7 +252,7 @@ def main(
         model: Model IDs to check instead of all candidates.
     """
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    # The client libraries log every call and failure; the summary line is enough here.
+    # The client libraries log every call and failure. The summary line is enough here.
     logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
     logging.getLogger("google_genai").setLevel(logging.WARNING)
     candidates = [

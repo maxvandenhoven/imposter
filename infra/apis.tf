@@ -1,8 +1,8 @@
-# APIs the app needs. In a shared project some are likely enabled already; enabling is
+# APIs the app needs. In a shared project some are likely enabled already. Enabling is
 # idempotent, and `disable_on_destroy = false` keeps them enabled on destroy because other
 # work in the project may use them. `serviceusage` and `cloudresourcemanager` must be on
 # before Terraform runs, because the providers bill API calls to the project
-# (`user_project_override`); `make tf-setup` enables them with `gcloud`, and they are
+# (`user_project_override`). `make tf-setup` enables them with `gcloud`, and they are
 # listed here too so the configuration names every API the app relies on.
 locals {
   apis = [
