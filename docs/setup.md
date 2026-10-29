@@ -17,6 +17,9 @@ each labelled `app=imposter`. What you end up with:
 Steps 1–3, 7 and 9 need you at the keyboard (browser logins and console clicks). The rest
 is `make` targets.
 
+[`infrastructure.md`](infrastructure.md) lists every resource with the reason it exists
+and shows how the pieces connect.
+
 ## Terms used here
 
 | Term | Meaning |

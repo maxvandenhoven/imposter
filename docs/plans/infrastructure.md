@@ -35,7 +35,8 @@ application with topology and monitoring; more setup than a one-service demo nee
 ## Manual prerequisites (once)
 
 The step-by-step guide for the owner is [`docs/setup.md`](../setup.md); this is the
-summary.
+summary. What is actually created, and how it connects, is kept current in
+[`docs/infrastructure.md`](../infrastructure.md).
 
 1. Install the `gcloud` CLI and Terraform (>= 1.9).
 2. `gcloud auth login` and `gcloud auth application-default login` with the org account.
