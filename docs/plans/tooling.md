@@ -33,6 +33,9 @@ Same rules as hive (see its `docs/plans/tooling.md` and `CLAUDE.md`), summarised
 | Public by default; underscore only when hiding matters | review |
 | Blank lines around compound statements and before a multi-step `return` | review |
 | Keyword arguments for own calls with 2+ arguments | review |
+| No em-dashes or semicolons in prose (docs, comments, docstrings, commit messages, PR and issue text). Use a period, a comma or a colon instead | review |
+| Documentation is written in complete, flowing sentences, including list items and table explanations, not terse fragments | review |
+| Top-level docs (`README.md`, `docs/*.md`) stand on their own: no references to work packages, issues, PRs or plan decisions. Parts that do not exist yet are marked as planned | review |
 
 Ruff rules: `B`, `D`, `E`, `F`, `I`, `EM`, `T20`, `RET`, `ANN`, `UP`, with the same ignores
 and per-file test ignores as hive.
@@ -53,8 +56,10 @@ make adk-web        # adk web src/imposter
 make play ARGS=...  # imposter play
 make build          # Cloud Build image
 make deploy         # build + terraform apply with the image digest
-make tf-plan        # terraform plan for infra/env/dev
-make tf-apply       # terraform apply for infra/env/dev
+make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
+make tf-init        # terraform init for infra with the state bucket
+make tf-plan        # terraform plan for infra
+make tf-apply       # terraform apply for infra
 make install-hooks  # pre-commit hooks (including commit-msg)
 ```
 

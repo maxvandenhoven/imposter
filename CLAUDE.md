@@ -30,7 +30,9 @@ root. The dependency direction is `engine ← players ← orchestration ← api`
 - `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for `src/imposter/engine/`
 - `scripts/tooling/` — development tooling such as the comment and docstring checkers
   (tests in `tests/tooling/`)
-- `infra/` — Terraform: `bootstrap/` (local state) and `env/dev/`
+- `infra/` — Terraform (one flat root) for the app's resources in the existing sandbox
+  project (no bootstrap; `make tf-setup` enables the base APIs and creates the state
+  bucket)
 
 ## Setup and commands
 
@@ -42,11 +44,18 @@ make sync           # uv sync --all-groups
 make format         # ruff format and import sorting
 make lint           # ruff check --fix, the comment and docstring checkers
 make type           # ty check
-make check          # format + lint + type (no tests)
+make check          # format + lint + type + Terraform fmt/validate (no tests)
 make test           # pytest with coverage, excluding `slow` tests
 make test-slow      # pytest -m slow (real Vertex AI calls)
+make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
+make tf-plan        # terraform plan for infra (tf-apply to apply)
 make install-hooks  # install pre-commit hooks (including commit-msg)
 ```
+
+GCP setup in the sandbox project is described in `docs/setup.md`; what is created in
+GCP, why and how it connects is in `docs/infrastructure.md`. Update that page in the same
+PR as every change to `infra/` or to manual GCP steps. `uv run --env-file .env
+python scripts/check_models.py` sends one test call per candidate model on Vertex AI.
 
 Run a single test with:
 
@@ -58,6 +67,15 @@ uv run pytest tests/path/to/test_file.py::test_name
 
 See `docs/plans/tooling.md` for the full rules and how each one is enforced.
 
+- No em-dashes (—) or semicolons in prose: docs, comments, docstrings, commit messages,
+  PR and issue text. Split the sentence or use a comma or colon instead. Code syntax
+  (for example a semicolon in a shell command) is fine.
+- Write documentation in complete, flowing sentences, including list items and the
+  explanation cells of tables. Avoid terse fragments such as "What the app creates, and
+  why." or "Region: `europe-west4`."
+- Top-level documentation (`README.md` and `docs/*.md`, not `docs/plans/`) stands on its
+  own and describes the system, not how it was built. Do not refer to work packages,
+  issues, PRs or plan decisions (`D17`). Mark parts that do not exist yet as planned.
 - Line length: 90 characters for code, docstrings and comments.
 - Type annotations on every function and method, including private ones and tests (ruff
   `ANN`, no test exemptions). Test functions return `-> None`.

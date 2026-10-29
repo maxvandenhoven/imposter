@@ -4,46 +4,85 @@
 
 - **Organisation**: the company root. **Folders** group projects; the sandbox is a folder
   with its own policies (for example allowed regions or services).
-- **Project**: the unit that holds resources, enabled APIs, IAM and quotas. Everything in
-  this repo lives in one project.
-- **Billing account**: pays for projects linked to it.
+- **Project**: the unit that holds resources, enabled APIs, IAM and quotas. The app lives
+  in an **existing sandbox project** that the owner already has and that other work
+  shares. Terraform does not create or own the project.
 - **ADC** (Application Default Credentials): what client libraries and Terraform use
   locally after `gcloud auth application-default login`; on Cloud Run, the service
   account attached to the service.
 
+### Organising resources in a shared project
+
+GCP has no resource groups like Azure: the project is the smallest container, and IAM,
+quotas, APIs and billing are per project. Within one project the app's resources are kept
+apart by:
+
+- **Labels** `app = "imposter"` on every resource that supports them, set
+  once through the providers' `default_labels`. Labels are filterable in the console
+  lists, in Cloud Asset Inventory (`gcloud asset search-all-resources
+  --query="labels.app=imposter"`) and in billing reports, so the app's cost can be split
+  from the rest of the project.
+- **Names** starting with `imposter` (service, service account, repository, bucket).
+- **Terraform state** as the authoritative list of what the app owns: `terraform state
+  list` and `terraform destroy` touch only those resources. APIs are never disabled on
+  destroy (`disable_on_destroy = false`), because other work may use them.
+
+Considered and not used: **Resource Manager tags** (org-level tag keys that need tag admin
+rights the sandbox likely lacks; useful for IAM conditions and org policies, not needed
+here) and **App Hub applications** (group services and workloads into a logical
+application with topology and monitoring; more setup than a one-service demo needs).
+
 ## Manual prerequisites (once)
+
+The step-by-step guide for the owner is [`docs/setup.md`](../setup.md); this is the
+summary. What is actually created, and how it connects, is kept current in
+[`docs/infrastructure.md`](../infrastructure.md).
 
 1. Install the `gcloud` CLI and Terraform (>= 1.9).
 2. `gcloud auth login` and `gcloud auth application-default login` with the org account.
-3. Find the sandbox folder ID and billing account ID:
-   `gcloud resource-manager folders list --organization <org id>` (or from the console) and
-   `gcloud billing accounts list`.
-4. After `infra/bootstrap` ran: in the Model Garden console, open each Claude model and
-   chosen open model and click Enable / accept the terms. Request quota increases if the
-   defaults are too low (Vertex AI quotas page).
-5. Set the quota project for ADC: `gcloud auth application-default set-quota-project
-   <project id>`.
+3. Point local tools at the sandbox project: `gcloud config set project <project id>`,
+   `gcloud auth application-default set-quota-project <project id>`, and
+   `GOOGLE_CLOUD_PROJECT` in `.env`.
+4. Enable the base APIs and create the Terraform state bucket once: `make tf-setup`.
+5. In the Model Garden console, open each Claude model and chosen open model and click
+   Enable / accept the terms. Request quota increases if the defaults are too low (Vertex
+   AI quotas page).
 
 ## Terraform layout
 
 ```
-infra/
-├─ bootstrap/          # local state (terraform.tfstate gitignored; keep a copy safe)
-│  ├─ main.tf          # google_project, billing link, state bucket (versioned, EU)
-│  ├─ variables.tf     # project_id, folder_id, billing_account, region
-│  └─ outputs.tf       # project_id, state_bucket
-└─ env/dev/            # backend "gcs" { bucket = <state bucket>, prefix = "env/dev" }
-   ├─ apis.tf          # google_project_service for the APIs below
-   ├─ iam.tf           # runtime service account + roles, Cloud Build SA roles
-   ├─ registry.tf      # Artifact Registry docker repo (europe-west4)
-   ├─ run.tf           # Cloud Run v2 service with IAP
-   ├─ iap.tf           # IAP access for the allowed principal
-   ├─ budget.tf        # billing budget with email alerts
-   ├─ variables.tf     # project_id, region, image (digest), iap_members, budget_amount
-   └─ terraform.tfvars.example
+infra/                 # one root; backend "gcs" { prefix = "imposter" }, bucket passed at init
+├─ versions.tf         # terraform and provider versions, backend
+├─ providers.tf        # google + google-beta, billed to the project, default labels
+├─ apis.tf             # google_project_service for the APIs below
+├─ iam.tf              # runtime service account + roles, Cloud Build SA roles
+├─ registry.tf         # Artifact Registry docker repo (europe-west4)
+├─ run.tf              # Cloud Run v2 service with IAP
+├─ iap.tf              # IAP access for the allowed principal
+├─ budget.tf           # billing budget with email alerts
+├─ variables.tf        # project_id, region, labels, image (digest), iap_members, ...
+└─ terraform.tfvars.example
 ```
 
-Providers `google` and `google-beta` (IAP on Cloud Run may need beta), versions pinned.
+Providers `google` and `google-beta` (IAP on Cloud Run may need beta), versions pinned
+(`~> 8.9`), with `.terraform.lock.hcl` committed (Linux and macOS hashes).
+
+There is no Terraform bootstrap root: the project exists already, and the only thing
+needed before Terraform can run is a few base APIs and its state bucket. The providers
+bill API calls to the project (`user_project_override`, see below), so the Service Usage
+API must already be enabled *in the project* before Terraform can enable anything:
+otherwise every `google_project_service` fails with `SERVICE_DISABLED` for
+`serviceusage.googleapis.com`. `make tf-setup` therefore enables `serviceusage`,
+`cloudresourcemanager` and `storage` with `gcloud` (which bills to its own client
+project), then creates `<project id>-imposter-tfstate` in `europe-west4` with `gcloud` (versioned, uniform
+access, public access prevention, label `app=imposter`). It is idempotent. A
+backend block cannot use variables, so the backend leaves the bucket out and `make
+tf-init` passes it with `-backend-config="bucket=..."` (override with `TF_STATE_BUCKET`).
+
+The project ID has one source, `GOOGLE_CLOUD_PROJECT` in `.env`, which the Makefile
+includes and passes to Terraform as `TF_VAR_project_id`. The providers set
+`user_project_override` and `billing_project` so API calls count against the project
+itself, not the quota project of the caller's credentials.
 
 ### APIs
 
@@ -75,7 +114,11 @@ requires it; verify). No owner or editor roles.
 ### Budget
 
 `google_billing_budget` on the project, default €20/month, alerts at 50/90/100% to the
-billing admins (and an email channel if set). It does not cap spending; it warns.
+billing admins (and an email channel if set). It does not cap spending; it warns. The
+project is shared, so filter the budget on the label `app=imposter` (budget filters
+support labels) to count only the app's spend. Vertex AI model calls carry no resource
+labels, so check whether request labels or a budget filtered on the Vertex AI service is
+the better filter when implementing.
 
 ## Build and deploy
 
@@ -87,7 +130,8 @@ billing admins (and an email channel if set). It does not cap spending; it warns
 - `make build`: `gcloud builds submit --tag <region>-docker.pkg.dev/<project>/imposter/app:<git sha>`
   (builds in GCP, no local Docker needed).
 - `make deploy`: build, resolve the image digest, then
-  `terraform -chdir=infra/env/dev apply -var image=<repo>@sha256:...`.
+  `terraform -chdir=infra apply -var image=<repo>@sha256:...`.
 - Rollback: re-apply with an earlier digest.
-- `make tf-plan` / `make tf-apply` for infra-only changes.
+- `make tf-setup` once, then `make tf-plan` / `make tf-apply` for infra-only
+  changes (both run `make tf-init` first).
 - `.env.example` documents the local variables; `make dev` uses ADC and the same project.
