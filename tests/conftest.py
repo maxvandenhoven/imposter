@@ -1,13 +1,58 @@
 """Fixtures shared by the tests of several packages."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable, Sequence
 
 import pytest
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import types
 from pydantic import Field
 
+from imposter.engine.game import Game
+from imposter.judge.base import JudgeProtocol
 from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
+from imposter.orchestration.runner import GameRunner
+from imposter.orchestration.setup import GameSetup
+from imposter.players.base import PlayerProtocol, TurnUsage
+from imposter.players.fake import RandomPlayer
+from imposter.words.options import SecretWordResolver
+from imposter.words.picker import WordPicker
+
+type PlayersFactory = Callable[[Game], Sequence[PlayerProtocol]]
+"""Builds the players of a game, one per seat in seat order."""
+
+
+def random_players(game: Game) -> list[RandomPlayer]:
+    """Seat a random player that reports 100 tokens per turn for every seat."""
+    return [
+        RandomPlayer(
+            seed=seat.seat,
+            usage=TurnUsage(
+                model_id=seat.player.model_id, input_tokens=90, output_tokens=10
+            ),
+        )
+        for seat in game.seats
+    ]
+
+
+class FakeGameSetup(GameSetup):
+    """A game setup with random words from the built-in categories and fake players.
+
+    Attributes:
+        players_for: Builds the players of a game.
+    """
+
+    def __init__(
+        self,
+        *,
+        players_for: PlayersFactory = random_players,
+        judge: JudgeProtocol | None = None,
+    ) -> None:
+        resolver = SecretWordResolver(picker=WordPicker.load(seed=3), generator=None)
+        super().__init__(catalog=ModelCatalog.load(), resolver=resolver, judge=judge)
+        self.players_for = players_for
+
+    def runner_for(self, game: Game) -> GameRunner:
+        return GameRunner(players=self.players_for(game), judge=self.judge)
 
 
 class ReplayLlm(BaseLlm):

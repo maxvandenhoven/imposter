@@ -57,6 +57,17 @@ test-slow:
 	@uv run $(if $(wildcard .env),--env-file .env) pytest -m slow
 
 
+# Pass options with ARGS, for example `make play ARGS="--god --seed 7"`.
+.PHONY: play
+play:
+	@uv run $(if $(wildcard .env),--env-file .env) imposter play $(ARGS)
+
+
+.PHONY: adk-web
+adk-web:
+	@uv run $(if $(wildcard .env),--env-file .env) adk web src
+
+
 .PHONY: tf-require-project
 tf-require-project:
 	@test -n "$(GOOGLE_CLOUD_PROJECT)" || { echo "Set GOOGLE_CLOUD_PROJECT in .env first"; exit 1; }

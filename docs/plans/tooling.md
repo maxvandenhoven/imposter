@@ -54,7 +54,7 @@ make test           # pytest, excluding `slow`, with coverage
 make test-slow      # pytest -m slow (real Vertex AI calls)
 make css            # standalone Tailwind CLI build (downloads the pinned binary to .bin/)
 make dev            # css + uvicorn with reload
-make adk-web        # adk web src/imposter
+make adk-web        # adk web src
 make play ARGS=...  # imposter play
 make build          # Cloud Build image
 make deploy         # build + terraform apply with the image digest
