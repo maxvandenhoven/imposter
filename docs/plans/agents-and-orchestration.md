@@ -51,8 +51,12 @@ class Player(Protocol):
 ```
 
 - `PlayerTask` names the phase and carries phase-specific instructions and limits.
-- `PlayerResponse` is one of the structured responses below, plus `usage` (input, output
-  and thinking tokens, model id) and `attempts`.
+- `PlayerResponse` wraps one of the structured responses below as `output`, plus `usage`
+  (`TurnUsage`: input, output and thinking tokens, model id), `attempts` and an optional
+  `error` when the player fell back to a default output.
+- `players/driver.py` has `GameDriver`, a small in-process loop with the same turn logic
+  as the `GameMaster` (one retry with the rejection reason, then the phase fallback), used
+  by tests and offline demos until WP 06.
 - Implementations: `AdkPlayer` (real), `ScriptedPlayer` (tests: returns canned responses),
   `RandomPlayer` (tests and offline demos). A future `A2aPlayer` calls a remote agent over
   the A2A protocol (`future-work.md`).

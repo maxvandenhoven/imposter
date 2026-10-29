@@ -22,7 +22,8 @@ Options on the setup screen are kept few and clear. Defaults in bold.
 | Advanced (collapsed) | statement cap **100** words, reasoning cap **60** words, token budget **200k**, temperature override | |
 
 Seat order is randomised at setup. Imposters are chosen uniformly at random. A seed may be
-given for reproducible role assignment (the LLM output itself is not reproducible).
+given for reproducible role assignment (the LLM output itself is not reproducible). Seats
+are numbered from 0 after shuffling, so the seat number is also the turn order.
 
 ## Phases
 
@@ -56,17 +57,26 @@ SETUP → CLUE(1..C) → DISCUSSION(1..D) → VOTE → RESOLUTION → GUESS → 
 ## Validation and limits
 
 - **Clue**: one word after trimming (letters, digits, internal hyphens or apostrophes),
-  not equal to the secret word after normalisation, not a repeat of an earlier clue, not a
-  trivial derivative of the word (the judge decides, see `models-and-judge.md` §Judge).
-  Code checks run first; the judge is only consulted when code checks pass. An invalid
-  clue gets one retry with the reason, then becomes `pass`.
+  not equal to and not containing the secret word after normalisation, not a repeat of an
+  earlier clue, not a trivial derivative of the word (the judge decides, see
+  `models-and-judge.md` §Judge). Code checks run first; the judge is only consulted when
+  code checks pass. An invalid clue gets one retry with the reason, then becomes `pass`.
+  Exception: when an imposter's clue is rejected because of the word (by the code checks
+  or the judge), it passes at once without a retry or a reason, since the reason would
+  reveal the word.
 - **Statement**: at most 100 words. Enforced in the prompt and by truncation in code
-  (with a `truncated` flag on the event).
+  (with a `truncated` flag on the event). Whole-word occurrences of the secret word
+  (including simple plurals) are replaced by `[redacted]`, so a civilian who blurts out
+  the word cannot leak it to the imposter.
 - **Private reasoning**: at most 60 words, truncated the same way.
 - **Vote**: must name another living player by its display name; an invalid vote gets one
   retry, then counts as an abstention. Self-votes are invalid.
 - **Guess**: free text, judged by exact match after normalisation (lowercase, strip,
   simple singular/plural) and otherwise by the judge (synonym or equivalent).
+
+The engine never calls the judge itself, to stay pure: the caller (the `GameMaster`, or
+the test `GameDriver` with injected judge callables) consults it and passes the verdict
+in, for example `submit_guess(..., judge_verdict=True)`.
 
 ## Multiple imposters
 
@@ -85,7 +95,8 @@ Every state change is an `GameEvent` (pydantic, discriminated by `type`) with `g
 `statement_made`, `vote_cast` (private until resolution), `votes_revealed`,
 `guess_made`, `guess_judged`, `outcome`, `reflection`, `player_error`, `usage` (tokens and
 cost), `game_aborted`, `game_finished`. Private reasoning travels on the same event as the
-public action, in a private field that the public projection drops.
+public action, in a private field that the public projection drops. The `outcome` event
+reveals the word publicly; before it, no public projection contains the word.
 
 The event log is the single source of truth for both the UI and the export file.
 
@@ -94,7 +105,11 @@ The event log is the single source of truth for both the UI and the export file.
 `GameState.view_for(seat) -> PlayerView` builds what one player may see: rules, own seat
 and name, own role, the word (civilians only), the hint (imposter only, if on), the
 category (if public), number of imposters, other players (by identity mode), the public
-transcript so far, and that player's own scratchpad. Nothing else.
+transcript so far (clues and statements; the revealed votes once revealed), and that
+player's own scratchpad. Nothing else. Guesses are not in the transcript, so with several
+imposters a correct guess cannot help a later imposter. Once the outcome is decided, the
+view also carries a reveal (word, category, imposters, guesses, outcome) for the debrief.
+A seat's own vote stays out of its scratchpad until the votes are revealed.
 
 Invariants, enforced with Hypothesis property tests over random configs and scripted
 games:
