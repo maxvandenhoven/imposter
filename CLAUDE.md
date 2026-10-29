@@ -70,6 +70,9 @@ See `docs/plans/tooling.md` for the full rules and how each one is enforced.
 - No em-dashes (—) or semicolons in prose: docs, comments, docstrings, commit messages,
   PR and issue text. Split the sentence or use a comma or colon instead. Code syntax
   (for example a semicolon in a shell command) is fine.
+- Write documentation in complete, flowing sentences, including list items and the
+  explanation cells of tables. Avoid terse fragments such as "What the app creates, and
+  why." or "Region: `europe-west4`."
 - Line length: 90 characters for code, docstrings and comments.
 - Type annotations on every function and method, including private ones and tests (ruff
   `ANN`, no test exemptions). Test functions return `-> None`.
