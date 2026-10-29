@@ -53,6 +53,8 @@ make adk-web        # adk web src/imposter
 make play ARGS=...  # imposter play
 make build          # Cloud Build image
 make deploy         # build + terraform apply with the image digest
+make tf-bootstrap   # terraform init + apply for infra/bootstrap (local state)
+make tf-init        # terraform init for infra/env/dev with the state bucket
 make tf-plan        # terraform plan for infra/env/dev
 make tf-apply       # terraform apply for infra/env/dev
 make install-hooks  # pre-commit hooks (including commit-msg)

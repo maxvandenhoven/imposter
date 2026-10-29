@@ -42,11 +42,16 @@ make sync           # uv sync --all-groups
 make format         # ruff format and import sorting
 make lint           # ruff check --fix, the comment and docstring checkers
 make type           # ty check
-make check          # format + lint + type (no tests)
+make check          # format + lint + type + Terraform fmt/validate (no tests)
 make test           # pytest with coverage, excluding `slow` tests
 make test-slow      # pytest -m slow (real Vertex AI calls)
+make tf-bootstrap   # terraform apply for infra/bootstrap (local state)
+make tf-plan        # terraform plan for infra/env/dev (tf-apply to apply)
 make install-hooks  # install pre-commit hooks (including commit-msg)
 ```
+
+GCP setup from zero is described in `docs/setup.md`. `uv run python
+scripts/check_models.py` sends one test call per candidate model on Vertex AI.
 
 Run a single test with:
 

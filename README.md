@@ -6,3 +6,5 @@ exploring Google's Agent Development Kit (ADK), deployment on GCP (Cloud Run, IA
 Terraform) and tracing (OpenTelemetry, Cloud Trace).
 
 The plan, decisions and work packages live in [`docs/plans/`](docs/plans/README.md).
+
+To set up the GCP project from zero, follow [`docs/setup.md`](docs/setup.md).

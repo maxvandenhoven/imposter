@@ -16,6 +16,26 @@ Exact model IDs change often. WP 04 verifies them in Model Garden and with a tes
 model, and records them in the catalog. If the org sandbox blocks a model (org policy or
 missing terms acceptance), drop it from the catalog.
 
+### Verified model IDs
+
+`scripts/check_models.py` sends one test call per candidate (location `global`, falling
+back to `us-central1`). Candidates were picked from the Vertex AI and Anthropic model
+lists in October 2026. Open MaaS model IDs carry the publisher prefix and the `-maas`
+suffix; for LiteLLM all non-Gemini IDs get the `vertex_ai/` prefix. Update the *Result*
+column after every run; WP 04 copies the working IDs into the catalog.
+
+| Family | Model ID | Location | Result |
+|---|---|---|---|
+| Gemini | `gemini-3.1-pro-preview` | `global` only | not yet run |
+| Gemini | `gemini-3.8-flash` | `global` | not yet run |
+| Gemini | `gemini-3.5-flash-lite` | `global` | not yet run |
+| Claude | `claude-sonnet-5-5` | `global` | not yet run |
+| Claude | `claude-haiku-5-5` | `global` | not yet run |
+| Open | `deepseek-ai/deepseek-v3.2-maas` | `global` | not yet run |
+| Open | `qwen/qwen3-235b-a22b-instruct-2507-maas` | `global` | not yet run |
+| Open | `openai/gpt-oss-120b-maas` | `global` | not yet run |
+| Open | `meta/llama-4-maverick-17b-128e-instruct-maas` | `global` | not yet run |
+
 ## Catalog (`models/catalog.yaml`)
 
 ```yaml

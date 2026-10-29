@@ -13,6 +13,9 @@
 
 ## Manual prerequisites (once)
 
+The step-by-step guide for the owner is [`docs/setup.md`](../setup.md); this is the
+summary.
+
 1. Install the `gcloud` CLI and Terraform (>= 1.9).
 2. `gcloud auth login` and `gcloud auth application-default login` with the org account.
 3. Find the sandbox folder ID and billing account ID:
@@ -29,10 +32,14 @@
 ```
 infra/
 ├─ bootstrap/          # local state (terraform.tfstate gitignored; keep a copy safe)
-│  ├─ main.tf          # google_project, billing link, state bucket (versioned, EU)
-│  ├─ variables.tf     # project_id, folder_id, billing_account, region
-│  └─ outputs.tf       # project_id, state_bucket
-└─ env/dev/            # backend "gcs" { bucket = <state bucket>, prefix = "env/dev" }
+│  ├─ versions.tf      # terraform and provider versions, google provider
+│  ├─ main.tf          # google_project, billing link, bootstrap APIs, state bucket
+│  ├─ variables.tf     # project_id, project_name, folder_id, billing_account, region
+│  ├─ outputs.tf       # project_id, project_number, region, state_bucket
+│  └─ terraform.tfvars.example
+└─ env/dev/            # backend "gcs" { prefix = "env/dev" }, bucket passed at init
+   ├─ versions.tf      # terraform and provider versions, backend
+   ├─ providers.tf     # google + google-beta, billed to the project itself
    ├─ apis.tf          # google_project_service for the APIs below
    ├─ iam.tf           # runtime service account + roles, Cloud Build SA roles
    ├─ registry.tf      # Artifact Registry docker repo (europe-west4)
@@ -43,7 +50,19 @@ infra/
    └─ terraform.tfvars.example
 ```
 
-Providers `google` and `google-beta` (IAP on Cloud Run may need beta), versions pinned.
+Providers `google` and `google-beta` (IAP on Cloud Run may need beta), versions pinned
+(`~> 8.9`), with `.terraform.lock.hcl` committed per root (Linux and macOS hashes).
+
+The bootstrap enables `serviceusage`, `cloudresourcemanager`, `storage` (for the state
+bucket) and `aiplatform` (so models can be enabled in Model Garden before `env/dev`
+runs). The state bucket is `<project id>-tfstate` in `europe-west4`, versioned, keeping 10
+earlier versions of each state file, with uniform access and public access prevention.
+
+A backend block cannot use variables, so the `env/dev` backend leaves the bucket out and
+`make tf-init` passes it with `-backend-config="bucket=..."`, read from the bootstrap
+output `state_bucket` (or `TF_STATE_BUCKET`). The `env/dev` providers set
+`user_project_override` and `billing_project` so API calls count against the project
+itself, not the quota project of the caller's credentials.
 
 ### APIs
 
@@ -89,5 +108,6 @@ billing admins (and an email channel if set). It does not cap spending; it warns
 - `make deploy`: build, resolve the image digest, then
   `terraform -chdir=infra/env/dev apply -var image=<repo>@sha256:...`.
 - Rollback: re-apply with an earlier digest.
-- `make tf-plan` / `make tf-apply` for infra-only changes.
+- `make tf-bootstrap` for the bootstrap root, `make tf-plan` / `make tf-apply` for
+  infra-only changes in `env/dev` (both run `make tf-init` first).
 - `.env.example` documents the local variables; `make dev` uses ADC and the same project.
