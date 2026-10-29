@@ -19,6 +19,7 @@ from imposter.engine.events import (
 )
 from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
+from imposter.judge.base import JudgeVerdict
 from imposter.orchestration.runner import GameRunner
 from imposter.players.base import (
     ClueResponse,
@@ -32,6 +33,34 @@ from imposter.players.base import (
 from imposter.players.fake import RandomPlayer, ScriptedPlayer, ScriptStep
 
 WORD = "giraffe"
+
+
+class RecordingJudge:
+    """A judge that accepts every guess and every clue not starting with `bad`.
+
+    Attributes:
+        judged: The candidates the judge was asked about, with the word.
+    """
+
+    def __init__(self) -> None:
+        self.judged: list[tuple[str, str]] = []
+
+    def verdict(self, *, candidate: str, word: str) -> JudgeVerdict:
+        """Record a question and answer it."""
+        self.judged.append((candidate, word))
+
+        return JudgeVerdict(
+            verdict=not candidate.startswith("bad"),
+            confidence=1.0,
+            rationale="Scripted.",
+            judge_model="fake",
+        )
+
+    async def is_same_word(self, guess: str, word: str) -> JudgeVerdict:
+        return self.verdict(candidate=guess, word=word)
+
+    async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict:
+        return self.verdict(candidate=clue, word=word)
 
 
 def new_game(*, player_count: int = 4, **options: Any) -> Game:
@@ -129,18 +158,13 @@ async def test_caught_imposter_steals_with_exact_guess() -> None:
 
 
 async def test_guess_judge_decides_inexact_guesses_only() -> None:
-    judged: list[tuple[str, str]] = []
-
-    async def judge(guess: str, word: str) -> bool:
-        judged.append((guess, word))
-        return True
-
+    judge = RecordingJudge()
     game = new_game()
     await GameRunner(
-        players=scripted_players(game, guess="camelopard"), guess_judge=judge
+        players=scripted_players(game, guess="camelopard"), judge=judge
     ).play(game)
 
-    assert judged == [("camelopard", WORD)]
+    assert judge.judged[-1:] == [("camelopard", WORD)]
     assert game.events_of_type(GuessMadeEvent)[0].judged_by == "judge"
     assert game.outcome is GameOutcome.IMPOSTER_STEALS
 
@@ -182,12 +206,7 @@ async def test_second_invalid_clue_becomes_a_pass() -> None:
 
 
 async def test_saying_the_word_ends_the_game_without_a_retry_or_judge() -> None:
-    judged: list[str] = []
-
-    async def judge(clue: str, word: str) -> bool:
-        judged.append(clue)
-        return True
-
+    judge = RecordingJudge()
     game = new_game(clue_rounds=1, discussion_rounds=0)
     speaker = game.pending_seats[0]
     players = [
@@ -196,7 +215,7 @@ async def test_saying_the_word_ends_the_game_without_a_retry_or_judge() -> None:
     ]
     players[speaker].script.insert(0, ClueResponse(clue=WORD))
 
-    await GameRunner(players=players, clue_judge=judge).play(game)
+    await GameRunner(players=players, judge=judge).play(game)
 
     expected = (
         GameOutcome.IMPOSTER_SAID_WORD
@@ -204,16 +223,14 @@ async def test_saying_the_word_ends_the_game_without_a_retry_or_judge() -> None:
         else GameOutcome.CIVILIAN_SAID_WORD
     )
     assert game.outcome is expected
-    assert judged == []
+    assert judge.judged == []
     assert players[speaker].retry_reasons == [None, None]
     assert errors(game) == []
     assert game.phase is GamePhase.DONE
 
 
 async def test_clue_judge_rejection_is_retried_for_civilians_only() -> None:
-    async def judge(clue: str, word: str) -> bool:
-        return not clue.startswith("bad")
-
+    judge = RecordingJudge()
     game = new_game(clue_rounds=1, discussion_rounds=0)
     players = scripted_players(game)
     imposter = game.imposters[0]
@@ -221,7 +238,7 @@ async def test_clue_judge_rejection_is_retried_for_civilians_only() -> None:
     players[imposter].script[0] = ClueResponse(clue="badclue")
     players[civilian].script.insert(0, ClueResponse(clue="badclue"))
 
-    await GameRunner(players=players, clue_judge=judge).play(game)
+    await GameRunner(players=players, judge=judge).play(game)
 
     assert (
         players[civilian].retry_reasons[1] == "the clue is too close to the secret word"

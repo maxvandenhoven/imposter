@@ -110,6 +110,14 @@ traces can be filtered to compare behaviour.
   list of recently used words (in memory) to avoid repeats. Traced as part of `setup`.
 - Hint (when enabled): a related but non-revealing word for the imposter, generated at
   setup for typed and random words too.
+- `words/options.py`: `WordOptions` (mode, typed word, category) are the setup choices,
+  and `SecretWordResolver` turns them into a `SecretWord` before `Game.create`. A hint
+  that mentions the word is rejected.
+- Good secret words are familiar but many-sided, so civilians have room for clever clues
+  that an imposter cannot easily decode. Obscure words are avoided.
+- The generator and the LLM judge both run on `models/structured.py`
+  (`StructuredTaskAgent`), an ADK `LlmAgent` with a response schema and a fresh session
+  per task.
 
 ## Judge
 
@@ -129,6 +137,8 @@ class JudgeVerdict(BaseModel):
   shared stem for clues). Only undecided cases reach the LLM.
 - `judge/llm_judge.py`: `LlmJudge`, implementing `JudgeProtocol` with Gemini Flash-Lite and
   structured output. Temperature 0.
+- `GameRunner` takes one `judge: JudgeProtocol` for both clues and guesses. When the
+  model fails, the judge falls back to the lenient verdict (clue valid, guess wrong).
 - Verdicts are on events (the `guess_made` event, and the rejection reason on the clue event)
   and span attributes.
 - The Laya typed-decision model was considered: in Model Garden it is a self-deployed

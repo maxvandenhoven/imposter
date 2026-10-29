@@ -98,6 +98,26 @@ def generate_content_config(
     Returns:
         The temperature, output token limit and thinking setting.
     """
+    return output_config(
+        entry=entry,
+        max_output_tokens=PHASE_MAX_OUTPUT_TOKENS[phase],
+        temperature=temperature,
+    )
+
+
+def output_config(
+    *, entry: ModelCatalogEntry, max_output_tokens: int, temperature: float | None = None
+) -> types.GenerateContentConfig:
+    """Build the generation settings of a catalog entry for an answer of a given size.
+
+    Args:
+        entry: The catalog entry.
+        max_output_tokens: The answer tokens, without the room for thinking.
+        temperature: A temperature that overrides the entry's default, if given.
+
+    Returns:
+        The temperature, output token limit and thinking setting.
+    """
     thinking_config = None
 
     if entry.via is ModelVia.NATIVE or entry.thinking is not ModelThinking.OFF:
@@ -107,7 +127,6 @@ def generate_content_config(
 
     return types.GenerateContentConfig(
         temperature=entry.temperature if temperature is None else temperature,
-        max_output_tokens=PHASE_MAX_OUTPUT_TOKENS[phase]
-        + THINKING_TOKENS[entry.thinking],
+        max_output_tokens=max_output_tokens + THINKING_TOKENS[entry.thinking],
         thinking_config=thinking_config,
     )
