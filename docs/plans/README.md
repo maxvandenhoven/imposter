@@ -7,7 +7,7 @@ the order in which work happens. Topic files go deeper on each area:
 | File | Covers |
 |---|---|
 | [`game-rules.md`](game-rules.md) | The game as a precise state machine: setup options, phases, limits, vote tally, guess, outcome, debrief |
-| [`agents-and-orchestration.md`](agents-and-orchestration.md) | ADK setup, `GameMaster` agent, `Player` interface, `PlayerView`, prompts, structured outputs, scratchpad, concurrency, failures, ports |
+| [`agents-and-orchestration.md`](agents-and-orchestration.md) | ADK setup, how engine, players and orchestration fit, the turn loop, `GameRunnerAgent`, `PlayerProtocol`, `PlayerView`, prompts, structured outputs, scratchpad, concurrency, failures, ports |
 | [`models-and-judge.md`](models-and-judge.md) | Model catalog, Vertex AI access (Gemini, Claude, open MaaS models), identity modes, words and categories, the `Judge` |
 | [`observability.md`](observability.md) | OpenTelemetry, Cloud Trace span hierarchy, content capture to Cloud Logging, token and cost attributes, IAP identity |
 | [`web-ui.md`](web-ui.md) | FastAPI + SSE API, static frontend (Alpine.js + Tailwind), setup screen, game board, audience and god mode, playback, export and import |
@@ -64,8 +64,8 @@ public multi-user access.
  ┌──────────────── Cloud Run service `imposter` (europe-west4, behind IAP) ─────────────────┐
  │ api (FastAPI) ── identity (IAP header) ── EventBus (in memory) ◀── events ──┐            │
  │    │                                                                        │            │
- │    └──▶ orchestration: GameMaster (custom ADK BaseAgent, run by ADK Runner) ─┘            │
- │              │   drives the pure engine (state machine, rules, tally)                     │
+ │    └──▶ orchestration: GameRunnerAgent (custom ADK BaseAgent, run by ADK Runner) ┘        │
+ │              │   GameRunner: ask players (I/O) → apply to the pure Game engine            │
  │              ├──▶ players: AdkPlayer (LlmAgent, include_contents='none') × N              │
  │              ├──▶ judge: Gemini Flash-Lite (structured yes/no)                           │
  │              └──▶ words: categories + Gemini word generator                               │
@@ -77,9 +77,11 @@ public multi-user access.
  CLI: imposter play | imposter tournament   (same engine and players, no web)
 ```
 
-Dependency direction is strictly one way: `engine ← players ← orchestration ← api`, with
-`models`, `words`, `judge` and `ports` used by `orchestration` and `api`. The engine
-imports nothing else from the package and has no ADK or LLM dependency.
+Code is layered, and each layer imports only from the layers below it: `config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`,
+with `models`, `words`, `judge` and `ports` used by `orchestration` and `api`. `config.py`
+and `utils/` hold the shared types and small helpers. `config`, `utils` and the engine use
+only the standard library and pydantic: no ADK or LLM dependency. A test checks the
+layers.
 
 ## 4. Decisions
 
@@ -90,14 +92,14 @@ imports nothing else from the package and has no ADK or LLM dependency.
 | D3 | Clues are exactly one word, not the word, no repeats, no trivial derivatives. Discussion statements and private reasoning are capped (100 and 60 words), enforced in the prompt and by hard truncation in code. | Prevents endless discussion and keeps costs predictable. |
 | D4 | Most votes is caught; a tie catches nobody. Imposter not caught wins; caught imposter who guesses the word steals the win; otherwise civilians win. | Deterministic, simple, matches the spirit of the app. |
 | D5 | All models via Vertex AI in the project: Gemini natively, Claude via Model Garden, open models via Vertex MaaS, non-Gemini models through ADK `LiteLlm` (`vertex_ai/...`). No OpenAI. | Keep everything GCP-native: one bill, IAM, quotas and logs in one project. |
-| D6 | Orchestration is deterministic code: a custom ADK `BaseAgent` (`GameMaster`) drives a pure engine state machine and calls player agents turn by turn. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
-| D7 | Players implement a `Player` protocol (`take_turn(view) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. | No shared conversation history that could leak the word. The protocol leaves room for A2A remote players (future work). |
-| D8 | Each player has a private scratchpad in session state (keyed per player) with its own earlier reasoning, shown only to that player. | Consistent strategy over rounds and material for the debrief. |
+| D6 | Orchestration is deterministic code: a custom ADK `BaseAgent` (`GameRunnerAgent`) runs a `GameRunner`, which asks players for their action (I/O) and applies it to a pure `Game` object that owns the rules and the event log. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
+| D7 | Players implement a `PlayerProtocol` (`take_turn(view, retry_reason) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. | No shared conversation history that could leak the word. The protocol leaves room for A2A remote players (future work). |
+| D8 | Each player has a private scratchpad with its own earlier actions and reasoning, derived by the engine from that seat's events and shown only to that player in its `PlayerView`. | Consistent strategy over rounds and material for the debrief. |
 | D9 | Structured output per phase with a `private_reasoning` field. Native structured output where supported, otherwise JSON in the prompt plus pydantic validation and one retry with the error, then a pass/abstain fallback. | Machine-checkable turns across all model families. |
 | D10 | Web UI is a FastAPI backend streaming game events over SSE to a single static page (Alpine.js + Tailwind, standalone Tailwind CLI, no Node). `adk web` stays available for development. | Watchable game board with animations, one container, no frontend build pipeline. |
 | D11 | Deploy on Cloud Run (`europe-west4`), 60 minute request timeout, min 0 / max 1 instance, request-based billing. Agent Engine is a later comparison experiment. | Scales to zero, cheapest, simplest Terraform; one container holds API, UI and SSE. |
 | D12 | Access via IAP directly on Cloud Run (no load balancer), allowing the owner's org account or group. The IAP identity goes on the root span (`enduser.id`). | Org Google login, best practice, and traces show who ran each game. |
-| D13 | Everything in memory: game store, event bus and ADK `InMemorySessionService`, each behind a port (`GameStore`, `EventBus`, `BaseSessionService`) so adapters can be swapped later. | Cheap and simple; scaling to zero loses running games, which is fine for a demo. |
+| D13 | Everything in memory: game store, event bus and ADK `InMemorySessionService`, each behind a port (`GameStoreProtocol`, `EventBusProtocol`, `BaseSessionService`) so adapters can be swapped later. | Cheap and simple. Scaling to zero loses running games, which is fine for a demo. |
 | D14 | A game runs while its SSE connection is open (request-based billing gives CPU only during requests). The event bus buffers all events of a game, so a reconnect replays them. One game at a time per instance. | Correct CPU allocation without instance-based billing. |
 | D15 | Tracing with OpenTelemetry to Cloud Trace: `game` → `phase` → `turn` → ADK and GenAI spans. Prompt and completion content captured as Cloud Logging events, linked by trace ID. Token and cost attributes on every turn. | Cloud Trace keeps traces 30 days, a free game archive; filterable by model, role, phase, identity mode. |
 | D16 | Local development exports to Cloud Trace with ADC; a flag switches to the console exporter. | Same traces locally and deployed. |
@@ -106,10 +108,10 @@ imports nothing else from the package and has no ADK or LLM dependency.
 | D19 | Tooling mirrors the hive repo: Python 3.13, uv, ruff (Google docstrings, line length 90), ty, pytest, the comment and docstring checkers, pre-commit with commitizen, Claude Code hooks. | Proven setup, consistent style. |
 | D20 | Package layout: `engine`, `players`, `models`, `words`, `judge`, `orchestration`, `ports`, `telemetry`, `api`, `web`, plus `agent.py` (for `adk web`) and `cli.py`. | Pure engine testable without LLMs; clear dependency direction. |
 | D21 | Model catalog in YAML: id, display name, provider, ADK model string, location, logo, structured output support, thinking, temperature, prices. Starting lineup: latest Gemini Pro and Flash, Claude Sonnet and Haiku, 2–3 open models (IDs verified in Model Garden during WP 04). | One place to add or drop models; cost estimates from prices. |
-| D22 | `identity_mode` per game: `seat` (Player 1..N), `names` (random neutral names) or `models` (model display names, numbered when repeated). Recorded on the root span. The UI shows models separately depending on audience or god mode. | Lets you compare play when models know who is who. |
+| D22 | `identity_mode` per game: `seat` (Player 1..N), `names` (Alice, Bob, Charlie, ... in seat order) or `models` (model display names, numbered when repeated). Recorded on the root span. The UI shows models separately depending on audience or god mode. | Lets you compare play when models know who is who. |
 | D23 | No personas in v1, but `PlayerConfig` has an optional `persona` field from day one; the design is in `future-work.md`. | Adding personas later changes no API. |
 | D24 | Secret word: typed, random from a category, or generated by Gemini Flash ("surprise me") avoiding recent words. Category is public by default; imposter hint off by default. Both are toggles. | Matches the app; a public category makes the game playable for the imposter. |
-| D25 | `Judge` port for guess equivalence and clue validity, implemented with Gemini Flash-Lite and structured output (`verdict`, `confidence`, `rationale`). Cheap code checks run first. | The Laya decision model in Model Garden needs a dedicated deployed endpoint (billed per hour), which conflicts with scaling to zero. |
+| D25 | `JudgeProtocol` port for guess equivalence and clue validity, implemented with Gemini Flash-Lite and structured output (`verdict`, `confidence`, `rationale`). Cheap code checks run first. | The Laya decision model in Model Garden needs a dedicated deployed endpoint (billed per hour), which conflicts with scaling to zero. |
 | D26 | Reasoning is captured at every turn (`private_reasoning`) and in a debrief after the reveal. Native model thinking is a catalog setting, off by default; thinking tokens are counted, not shown. | Compare in-the-moment reasoning with after-the-fact rationalisation. |
 | D27 | The browser buffers all events. A playback cursor supports live, step (prev/next, next phase) and autoplay; a badge shows how far behind live you are. Games can be exported and imported as JSON. | Presentable demos without backend persistence; recordings as a fallback when live APIs fail. |
 | D28 | Concurrency: clues and discussion sequential, votes and debrief in parallel. Each LLM call has a 60 s timeout and 2 retries with exponential backoff on 429/5xx, then a pass/abstain fallback with a `player_error` event. | Robust against low default Model Garden quotas. |
@@ -134,12 +136,14 @@ imposter/
 ├─ .env.example                # GOOGLE_CLOUD_PROJECT, locations, telemetry flags
 ├─ docs/plans/                 # this folder
 ├─ src/imposter/
-│  ├─ engine/                  # config.py, state.py, phases.py, events.py, views.py, tally.py, rules.py
-│  ├─ players/                 # base.py (Player protocol, responses), adk_player.py, fake.py, prompts/
+│  ├─ config.py                # GameConfig, PlayerConfig, SecretWord and the shared enums
+│  ├─ utils/                   # names.py, phases.py, tally.py, text.py (functions on plain values)
+│  ├─ engine/                  # game.py (Game), events.py, views.py
+│  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompts/
 │  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects)
 │  ├─ words/                   # categories/*.yaml, picker.py, generator.py
-│  ├─ judge/                   # base.py (Judge port), llm_judge.py, checks.py (cheap code checks)
-│  ├─ orchestration/           # game_master.py (BaseAgent), runner.py (ADK Runner wiring)
+│  ├─ judge/                   # base.py (JudgeProtocol), llm_judge.py, checks.py (cheap code checks)
+│  ├─ orchestration/           # runner.py (GameRunner), runner_agent.py (GameRunnerAgent), adk_runner.py
 │  ├─ ports/                   # game_store.py, event_bus.py (protocols + in-memory adapters)
 │  ├─ telemetry/               # setup.py (exporters), spans.py (game/phase/turn helpers), cost.py
 │  ├─ api/                     # app.py, settings.py, identity.py, routes/ (games, catalog, sse)
@@ -157,7 +161,7 @@ imposter/
 | Milestone | Goal | Done when |
 |---|---|---|
 | **M0 Foundations** | Repo, tooling, Terraform for the sandbox project, models enabled | `make check test` is green on an empty package; `gcloud` and Terraform work against the sandbox project; a test call to Gemini and Claude on Vertex succeeds |
-| **M1 Headless game** | Pure engine, model catalog, ADK players, words and judge, `GameMaster`, CLI | `imposter play --word ... --players ...` plays a full game with mixed models in the terminal, including the debrief |
+| **M1 Headless game** | Pure engine, model catalog, ADK players, words and judge, `GameRunnerAgent`, CLI | `imposter play --word ... --players ...` plays a full game with mixed models in the terminal, including the debrief |
 | **M2 Tracing** | OpenTelemetry to Cloud Trace and Logging with the game/phase/turn hierarchy | A CLI game shows up as one readable trace with content, tokens and cost |
 | **M3 Web UI** | FastAPI + SSE, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
 | **M4 Deploy** | Dockerfile, Terraform for the app, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
@@ -176,7 +180,7 @@ issue should not be started.
 | 03 | Pure game engine with fake players and leak tests | M1 | 01 | #3 |
 | 04 | Model catalog and ADK player | M1 | 02, 03 | #4 |
 | 05 | Words, categories and the judge | M1 | 04 | #5 |
-| 06 | GameMaster agent and `imposter play` CLI | M1 | 04, 05 | #6 |
+| 06 | GameRunnerAgent and `imposter play` CLI | M1 | 04, 05 | #6 |
 | 07 | Tracing to Cloud Trace and Cloud Logging | M2 | 06 | #7 |
 | 08 | FastAPI app, SSE stream and in-memory ports | M3 | 06 | #8 |
 | 09 | Static frontend foundation and setup screen | M3 | 08 | #9 |

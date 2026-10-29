@@ -12,16 +12,23 @@ topic files and code the task points to.
 ## Project structure
 
 One Python package `imposter` with a single `pyproject.toml` and `uv.lock` at the repo
-root. The dependency direction is `engine ← players ← orchestration ← api`, with `models`,
-`words`, `judge` and `ports` used by `orchestration` and `api`.
+root. Code is layered, and each layer imports only from the layers below it:
+`config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`, with `models`,
+`words`, `judge` and `ports` used by `orchestration` and `api`. `tests/test_layers.py`
+checks the layers that exist.
 
-- `src/imposter/engine/` — pure game state machine, rules, views and tally (imports
-  nothing from the rest of the package, no ADK or LLM dependency)
-- `src/imposter/players/` — `Player` protocol, ADK player, fake players, prompts
+- `src/imposter/config.py` — the game options and the shared enums (`GameConfig`,
+  `PlayerConfig`, `SecretWord`, `GamePhase`, ...), used across the package
+- `src/imposter/utils/` — small functions on plain values, used across the package (word
+  handling, vote tally, seat names, phase flow)
+- `src/imposter/engine/` — pure game rules: the `Game` class (event log, queries,
+  actions, player views), events and views (no ADK or LLM dependency)
+- `src/imposter/players/` — `PlayerProtocol`, ADK player, fake players, prompts
 - `src/imposter/models/` — model catalog (YAML) and ADK model factory
 - `src/imposter/words/` — word categories, picker and generator
-- `src/imposter/judge/` — `Judge` port, LLM judge and cheap code checks
-- `src/imposter/orchestration/` — `GameMaster` agent and ADK runner wiring
+- `src/imposter/judge/` — `JudgeProtocol` port, LLM judge and cheap code checks
+- `src/imposter/orchestration/` — `GameRunner` (asks players, applies turns), the
+  `GameRunnerAgent` ADK agent and the ADK `Runner` wiring
 - `src/imposter/ports/` — game store and event bus protocols with in-memory adapters
 - `src/imposter/telemetry/` — OpenTelemetry setup, span helpers, cost estimates
 - `src/imposter/api/` — FastAPI app, settings, identity, routes (games, catalog, SSE)
@@ -91,15 +98,27 @@ See `docs/plans/tooling.md` for the full rules and how each one is enforced.
 - Comments start with a capital letter and end with a period, unless shorter than 5 words.
   Checked by `scripts/tooling/check_comments.py` (part of `make lint`).
 - No `print` statements (ruff `T20`); use `logging` instead.
+- Exception messages are full sentences: they start with a capital letter and end with a
+  period, for example `"Seat 2 has no turn to start in phase vote."`.
 - Do not split lines manually or add trailing commas to force splits; let `ruff format`
   wrap (`skip-magic-trailing-comma = true`).
 - Pytest fixtures always state their scope explicitly, for example `scope="function"`.
-- Behaviour is a method on the type that owns the data it reads. Plain functions only for
-  math on primitives without an owning type (for example `engine/tally.py`).
+- Keep it simple, and use objects where state or shared logic lives. Behaviour that reads
+  or changes an object's state is a method on that object, for example
+  `game.submit_clue(...)`, `game.view_for(seat)` and `runner.play(game)`. Objects change in
+  place: no copy-and-reassign updates. Plain functions only for logic on plain values
+  without an owning object (`utils/text.py`, `utils/tally.py`, `utils/phases.py`).
+  Data types (pydantic models for configs, events, views and responses) and enums carry
+  data and validation only, no behaviour methods. Keep I/O at the edges: the step that
+  calls a model returns data, and a separate step applies it to the game.
 - Use specific, descriptive names, consistent across the package. Prefix types, enums and
   constants with their domain (`GameEvent`, `PlayerView`, `JudgeVerdict`) instead of a
   bare generic word (`Event`, `View`, `Verdict`). Related types share a pattern, for
   example the per-phase responses `ClueResponse`, `DiscussionResponse`, `VoteResponse`.
+- Name abstract types by their kind: base classes start with `Base` (`BaseGameEvent`),
+  protocols end with `Protocol` (`PlayerProtocol`), and ADK agents end with `Agent`
+  (`GameRunnerAgent`). Functions are named after what they return or do
+  (`pending_seats`, `start_turn`), not `get_` or `do_`.
 - Prefer public over private. Do not prefix functions, methods, attributes or constants
   with `_` unless hiding them clearly matters (state that must only change through
   methods, or a subclass hook that callers must not use). Document public attributes in

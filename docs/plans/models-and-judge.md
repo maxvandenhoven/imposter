@@ -64,7 +64,7 @@ turns an entry into an ADK model object and `GenerateContentConfig`.
 | Mode | Names | What players learn |
 |---|---|---|
 | `seat` | Player 1 … Player N | Nothing about opponents |
-| `names` (default) | Random neutral first names (Alice, Bob, Chen, Dara, ...) | Nothing about opponents |
+| `names` (default) | The classic names in alphabetical seat order (Alice, Bob, Charlie, Dave, ...) | Nothing about opponents |
 | `models` | Model display names, numbered when repeated (`Claude Sonnet #2`) | Which model each opponent is |
 
 The model behind each seat is always known to the UI; audience mode hides it until the
@@ -84,7 +84,7 @@ traces can be filtered to compare behaviour.
 ## Judge
 
 ```python
-class Judge(Protocol):
+class JudgeProtocol(Protocol):
     async def is_same_word(self, guess: str, word: str) -> JudgeVerdict: ...
     async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict: ...
 
@@ -97,8 +97,10 @@ class JudgeVerdict(BaseModel):
 
 - `judge/checks.py`: cheap code checks first (normalisation, exact match, substring /
   shared stem for clues). Only undecided cases reach the LLM.
-- `judge/llm_judge.py`: Gemini Flash-Lite with structured output. Temperature 0.
-- Verdicts are events (`guess_judged`, and on the clue event) and span attributes.
+- `judge/llm_judge.py`: `LlmJudge`, implementing `JudgeProtocol` with Gemini Flash-Lite and
+  structured output. Temperature 0.
+- Verdicts are on events (the `guess_made` event, and the rejection reason on the clue event)
+  and span attributes.
 - The Laya typed-decision model was considered: in Model Garden it is a self-deployed
   model (dedicated endpoint, billed per hour), which conflicts with scaling to zero. A
   `LayaJudge` on Cloud Run CPU is listed in `future-work.md`.

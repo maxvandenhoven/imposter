@@ -4,9 +4,30 @@ The rules of [imposter.app](https://imposter.app/) are loose because humans fill
 Agents need a precise state machine. This file is the source of truth for the engine
 (`src/imposter/engine/`). It is pure Python: no ADK, no LLM calls, no I/O.
 
-## Setup (`GameConfig`)
+## Engine shape
 
-Options on the setup screen are kept few and clear. Defaults in bold.
+A game is a `Game` object: the config, the secret word, the seats and an append-only
+event log. Its methods change it in place by appending events, for example
+`game.start_turn(seat)` and `game.submit_clue(seat=..., clue=...)`, and the automatic
+phases (resolution, outcome) run inside those methods. The event log is the only state
+that changes: the current phase is the phase of the last event, `game.pending_seats`
+lists who still has to act, and `game.view_for(seat)` builds what one seat may see, all
+derived from the events. There is no second copy of the state that could drift away
+from the log.
+
+| Module | Holds |
+|---|---|
+| `engine/game.py` | The `Game` class with its queries, checks (`clue_rejection`, `vote_rejection`), actions and `view_for`, plus `Seat`, `ActionRejection` and `InvalidActionError`. |
+| `engine/events.py` | The `GameEvent` types and `public_projection`. |
+| `engine/views.py` | The `PlayerView` data types. |
+| `config.py` | The shared enums and the `GameConfig`, `PlayerConfig` and `SecretWord` data types, at the package root because players, orchestration and the API use them too. |
+| `utils/` | Small functions on plain values, also at the package root: seat names per identity mode (`names.py`), the phase flow (`phases.py`), vote counting and the outcome (`tally.py`), and word handling (`text.py`). |
+
+## Setup
+
+Options on the setup screen are kept few and clear. Defaults in bold. The word options
+are resolved into a `SecretWord` (word, category, hint) before the game is created, so
+`GameConfig` holds only the other options.
 
 | Option | Values | Notes |
 |---|---|---|
@@ -22,7 +43,8 @@ Options on the setup screen are kept few and clear. Defaults in bold.
 | Advanced (collapsed) | statement cap **100** words, reasoning cap **60** words, token budget **200k**, temperature override | |
 
 Seat order is randomised at setup. Imposters are chosen uniformly at random. A seed may be
-given for reproducible role assignment (the LLM output itself is not reproducible).
+given for reproducible role assignment (the LLM output itself is not reproducible). Seats
+are numbered from 0 after shuffling, so the seat number is also the turn order.
 
 ## Phases
 
@@ -32,7 +54,8 @@ SETUP → CLUE(1..C) → DISCUSSION(1..D) → VOTE → RESOLUTION → GUESS → 
 ```
 
 1. **Setup**: word, category, hint, roles, seat order and names are fixed. Event:
-   `game_started` (public part) plus per-player `role_assigned` (private).
+   `game_started`, with the word, the hint, the models and the imposters as private
+   fields.
 2. **Clue round r** (sequential, in seat order): each player gives exactly one word. Every
    player sees all earlier clues of all rounds.
 3. **Discussion round r** (sequential, in seat order): each player gives one public
@@ -56,17 +79,26 @@ SETUP → CLUE(1..C) → DISCUSSION(1..D) → VOTE → RESOLUTION → GUESS → 
 ## Validation and limits
 
 - **Clue**: one word after trimming (letters, digits, internal hyphens or apostrophes),
-  not equal to the secret word after normalisation, not a repeat of an earlier clue, not a
-  trivial derivative of the word (the judge decides, see `models-and-judge.md` §Judge).
-  Code checks run first; the judge is only consulted when code checks pass. An invalid
-  clue gets one retry with the reason, then becomes `pass`.
+  not equal to and not containing the secret word after normalisation, not a repeat of an
+  earlier clue, not a trivial derivative of the word (the judge decides, see
+  `models-and-judge.md` §Judge). Code checks run first; the judge is only consulted when
+  code checks pass. An invalid clue gets one retry with the reason, then becomes `pass`.
+  Exception: when an imposter's clue is rejected because of the word (by the code checks
+  or the judge), it passes at once without a retry or a reason, since the reason would
+  reveal the word.
 - **Statement**: at most 100 words. Enforced in the prompt and by truncation in code
-  (with a `truncated` flag on the event).
+  (with a `truncated` flag on the event). Whole-word occurrences of the secret word
+  (including simple plurals) are replaced by `[redacted]`, so a civilian who blurts out
+  the word cannot leak it to the imposter.
 - **Private reasoning**: at most 60 words, truncated the same way.
 - **Vote**: must name another living player by its display name; an invalid vote gets one
   retry, then counts as an abstention. Self-votes are invalid.
 - **Guess**: free text, judged by exact match after normalisation (lowercase, strip,
   simple singular/plural) and otherwise by the judge (synonym or equivalent).
+
+The engine never calls the judge itself, to stay pure: the turn loop in
+`GameRunner` in `orchestration/runner.py` consults it and passes the verdict in, for example
+`game.submit_guess(..., judge_verdict=True)`.
 
 ## Multiple imposters
 
@@ -81,20 +113,25 @@ mode is future work; v1 tests cover the engine logic.
 Every state change is an `GameEvent` (pydantic, discriminated by `type`) with `game_id`,
 `seq` (monotonic), `phase`, `timestamp`, and a `visibility`: `public` (anyone), `private`
 (one seat; shown only in god mode or after the reveal) or `system`. Main types:
-`game_started`, `role_assigned`, `phase_started`, `turn_started`, `clue_given`,
-`statement_made`, `vote_cast` (private until resolution), `votes_revealed`,
-`guess_made`, `guess_judged`, `outcome`, `reflection`, `player_error`, `usage` (tokens and
-cost), `game_aborted`, `game_finished`. Private reasoning travels on the same event as the
-public action, in a private field that the public projection drops.
+`game_started`, `phase_started`, `turn_started`, `clue_given`, `statement_made`,
+`vote_cast` (private until resolution), `votes_revealed`, `guess_made` (with the verdict
+and whether it came from an exact match or the judge), `outcome`, `reflection`,
+`player_error`, `usage` (tokens and cost), `game_aborted`, `game_finished`. Private reasoning travels on the same event as the
+public action, in a private field that the public projection drops. The `outcome` event
+reveals the word publicly; before it, no public projection contains the word.
 
 The event log is the single source of truth for both the UI and the export file.
 
 ## Views (information hiding)
 
-`GameState.view_for(seat) -> PlayerView` builds what one player may see: rules, own seat
+`game.view_for(seat) -> PlayerView` builds what one player may see: rules, own seat
 and name, own role, the word (civilians only), the hint (imposter only, if on), the
 category (if public), number of imposters, other players (by identity mode), the public
-transcript so far, and that player's own scratchpad. Nothing else.
+transcript so far (clues and statements; the revealed votes once revealed), and that
+player's own scratchpad. Nothing else. Guesses are not in the transcript, so with several
+imposters a correct guess cannot help a later imposter. Once the outcome is decided, the
+view also carries a reveal (word, category, imposters, guesses, outcome) for the debrief.
+A seat's own vote stays out of its scratchpad until the votes are revealed.
 
 Invariants, enforced with Hypothesis property tests over random configs and scripted
 games:
