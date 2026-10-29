@@ -155,8 +155,12 @@ enabled once per project in the console:
 ## 8. Check the models
 
 ```
-uv run python scripts/check_models.py
+uv run --env-file .env python scripts/check_models.py
 ```
+
+`--env-file .env` loads `GOOGLE_CLOUD_PROJECT` from `.env` (step 3), which the script
+uses as its `--project`. Without it the script stops with `Missing option '--project'`,
+unless you pass `--project <project id>` yourself.
 
 This sends one tiny prompt to every candidate model (Gemini through `google-genai`, Claude
 and open models through LiteLLM `vertex_ai/...`), first at location `global`, then at the
@@ -170,6 +174,7 @@ Common errors:
 
 | Error | Meaning and fix |
 |---|---|
+| `Missing option '--project'` | `GOOGLE_CLOUD_PROJECT` is not set: run with `uv run --env-file .env` or pass `--project`. |
 | `DefaultCredentialsError` | No ADC: run step 2 again. |
 | `403 ... quota project` / `USER_PROJECT_DENIED` | Quota project not set: run step 3. |
 | `403 ... has not been used in project ... or it is disabled` | API not enabled: for `serviceusage` run `make tf-setup` (step 4). Otherwise wait a few minutes after step 5, or rerun `make tf-apply`. |

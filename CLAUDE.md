@@ -54,8 +54,8 @@ make install-hooks  # install pre-commit hooks (including commit-msg)
 
 GCP setup in the sandbox project is described in `docs/setup.md`; what is created in
 GCP, why and how it connects is in `docs/infrastructure.md`. Update that page in the same
-PR as every change to `infra/` or to manual GCP steps. `uv run python
-scripts/check_models.py` sends one test call per candidate model on Vertex AI.
+PR as every change to `infra/` or to manual GCP steps. `uv run --env-file .env
+python scripts/check_models.py` sends one test call per candidate model on Vertex AI.
 
 Run a single test with:
 

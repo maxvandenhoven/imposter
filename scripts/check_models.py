@@ -7,9 +7,9 @@ Prints one line per model with OK or the error.
 
 Exits with 0 when at least one Gemini and one Claude model answer, otherwise 1.
 
-Usage: `uv run python scripts/check_models.py [--project ID] [--model ID ...]`. The
-project defaults to `GOOGLE_CLOUD_PROJECT`, and credentials come from ADC (`gcloud auth
-application-default login`).
+Usage: `uv run --env-file .env python scripts/check_models.py [--model ID ...]`. The
+project defaults to `GOOGLE_CLOUD_PROJECT`, loaded from `.env` by `--env-file` (or pass
+`--project ID`), and credentials come from ADC (`gcloud auth application-default login`).
 """
 
 import logging
