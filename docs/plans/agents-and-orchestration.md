@@ -90,8 +90,9 @@ class PlayerProtocol(Protocol):
 - The view carries the phase, round and limits, so the only extra input is the reason a
   previous attempt in the same turn was rejected.
 - `PlayerResponse` wraps one of the structured responses below as `output`, plus `usage`
-  (`TurnUsage`: input, output and thinking tokens, model id) and an optional `error` when
-  the player fell back to a default output itself.
+  (`TurnUsage`: input, output and thinking tokens, model id) and an optional `error`. A
+  player that gives up returns `output=None` with an error, and the runner applies the
+  phase fallback, so the fallbacks live in one place.
 - `PHASE_RESPONSE_TYPES` maps each phase to its response type, for structured output.
 - Implementations: `AdkPlayer` (real), `ScriptedPlayer` (tests: returns canned responses),
   `RandomPlayer` (tests and offline demos). A future `A2aPlayer` calls a remote agent over
@@ -99,21 +100,32 @@ class PlayerProtocol(Protocol):
 
 ## AdkPlayer
 
-- One `LlmAgent` per seat, created from the model catalog entry (`models/factory.py`),
-  `include_contents='none'` so no conversation history is shared between players or turns.
+- One `LlmAgent` per seat and phase, created from the model catalog entry
+  (`models/factory.py`), because `output_schema` and `max_output_tokens` differ per phase.
+  All agents of a seat share one ADK model object. `include_contents='none'` so no
+  conversation history is shared between players or turns.
 - The instruction is an instruction provider (a callable on ADK's readonly context) that
   renders the prompt for this seat from the `PlayerView` it was given, written to session
-  state under `player:{seat}:view` just before the call. Session state is a hand-over to
-  the instruction provider, not a second store: the engine stays the only owner of game
-  state. Nothing else in state is rendered.
-- Output: native `output_schema` for models whose catalog entry has
-  `supports_structured_output: true` (Gemini; check Claude via LiteLLM). Otherwise the
-  prompt asks for JSON matching the schema, the player parses it with pydantic, and on a
-  validation error retries once with the error message. A second failure produces the
+  state under `player:{seat}:view` with the `state_delta` of the call. Session state is a
+  hand-over to the instruction provider, not a second store: the engine stays the only
+  owner of game state. Nothing else in state is rendered.
+- A short fixed `static_instruction` (`prompts/system.md`) is the system instruction,
+  which makes ADK send the rendered instruction as user content. Claude Sonnet refuses
+  the game instruction as a system prompt but plays fine with it as a user message.
+- Output: every agent has the response type as `output_schema` and an `output_key`, so
+  ADK validates the answer and stores the parsed result in session state. Models whose
+  catalog entry has `supports_structured_output: false` get the schema removed from the
+  request by a `before_model_callback` and are asked for JSON in the task instead. On a
+  validation error the player asks once more with the error message (ADK has no
+  re-prompt for schema errors). An `after_model_callback` records the tokens of every
+  call, including calls whose answer was invalid. A second failure produces the
   phase fallback (`pass` clue, empty statement, abstain vote, empty guess) and a
-  `player_error` event.
-- The agent is called with a fresh user message per turn (the task), through the same ADK
-  runner/session so ADK spans and events nest under the game.
+  `player_error` event. Claude Sonnet and `gpt-oss` use JSON in the prompt (see
+  `models-and-judge.md`).
+- The agent is called with a fresh user message per turn (the task). For now each
+  `AdkPlayer` runs its agents with its own ADK `Runner` and `InMemorySessionService`, one
+  session per game. WP 06 moves the calls into the runner and session of the
+  `GameRunnerAgent`, so ADK spans and events nest under the game.
 
 ### Structured responses
 
@@ -141,10 +153,18 @@ memory of their own between turns.
 - `role_civilian.md`, `role_imposter.md`: role, goal and strategy nudge. Civilian: "prove
   you know the word without making it guessable for the imposter". Imposter: "blend in,
   infer the word from the clues, do not reveal you lack it".
+- `transcript.md`: the game so far from the view: players, category and hint, clues,
+  statements, revealed votes, the reveal and the seat's own scratchpad.
 - `phase_clue.md`, `phase_discussion.md`, `phase_vote.md`, `phase_guess.md`,
-  `phase_debrief.md`: the task, limits (word caps) and the JSON schema when native
-  structured output is not used.
+  `phase_debrief.md`: the task and limits (word caps). They include `response.md`, which
+  adds the retry reason and the JSON schema when native structured output is not used.
+- `system.md`: the fixed system instruction (see AdkPlayer).
 - `persona.md` slot (empty in v1, see `future-work.md`).
+
+`players/prompt.py` (`PlayerPromptRenderer`) renders them: the instruction is `rules.md`,
+`persona.md`, the role and `transcript.md`, and the task is the phase template. Snapshots
+of every phase and role live in `tests/players/snapshots/` (`UPDATE_SNAPSHOTS=1` rewrites
+them).
 
 Rendered prompts are part of the leak tests: the imposter's rendered prompt never contains
 the word.
@@ -154,7 +174,9 @@ the word.
 - Clues, discussion and guesses are sequential; votes and debrief run with
   `asyncio.gather`.
 - Every LLM call: 60 s timeout, up to 2 retries with exponential backoff and jitter on 429
-  and 5xx. After the last failure: phase fallback and a `player_error` event; the turn
+  and 5xx. The model clients do this (`models/factory.py`): `Gemini(retry_options=...)`
+  with an HTTP timeout, and `LiteLlm(num_retries=..., timeout=...)`. Below ADK the status
+  code is still known, so only transient errors are retried. After the last failure: phase fallback and a `player_error` event; the turn
   span gets error status. The game continues.
 - `max_output_tokens` per phase (clue small, discussion and debrief larger) from config.
 - Per-game token budget (default 200k, input + output + thinking). When exceeded, the

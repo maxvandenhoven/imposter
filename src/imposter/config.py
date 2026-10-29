@@ -41,11 +41,18 @@ class PlayerRole(StrEnum):
 
 
 class GameOutcome(StrEnum):
-    """How a finished game ended."""
+    """How a finished game ended.
+
+    Saying the secret word in a clue or statement ends the game at once and loses it for
+    the speaker's side: the imposters win when a civilian says it (`CIVILIAN_SAID_WORD`)
+    and the civilians win when an imposter says it (`IMPOSTER_SAID_WORD`).
+    """
 
     IMPOSTER_WINS = "imposter_wins"
     IMPOSTER_STEALS = "imposter_steals"
     CIVILIANS_WIN = "civilians_win"
+    CIVILIAN_SAID_WORD = "civilian_said_word"
+    IMPOSTER_SAID_WORD = "imposter_said_word"
 
 
 class PlayerConfig(BaseModel):
@@ -91,7 +98,7 @@ class GameConfig(BaseModel):
     players: list[PlayerConfig] = Field(min_length=MIN_PLAYERS, max_length=MAX_PLAYERS)
     imposter_count: int = Field(default=1, ge=1)
     identity_mode: IdentityMode = IdentityMode.NAMES
-    public_category: bool = True
+    public_category: bool = False
     imposter_hint: bool = False
     clue_rounds: int = Field(default=2, ge=1, le=3)
     discussion_rounds: int = Field(default=2, ge=0, le=3)

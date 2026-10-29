@@ -13,9 +13,9 @@ topic files and code the task points to.
 
 One Python package `imposter` with a single `pyproject.toml` and `uv.lock` at the repo
 root. Code is layered, and each layer imports only from the layers below it:
-`config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`, with `models`,
-`words`, `judge` and `ports` used by `orchestration` and `api`. `tests/test_layers.py`
-checks the layers that exist.
+`config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`, with `models`
+(used by `players` and above) and `words`, `judge` and `ports` used by `orchestration` and
+`api`. `tests/test_layers.py` checks the layers that exist.
 
 - `src/imposter/config.py` — the game options and the shared enums (`GameConfig`,
   `PlayerConfig`, `SecretWord`, `GamePhase`, ...), used across the package
@@ -23,7 +23,8 @@ checks the layers that exist.
   handling, vote tally, seat names, phase flow)
 - `src/imposter/engine/` — pure game rules: the `Game` class (event log, queries,
   actions, player views), events and views (no ADK or LLM dependency)
-- `src/imposter/players/` — `PlayerProtocol`, ADK player, fake players, prompts
+- `src/imposter/players/` — `PlayerProtocol`, ADK player, fake players, prompt renderer
+  and Jinja2 prompt templates (`prompts/*.md`)
 - `src/imposter/models/` — model catalog (YAML) and ADK model factory
 - `src/imposter/words/` — word categories, picker and generator
 - `src/imposter/judge/` — `JudgeProtocol` port, LLM judge and cheap code checks

@@ -54,7 +54,7 @@ test:
 
 .PHONY: test-slow
 test-slow:
-	@uv run pytest -m slow
+	@uv run $(if $(wildcard .env),--env-file .env) pytest -m slow
 
 
 .PHONY: tf-require-project

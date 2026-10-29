@@ -13,6 +13,7 @@ the order in which work happens. Topic files go deeper on each area:
 | [`web-ui.md`](web-ui.md) | FastAPI + SSE API, static frontend (Alpine.js + Tailwind), setup screen, game board, audience and god mode, playback, export and import |
 | [`infrastructure.md`](infrastructure.md) | GCP basics, organising resources in the shared sandbox project, Terraform layout, Cloud Run, IAP, budget, Dockerfile, `make deploy` |
 | [`tooling.md`](tooling.md) | Code style, ruff/ty/pytest, custom checkers, Makefile, pre-commit, Claude Code hooks (mirrors the hive repo) |
+| [`playtests.md`](playtests.md) | Real games worth remembering: transcripts, findings and the rule changes they led to |
 | [`future-work.md`](future-work.md) | Designed-for but not planned: personas, A2A players, Agent Engine, persistence, Laya judge, CI/CD, ... |
 
 Work is split into **work packages** (WPs), each tracked as a GitHub issue that contains a
@@ -78,7 +79,7 @@ public multi-user access.
 ```
 
 Code is layered, and each layer imports only from the layers below it: `config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`,
-with `models`, `words`, `judge` and `ports` used by `orchestration` and `api`. `config.py`
+with `models` (used by `players` and above) and `words`, `judge` and `ports` used by `orchestration` and `api`. `config.py`
 and `utils/` hold the shared types and small helpers. `config`, `utils` and the engine use
 only the standard library and pydantic: no ADK or LLM dependency. A test checks the
 layers.
@@ -89,8 +90,8 @@ layers.
 |---|---|---|
 | D1 | Target audience is the owner plus colleagues in demos: a watchable live UI and a deployed URL, but no public multi-user app. | Learning value of ADK, deployment and tracing, without auth, rate limiting and abuse protection for strangers. |
 | D2 | Game flow: setup → 2 clue rounds → 2 discussion rounds → secret simultaneous vote → resolution → imposter guess (always) → outcome → debrief. Details in `game-rules.md`. | Two clue rounds create tension, two discussion rounds allow rebuttals of accusations. |
-| D3 | Clues are exactly one word, not the word, no repeats, no trivial derivatives. Discussion statements and private reasoning are capped (100 and 60 words), enforced in the prompt and by hard truncation in code. | Prevents endless discussion and keeps costs predictable. |
-| D4 | Most votes is caught; a tie catches nobody. Imposter not caught wins; caught imposter who guesses the word steals the win; otherwise civilians win. | Deterministic, simple, matches the spirit of the app. |
+| D3 | Clues are exactly one word, no repeats of any earlier clue (own clues included), no trivial derivatives. Saying the secret word in a clue or statement ends the game at once and loses it for the speaker's side (playtest 1). Discussion statements and private reasoning are capped (100 and 60 words), enforced in the prompt and by hard truncation in code. | Prevents endless discussion and keeps costs predictable. |
+| D4 | Most votes is caught; a tie catches nobody. Imposter not caught wins; caught imposter who guesses the word steals the win; otherwise civilians win. Before that, whoever says the secret word loses for their side. | Deterministic, simple, matches the spirit of the app. |
 | D5 | All models via Vertex AI in the project: Gemini natively, Claude via Model Garden, open models via Vertex MaaS, non-Gemini models through ADK `LiteLlm` (`vertex_ai/...`). No OpenAI. | Keep everything GCP-native: one bill, IAM, quotas and logs in one project. |
 | D6 | Orchestration is deterministic code: a custom ADK `BaseAgent` (`GameRunnerAgent`) runs a `GameRunner`, which asks players for their action (I/O) and applies it to a pure `Game` object that owns the rules and the event log. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
 | D7 | Players implement a `PlayerProtocol` (`take_turn(view, retry_reason) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. | No shared conversation history that could leak the word. The protocol leaves room for A2A remote players (future work). |
@@ -110,7 +111,7 @@ layers.
 | D21 | Model catalog in YAML: id, display name, provider, ADK model string, location, logo, structured output support, thinking, temperature, prices. Starting lineup: latest Gemini Pro and Flash, Claude Sonnet and Haiku, 2–3 open models (IDs verified in Model Garden during WP 04). | One place to add or drop models; cost estimates from prices. |
 | D22 | `identity_mode` per game: `seat` (Player 1..N), `names` (Alice, Bob, Charlie, ... in seat order) or `models` (model display names, numbered when repeated). Recorded on the root span. The UI shows models separately depending on audience or god mode. | Lets you compare play when models know who is who. |
 | D23 | No personas in v1, but `PlayerConfig` has an optional `persona` field from day one; the design is in `future-work.md`. | Adding personas later changes no API. |
-| D24 | Secret word: typed, random from a category, or generated by Gemini Flash ("surprise me") avoiding recent words. Category is public by default; imposter hint off by default. Both are toggles. | Matches the app; a public category makes the game playable for the imposter. |
+| D24 | Secret word: typed, random from a category, or generated by Gemini Flash ("surprise me") avoiding recent words. Category is hidden by default (changed after playtest 1) and categories are abstract rather than concrete; imposter hint off by default. Both are toggles. | A concrete public category let the imposter infer the word from a single clue in playtest 1. |
 | D25 | `JudgeProtocol` port for guess equivalence and clue validity, implemented with Gemini Flash-Lite and structured output (`verdict`, `confidence`, `rationale`). Cheap code checks run first. | The Laya decision model in Model Garden needs a dedicated deployed endpoint (billed per hour), which conflicts with scaling to zero. |
 | D26 | Reasoning is captured at every turn (`private_reasoning`) and in a debrief after the reveal. Native model thinking is a catalog setting, off by default; thinking tokens are counted, not shown. | Compare in-the-moment reasoning with after-the-fact rationalisation. |
 | D27 | The browser buffers all events. A playback cursor supports live, step (prev/next, next phase) and autoplay; a badge shows how far behind live you are. Games can be exported and imported as JSON. | Presentable demos without backend persistence; recordings as a fallback when live APIs fail. |
@@ -139,7 +140,7 @@ imposter/
 │  ├─ config.py                # GameConfig, PlayerConfig, SecretWord and the shared enums
 │  ├─ utils/                   # names.py, phases.py, tally.py, text.py (functions on plain values)
 │  ├─ engine/                  # game.py (Game), events.py, views.py
-│  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompts/
+│  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompt.py, prompts/
 │  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects)
 │  ├─ words/                   # categories/*.yaml, picker.py, generator.py
 │  ├─ judge/                   # base.py (JudgeProtocol), llm_judge.py, checks.py (cheap code checks)

@@ -1,0 +1,79 @@
+# The models that can play a seat, verified with `scripts/check_models.py`. Prices are USD
+# per million tokens, used only for cost estimates. Check them against the Vertex AI
+# pricing page when adding or updating a model.
+#
+# Gemini Pro and Flash cannot switch thinking off (`off` maps to the minimal thinking
+# level, which only Flash-Lite accepts), so they think at `low`. LiteLLM implements
+# structured output for Claude with a forced tool choice, which Claude Sonnet rejects, so
+# it gets the JSON schema in the prompt instead.
+- id: gemini-pro
+  display_name: Gemini Pro
+  provider: google
+  adk_model: gemini-3.1-pro-preview
+  via: native
+  location: global
+  logo: logos/gemini.svg
+  supports_structured_output: true
+  thinking: low
+  temperature: 1.0
+  price_per_mtok: {input: 2.0, output: 12.0}
+
+- id: gemini-flash
+  display_name: Gemini Flash
+  provider: google
+  adk_model: gemini-3.8-flash
+  via: native
+  location: global
+  logo: logos/gemini.svg
+  supports_structured_output: true
+  thinking: low
+  temperature: 1.0
+  price_per_mtok: {input: 0.75, output: 3.75}
+
+- id: gemini-flash-lite
+  display_name: Gemini Flash-Lite
+  provider: google
+  adk_model: gemini-3.5-flash-lite
+  via: native
+  location: global
+  logo: logos/gemini.svg
+  supports_structured_output: true
+  thinking: "off"
+  temperature: 1.0
+  price_per_mtok: {input: 0.3, output: 2.5}
+
+- id: claude-sonnet
+  display_name: Claude Sonnet
+  provider: anthropic
+  adk_model: vertex_ai/claude-sonnet-5-5
+  via: litellm
+  location: global
+  logo: logos/claude.svg
+  supports_structured_output: false
+  thinking: "off"
+  temperature: 1.0
+  price_per_mtok: {input: 2.0, output: 10.0}
+
+- id: claude-haiku
+  display_name: Claude Haiku
+  provider: anthropic
+  adk_model: vertex_ai/claude-haiku-5-5
+  via: litellm
+  location: global
+  logo: logos/claude.svg
+  supports_structured_output: true
+  thinking: "off"
+  temperature: 1.0
+  price_per_mtok: {input: 0.1, output: 0.5}
+
+- id: gpt-oss
+  display_name: GPT-OSS 120B
+  provider: openai
+  adk_model: vertex_ai/openai/gpt-oss-120b-maas
+  via: litellm
+  location: global
+  logo: logos/gpt-oss.svg
+  supports_structured_output: false
+  thinking: "off"
+  temperature: 1.0
+  price_per_mtok: {input: 0.09, output: 0.36}

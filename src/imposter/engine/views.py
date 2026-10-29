@@ -48,7 +48,7 @@ class PublicStatement(BaseModel):
     Attributes:
         round: The discussion round.
         seat: The seat that made the statement.
-        statement: The statement, truncated and with the secret word redacted.
+        statement: The statement, truncated to the cap.
         truncated: Whether the statement was cut to the cap.
     """
 
@@ -99,6 +99,7 @@ class GameReveal(BaseModel):
         imposters: The imposter seats.
         guesses: The guesses of the imposters.
         outcome: How the game ended.
+        word_said_by: The seat that said the secret word and ended the game, if any.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -108,6 +109,7 @@ class GameReveal(BaseModel):
     imposters: list[int]
     guesses: list[PublicGuess]
     outcome: GameOutcome
+    word_said_by: int | None = None
 
 
 class ScratchpadEntry(BaseModel):

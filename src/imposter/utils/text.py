@@ -1,8 +1,5 @@
 import re
 
-REDACTION = "[redacted]"
-"""The text that replaces the secret word in public statements."""
-
 SINGLE_WORD_PATTERN = re.compile(r"[^\W_]+(?:['-][^\W_]+)*")
 """One word: letters or digits with internal hyphens or apostrophes."""
 
@@ -77,18 +74,18 @@ def truncate_words(text: str, cap: int) -> tuple[str, bool]:
     return " ".join(words[:cap]), True
 
 
-def redact_word(text: str, word: str) -> str:
-    """Replace every whole-word occurrence of the secret word in a text.
+def mentions_word(text: str, word: str) -> bool:
+    """Check whether a text says a word as a whole word.
 
-    Matching ignores case and also catches simple plurals, so a civilian who blurts out
-    the word in a public statement cannot leak it to the imposter.
+    Matching ignores case and also catches simple plurals, so "Giraffes" mentions
+    "giraffe" but "category" does not mention "cat".
 
     Args:
-        text: The public text.
-        word: The secret word.
+        text: The text, for example a public statement.
+        word: The word to look for.
 
     Returns:
-        The text with each occurrence of the word replaced by `REDACTION`.
+        `True` when the text contains the word or a simple plural of it.
     """
     stem = normalize_word(word)
     forms = {clean_word(word).lower(), stem, stem + "s", stem + "es"}
@@ -101,4 +98,4 @@ def redact_word(text: str, word: str) -> str:
     )
     pattern = re.compile(rf"\b(?:{alternatives})\b", re.IGNORECASE)
 
-    return pattern.sub(REDACTION, text)
+    return pattern.search(text) is not None

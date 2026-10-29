@@ -5,6 +5,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from imposter.config import GamePhase
 from imposter.engine.views import PlayerView
 
+REASONING_DESCRIPTION = "Your private reasoning, which nobody else sees."
+"""The schema description of the `private_reasoning` field of every response."""
+
 
 class ClueResponse(BaseModel):
     """The structured output of a clue turn.
@@ -14,8 +17,8 @@ class ClueResponse(BaseModel):
         private_reasoning: Why this clue, at most the reasoning word cap.
     """
 
-    clue: str
-    private_reasoning: str = ""
+    clue: str = Field(description="Your clue, exactly one word.")
+    private_reasoning: str = Field(default="", description=REASONING_DESCRIPTION)
 
 
 class DiscussionResponse(BaseModel):
@@ -26,8 +29,8 @@ class DiscussionResponse(BaseModel):
         private_reasoning: Why this statement, at most the reasoning word cap.
     """
 
-    statement: str
-    private_reasoning: str = ""
+    statement: str = Field(description="Your public statement.")
+    private_reasoning: str = Field(default="", description=REASONING_DESCRIPTION)
 
 
 class VoteResponse(BaseModel):
@@ -38,8 +41,8 @@ class VoteResponse(BaseModel):
         private_reasoning: Why this vote, at most the reasoning word cap.
     """
 
-    vote_for: str
-    private_reasoning: str = ""
+    vote_for: str = Field(description="The exact name of the player you vote for.")
+    private_reasoning: str = Field(default="", description=REASONING_DESCRIPTION)
 
 
 class GuessResponse(BaseModel):
@@ -50,8 +53,8 @@ class GuessResponse(BaseModel):
         private_reasoning: Why this guess, at most the reasoning word cap.
     """
 
-    guess: str
-    private_reasoning: str = ""
+    guess: str = Field(description="Your guess at the secret word, one word.")
+    private_reasoning: str = Field(default="", description=REASONING_DESCRIPTION)
 
 
 class DebriefResponse(BaseModel):
@@ -61,7 +64,7 @@ class DebriefResponse(BaseModel):
         reflection: A reflection on the player's clues, statements and vote.
     """
 
-    reflection: str
+    reflection: str = Field(description="Your reflection on how you played.")
 
 
 type PhaseResponse = (
@@ -69,7 +72,7 @@ type PhaseResponse = (
 )
 """The structured output of any phase."""
 
-PHASE_RESPONSE_TYPES: dict[GamePhase, type[BaseModel]] = {
+PHASE_RESPONSE_TYPES: dict[GamePhase, type[PhaseResponse]] = {
     GamePhase.CLUE: ClueResponse,
     GamePhase.DISCUSSION: DiscussionResponse,
     GamePhase.VOTE: VoteResponse,
@@ -101,14 +104,15 @@ class PlayerResponse(BaseModel):
     """The result of one turn: the structured output plus how it was produced.
 
     Attributes:
-        output: The structured output for the phase.
+        output: The structured output for the phase, `None` when the player gave up,
+            so the runner applies the fallback of the phase.
         usage: The tokens the turn used, if known.
-        error: What went wrong, when the player fell back to a default output.
+        error: What went wrong, when the player gave up or fell back to a default.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    output: PhaseResponse
+    output: PhaseResponse | None
     usage: TurnUsage | None = None
     error: str | None = None
 

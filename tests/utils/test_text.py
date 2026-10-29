@@ -1,11 +1,10 @@
 import pytest
 
 from imposter.utils.text import (
-    REDACTION,
     clean_word,
     is_single_word,
+    mentions_word,
     normalize_word,
-    redact_word,
     truncate_words,
 )
 
@@ -51,9 +50,18 @@ def test_truncate_words_cuts_long_text() -> None:
     assert truncate_words("one two\nthree four", cap=2) == ("one two", True)
 
 
-def test_redact_word_replaces_whole_words_and_plurals() -> None:
-    text = "Cherry, cherries and CHERRYs, but not cherrystone."
-
-    assert redact_word(text=text, word="cherry") == (
-        f"{REDACTION}, {REDACTION} and {REDACTION}, but not cherrystone."
-    )
+@pytest.mark.parametrize(
+    ("text", "word", "expected"),
+    [
+        ("It has a CHERRY on top.", "cherry", True),
+        ("Two cherries, please.", "cherry", True),
+        ("Cherrys everywhere", "cherry", True),
+        ("A cherrystone clam.", "cherry", False),
+        ("Pick a category.", "cat", False),
+        ("No fruit here.", "cherry", False),
+    ],
+)
+def test_mentions_word_matches_whole_words_and_plurals(
+    text: str, word: str, expected: bool
+) -> None:
+    assert mentions_word(text=text, word=word) is expected
