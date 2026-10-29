@@ -53,7 +53,7 @@ make adk-web        # adk web src/imposter
 make play ARGS=...  # imposter play
 make build          # Cloud Build image
 make deploy         # build + terraform apply with the image digest
-make tf-state-bucket # create the Terraform state bucket once (gcloud)
+make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
 make tf-init        # terraform init for infra with the state bucket
 make tf-plan        # terraform plan for infra
 make tf-apply       # terraform apply for infra

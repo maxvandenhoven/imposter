@@ -4,6 +4,8 @@
 TF_DIR := infra
 TF_REGION ?= europe-west4
 TF_STATE_BUCKET ?= $(GOOGLE_CLOUD_PROJECT)-imposter-tfstate
+# Needed before Terraform can run: it bills its own API calls to the project.
+TF_BASE_APIS := serviceusage.googleapis.com cloudresourcemanager.googleapis.com storage.googleapis.com
 export TF_VAR_project_id := $(GOOGLE_CLOUD_PROJECT)
 
 
@@ -60,8 +62,9 @@ tf-require-project:
 	@test -n "$(GOOGLE_CLOUD_PROJECT)" || { echo "Set GOOGLE_CLOUD_PROJECT in .env first"; exit 1; }
 
 
-.PHONY: tf-state-bucket
-tf-state-bucket: tf-require-project
+.PHONY: tf-setup
+tf-setup: tf-require-project
+	@gcloud services enable $(TF_BASE_APIS) --project=$(GOOGLE_CLOUD_PROJECT)
 	@if gcloud storage buckets describe gs://$(TF_STATE_BUCKET) --project=$(GOOGLE_CLOUD_PROJECT) >/dev/null 2>&1; then \
 		echo "State bucket gs://$(TF_STATE_BUCKET) already exists"; \
 	else \

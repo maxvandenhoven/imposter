@@ -43,7 +43,7 @@ summary. What is actually created, and how it connects, is kept current in
 3. Point local tools at the sandbox project: `gcloud config set project <project id>`,
    `gcloud auth application-default set-quota-project <project id>`, and
    `GOOGLE_CLOUD_PROJECT` in `.env`.
-4. Create the Terraform state bucket once: `make tf-state-bucket`.
+4. Enable the base APIs and create the Terraform state bucket once: `make tf-setup`.
 5. In the Model Garden console, open each Claude model and chosen open model and click
    Enable / accept the terms. Request quota increases if the defaults are too low (Vertex
    AI quotas page).
@@ -68,9 +68,14 @@ Providers `google` and `google-beta` (IAP on Cloud Run may need beta), versions 
 (`~> 8.9`), with `.terraform.lock.hcl` committed (Linux and macOS hashes).
 
 There is no Terraform bootstrap root: the project exists already, and the only thing
-needed before Terraform can run is its state bucket. `make tf-state-bucket` creates
-`<project id>-imposter-tfstate` in `europe-west4` with `gcloud` (versioned, uniform
-access, public access prevention, label `app=imposter`); it skips an existing bucket. A
+needed before Terraform can run is a few base APIs and its state bucket. The providers
+bill API calls to the project (`user_project_override`, see below), so the Service Usage
+API must already be enabled *in the project* before Terraform can enable anything:
+otherwise every `google_project_service` fails with `SERVICE_DISABLED` for
+`serviceusage.googleapis.com`. `make tf-setup` therefore enables `serviceusage`,
+`cloudresourcemanager` and `storage` with `gcloud` (which bills to its own client
+project), then creates `<project id>-imposter-tfstate` in `europe-west4` with `gcloud` (versioned, uniform
+access, public access prevention, label `app=imposter`). It is idempotent. A
 backend block cannot use variables, so the backend leaves the bucket out and `make
 tf-init` passes it with `-backend-config="bucket=..."` (override with `TF_STATE_BUCKET`).
 
@@ -127,6 +132,6 @@ the better filter when implementing.
 - `make deploy`: build, resolve the image digest, then
   `terraform -chdir=infra apply -var image=<repo>@sha256:...`.
 - Rollback: re-apply with an earlier digest.
-- `make tf-state-bucket` once, then `make tf-plan` / `make tf-apply` for infra-only
+- `make tf-setup` once, then `make tf-plan` / `make tf-apply` for infra-only
   changes (both run `make tf-init` first).
 - `.env.example` documents the local variables; `make dev` uses ADC and the same project.

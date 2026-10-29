@@ -101,7 +101,7 @@ imports nothing else from the package and has no ADK or LLM dependency.
 | D14 | A game runs while its SSE connection is open (request-based billing gives CPU only during requests). The event bus buffers all events of a game, so a reconnect replays them. One game at a time per instance. | Correct CPU allocation without instance-based billing. |
 | D15 | Tracing with OpenTelemetry to Cloud Trace: `game` → `phase` → `turn` → ADK and GenAI spans. Prompt and completion content captured as Cloud Logging events, linked by trace ID. Token and cost attributes on every turn. | Cloud Trace keeps traces 30 days, a free game archive; filterable by model, role, phase, identity mode. |
 | D16 | Local development exports to Cloud Trace with ADC; a flag switches to the console exporter. | Same traces locally and deployed. |
-| D17 | The app lives in the owner's existing sandbox project, shared with other work. No Terraform bootstrap: `make tf-state-bucket` creates the state bucket with `gcloud`, and `infra/` (one flat Terraform root, GCS backend) holds every app resource, labelled `app=imposter`. Only gcloud install, login, the state bucket and Model Garden click-through acceptance are manual. | The project already exists and is not ours to manage; labels and Terraform state keep the app's resources identifiable in a shared project (GCP has no resource groups). |
+| D17 | The app lives in the owner's existing sandbox project, shared with other work. No Terraform bootstrap: `make tf-setup` enables the base APIs Terraform needs and creates the state bucket with `gcloud`, and `infra/` (one flat Terraform root, GCS backend) holds every app resource, labelled `app=imposter`. Only gcloud install, login, `make tf-setup` and Model Garden click-through acceptance are manual. | The project already exists and is not ours to manage; labels and Terraform state keep the app's resources identifiable in a shared project (GCP has no resource groups). |
 | D18 | Deploy via `make deploy`: Cloud Build builds and pushes the image to Artifact Registry, Terraform deploys the image by digest. No CI/CD. | Reproducible deploys and one-line rollbacks without a pipeline. |
 | D19 | Tooling mirrors the hive repo: Python 3.13, uv, ruff (Google docstrings, line length 90), ty, pytest, the comment and docstring checkers, pre-commit with commitizen, Claude Code hooks. | Proven setup, consistent style. |
 | D20 | Package layout: `engine`, `players`, `models`, `words`, `judge`, `orchestration`, `ports`, `telemetry`, `api`, `web`, plus `agent.py` (for `adk web`) and `cli.py`. | Pure engine testable without LLMs; clear dependency direction. |
@@ -149,7 +149,7 @@ imposter/
 ├─ tests/                      # mirrors src/imposter/; tests/tooling/ for the checkers
 ├─ scripts/tooling/            # check_comments.py, check_docstrings.py (from hive)
 └─ infra/                      # one Terraform root: APIs, service account, Artifact Registry,
-                               # Cloud Run, IAP, budget (state bucket via `make tf-state-bucket`)
+                               # Cloud Run, IAP, budget (`make tf-setup` first)
 ```
 
 ## 6. Milestones
@@ -223,6 +223,6 @@ Some steps need the project owner (human, in a browser or terminal):
 
 | Needed by | Task |
 |---|---|
-| WP 02 | Install the `gcloud` CLI and Terraform, run `gcloud auth login` and `gcloud auth application-default login`, set the sandbox project ID in `.env` and as quota project, run `make tf-state-bucket`. |
+| WP 02 | Install the `gcloud` CLI and Terraform, run `gcloud auth login` and `gcloud auth application-default login`, set the sandbox project ID in `.env` and as quota project, run `make tf-setup`. |
 | WP 02 | In the Model Garden console, enable (accept terms for) the Claude models and the chosen open models; request quota increases if the defaults are too low. |
 | WP 13 | Decide which principal IAP allows (own org account or a Google group) and set it in `terraform.tfvars`. |

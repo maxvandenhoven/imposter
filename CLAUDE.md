@@ -31,7 +31,8 @@ root. The dependency direction is `engine ← players ← orchestration ← api`
 - `scripts/tooling/` — development tooling such as the comment and docstring checkers
   (tests in `tests/tooling/`)
 - `infra/` — Terraform (one flat root) for the app's resources in the existing sandbox
-  project (no bootstrap; `make tf-state-bucket` creates the state bucket)
+  project (no bootstrap; `make tf-setup` enables the base APIs and creates the state
+  bucket)
 
 ## Setup and commands
 
@@ -46,7 +47,7 @@ make type           # ty check
 make check          # format + lint + type + Terraform fmt/validate (no tests)
 make test           # pytest with coverage, excluding `slow` tests
 make test-slow      # pytest -m slow (real Vertex AI calls)
-make tf-state-bucket # create the Terraform state bucket once (gcloud)
+make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
 make tf-plan        # terraform plan for infra (tf-apply to apply)
 make install-hooks  # install pre-commit hooks (including commit-msg)
 ```

@@ -75,6 +75,7 @@ state bucket on every run.
 flowchart LR
   laptop(["Laptop"]) -->|"ADC, quota project = sandbox"| vertex["Vertex AI global"]
   laptop -->|"ADC"| trace["Cloud Trace / Logging (WP 07)"]
+  laptop -->|"make tf-setup (gcloud): base APIs, bucket"| project
   laptop -->|"make tf-plan / tf-apply"| tf["Terraform"] -->|"enables APIs, creates resources"| project["Sandbox project"]
   tf <--> bucket[("State bucket")]
 ```
@@ -82,13 +83,16 @@ flowchart LR
 Locally everything runs as the owner: the app, `scripts/check_models.py` and Terraform
 use ADC from `gcloud auth application-default login`. The ADC quota project and
 `GOOGLE_CLOUD_PROJECT` in `.env` point at the sandbox project, so calls are billed there.
-Terraform additionally bills its own API calls to the project (`user_project_override`).
+Terraform additionally bills its own API calls to the project (`user_project_override`). That
+is why `make tf-setup` enables the Service Usage API with `gcloud` before the first
+Terraform run.
 
 ## Created outside Terraform
 
 | Resource | Created by | Why |
 |---|---|---|
-| GCS bucket `<project id>-imposter-tfstate` (`europe-west4`, label `app=imposter`) | `make tf-state-bucket` (`gcloud`) | Holds the Terraform state under the prefix `imposter`, so it survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create it itself. Versioning keeps every earlier state for recovery; uniform access and public access prevention keep it private. |
+| APIs `serviceusage`, `cloudresourcemanager`, `storage` | `make tf-setup` (`gcloud services enable`) | Terraform bills its API calls to the project (`user_project_override`), which needs the Service Usage API enabled in the project first; Terraform cannot enable it for itself. The first two are also listed in `infra/apis.tf`. |
+| GCS bucket `<project id>-imposter-tfstate` (`europe-west4`, label `app=imposter`) | `make tf-setup` (`gcloud`) | Holds the Terraform state under the prefix `imposter`, so it survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create it itself. Versioning keeps every earlier state for recovery; uniform access and public access prevention keep it private. |
 | Model enablement for Claude and open models | Owner, in the Model Garden console | Partner and open models need their terms accepted once per project; there is no API for it. |
 | Quota increases | Owner, on the Quotas page | Default per-model quotas can be too low for 8 players. |
 
@@ -103,8 +107,8 @@ enabled already. Terraform never disables them, not even on destroy
 | API | Why | Used from |
 |---|---|---|
 | `aiplatform.googleapis.com` | Vertex AI: Gemini, Claude and open models for players, judge and word generator | WP 02 (model check), WP 04 |
-| `serviceusage.googleapis.com` | Lets Terraform enable APIs; also needed to bill API calls to the project (`user_project_override`) | WP 02 |
-| `cloudresourcemanager.googleapis.com` | Lets Terraform read the project and manage its IAM bindings | WP 02, WP 12 |
+| `serviceusage.googleapis.com` | Lets Terraform enable APIs; also needed to bill API calls to the project (`user_project_override`). Enabled first by `make tf-setup` | WP 02 |
+| `cloudresourcemanager.googleapis.com` | Lets Terraform read the project and manage its IAM bindings. Enabled first by `make tf-setup` | WP 02, WP 12 |
 | `iam.googleapis.com` | Runtime service account `imposter-run` | WP 12 |
 | `artifactregistry.googleapis.com` | Docker repository for the app image | WP 12 |
 | `cloudbuild.googleapis.com` | Builds the image in GCP (`make build`), no local Docker | WP 12 |

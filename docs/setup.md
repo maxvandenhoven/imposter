@@ -82,19 +82,26 @@ for WP 12, the admin roles for Cloud Run, Artifact Registry, IAM service account
 `gcloud projects get-iam-policy <project id> --flatten=bindings
 --filter="bindings.members:<your email>" --format="value(bindings.role)"` lists yours.
 
-## 4. Create the Terraform state bucket
+## 4. Prepare the project for Terraform
 
 ```
-make tf-state-bucket
+make tf-setup
 ```
 
-Terraform records what it manages in a state file. It lives in a GCS bucket so it is not
-lost with your laptop, and the bucket must exist before Terraform can use it, so it is the
-one resource created with `gcloud` instead of Terraform. The target creates
-`<project id>-imposter-tfstate` in `europe-west4` with versioning (every earlier state
-is kept), uniform access, public access prevention and the label `app=imposter`. It does
-nothing if the bucket exists. If `storage.googleapis.com` is disabled in the project,
-enable it first with `gcloud services enable storage.googleapis.com`.
+Two things must exist before Terraform can run, so this target creates them with
+`gcloud`. It is safe to run again.
+
+- **Base APIs** `serviceusage`, `cloudresourcemanager` and `storage`. Terraform bills its
+  own API calls to the project (so they count against the project's quota, not yours),
+  which only works when the Service Usage API is already enabled in the project. Without
+  it, `make tf-apply` fails with `Service Usage API has not been used in project ... or
+  it is disabled` on every API. `gcloud` can enable it because it bills that one call to
+  its own client project.
+- **State bucket** `<project id>-imposter-tfstate`. Terraform records what it manages in
+  a state file. It lives in a GCS bucket so it is not lost with your laptop, and the
+  bucket must exist before Terraform can use it. It is created in `europe-west4` with
+  versioning (every earlier state is kept), uniform access, public access prevention and
+  the label `app=imposter`, and left alone if it exists.
 
 ## 5. Enable the APIs with Terraform (`infra/`)
 
@@ -165,7 +172,7 @@ Common errors:
 |---|---|
 | `DefaultCredentialsError` | No ADC: run step 2 again. |
 | `403 ... quota project` / `USER_PROJECT_DENIED` | Quota project not set: run step 3. |
-| `403 ... has not been used in project ... or it is disabled` | API not enabled: wait a few minutes after step 5, or rerun `make tf-apply`. |
+| `403 ... has not been used in project ... or it is disabled` | API not enabled: for `serviceusage` run `make tf-setup` (step 4); otherwise wait a few minutes after step 5, or rerun `make tf-apply`. |
 | `404 ... not found` / `Publisher model ... not found` | Wrong ID, model not served in that location, or not enabled in Model Garden (step 7). |
 | `403 ... terms of service` / `not allowlisted` | Model not enabled in Model Garden (step 7) or blocked by org policy. |
 | `429 Resource exhausted` | Quota too low: see step 9. |
