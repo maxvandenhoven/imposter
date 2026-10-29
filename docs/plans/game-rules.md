@@ -38,6 +38,7 @@ are resolved into a `SecretWord` (word, category, hint) before the game is creat
 | Identity mode | `seat`, **`names`**, `models` | See `models-and-judge.md` §Identity |
 | Public category | on, **off** | Everyone, including the imposter, knows the category. Off by default since playtest 1 (`playtests.md`): with a concrete category, one clue was enough for the imposter to infer the word. |
 | Imposter hint | **off**, on | A related word generated at setup, shown to the imposter only |
+| Model clue check | **on**, off | A model judges every clue that passes the code checks, to catch synonyms and translations. Off saves one Flash-Lite call per clue, and code checks still run. |
 | Clue rounds | **2** (1–3) | |
 | Discussion rounds | **2** (0–3) | |
 | Advanced (collapsed) | statement cap **100** words, reasoning cap **60** words, token budget **200k**, temperature override | |

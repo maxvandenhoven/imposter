@@ -141,8 +141,8 @@ imposter/
 │  ├─ utils/                   # names.py, phases.py, tally.py, text.py (functions on plain values)
 │  ├─ engine/                  # game.py (Game), events.py, views.py
 │  ├─ players/                 # base.py (PlayerProtocol, responses), adk_player.py, fake.py, prompt.py, prompts/
-│  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects)
-│  ├─ words/                   # categories/*.yaml, picker.py, generator.py
+│  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects), structured.py
+│  ├─ words/                   # categories/*.yaml, picker.py, generator.py, options.py
 │  ├─ judge/                   # base.py (JudgeProtocol), llm_judge.py, checks.py (cheap code checks)
 │  ├─ orchestration/           # runner.py (GameRunner), runner_agent.py (GameRunnerAgent), adk_runner.py
 │  ├─ ports/                   # game_store.py, event_bus.py (protocols + in-memory adapters)

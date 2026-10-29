@@ -84,6 +84,8 @@ class GameConfig(BaseModel):
         identity_mode: How players are named.
         public_category: Whether every player, including imposters, learns the category.
         imposter_hint: Whether imposters get a related hint word.
+        model_clue_check: Whether a model judges clues that pass the code checks, to
+            catch synonyms and translations of the word. Code checks always run.
         clue_rounds: The number of clue rounds.
         discussion_rounds: The number of discussion rounds.
         statement_word_cap: The maximum number of words in a discussion statement.
@@ -100,6 +102,7 @@ class GameConfig(BaseModel):
     identity_mode: IdentityMode = IdentityMode.NAMES
     public_category: bool = False
     imposter_hint: bool = False
+    model_clue_check: bool = True
     clue_rounds: int = Field(default=2, ge=1, le=3)
     discussion_rounds: int = Field(default=2, ge=0, le=3)
     statement_word_cap: int = Field(default=100, ge=1)

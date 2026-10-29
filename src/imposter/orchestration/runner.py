@@ -1,11 +1,13 @@
 import asyncio
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from imposter.config import GamePhase, PlayerRole
 from imposter.engine.game import ActionRejection, Game
+from imposter.judge.base import JudgeProtocol, JudgeVerdict
+from imposter.judge.checks import clue_check
 from imposter.players.base import (
     ClueResponse,
     DebriefResponse,
@@ -16,9 +18,6 @@ from imposter.players.base import (
     TurnUsage,
     VoteResponse,
 )
-
-type WordJudge = Callable[[str, str], Awaitable[bool]]
-"""A judge that compares a clue or guess with the secret word: `(candidate, word)`."""
 
 MAX_ATTEMPTS = 2
 """Attempts per turn: the first answer plus one retry with the rejection reason."""
@@ -41,7 +40,7 @@ class TurnResult(BaseModel):
     seat: int
     output: PhaseResponse | None = None
     rejection: ActionRejection | None = None
-    guess_verdict: bool | None = None
+    guess_verdict: JudgeVerdict | None = None
     usages: list[TurnUsage] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
 
@@ -58,14 +57,13 @@ class GameRunner:
 
     Attributes:
         players: The player at each seat, in seat order.
-        clue_judge: Decides whether a clue that passed the code checks is valid, if set.
-        guess_judge: Decides whether a guess that is not an exact match is the word, if
-            set.
+        judge: Decides whether a clue that passed the code checks is valid, when the
+            game's `model_clue_check` is on, and whether a guess that is not an exact
+            match is the word, if set.
     """
 
     players: Sequence[PlayerProtocol]
-    clue_judge: WordJudge | None = None
-    guess_judge: WordJudge | None = None
+    judge: JudgeProtocol | None = None
 
     async def play(self, game: Game) -> None:
         """Play a game until it is done or aborted.
@@ -140,11 +138,13 @@ class GameRunner:
         if (
             isinstance(output, GuessResponse)
             and rejection is None
-            and self.guess_judge is not None
+            and self.judge is not None
             and output.guess.strip()
             and not game.guess_is_exact(output.guess)
         ):
-            guess_verdict = await self.guess_judge(output.guess, game.secret.word)
+            guess_verdict = await self.judge.is_same_word(
+                guess=output.guess, word=game.secret.word
+            )
 
         return TurnResult(
             seat=seat,
@@ -173,14 +173,18 @@ class GameRunner:
                 rejection = game.clue_rejection(seat=seat, clue=clue)
 
                 # A clue that says the word is accepted: submitting it ends the game.
-                if (
-                    rejection is not None
-                    or self.clue_judge is None
-                    or game.clue_says_word(clue)
-                ):
+                if rejection is not None or game.clue_says_word(clue):
                     return rejection
 
-                if await self.clue_judge(clue, game.secret.word):
+                # The judge runs the code checks itself before it asks the model.
+                if self.judge is not None and game.config.model_clue_check:
+                    verdict = await self.judge.is_valid_clue(
+                        clue=clue, word=game.secret.word
+                    )
+                else:
+                    verdict = clue_check(clue=clue, word=game.secret.word)
+
+                if verdict is None or verdict.verdict:
                     return None
 
                 # Telling an imposter why would hint at the word, so it just passes.
@@ -267,7 +271,9 @@ class GameRunner:
                     seat=seat,
                     guess=guess,
                     private_reasoning=reasoning,
-                    judge_verdict=result.guess_verdict,
+                    judge_verdict=result.guess_verdict.verdict
+                    if result.guess_verdict
+                    else None,
                 )
             case GamePhase.GUESS, _:
                 game.submit_guess(seat=seat, guess="", private_reasoning=reasoning)
