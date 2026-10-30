@@ -21,13 +21,13 @@ Give players a play style on top of their model.
 An `A2aPlayer` implementing the `PlayerProtocol` by calling a remote agent over the A2A
 protocol (ADK has A2A support: `to_a2a` to expose, a remote A2A agent to consume). Each
 "player service" could run on its own Cloud Run service or another cloud, even built with a
-different framework. The `GameRunnerAgent` and engine stay unchanged, and `PlayerView` and the
+different framework. The game workflow and engine stay unchanged, and `PlayerView` and the
 structured responses become the A2A message schema. Trace context propagates over HTTP so
 remote turns still nest under the game trace.
 
 ## Agent Engine deployment comparison
 
-Deploy the same `GameRunnerAgent` to Vertex AI Agent Engine (Agent Runtime) with
+Deploy the same game workflow to Vertex AI Agent Engine (Agent Runtime) with
 `agents-cli deploy` or the SDK, run games headless through it, and compare with Cloud Run:
 setup effort, managed sessions, built-in tracing, cold starts, cost. The UI would stay on
 Cloud Run and call Agent Engine, or the CLI drives it directly.
@@ -64,11 +64,6 @@ Gemini judge on the same games.
 `adk eval` / `agents-cli eval` with eval sets per phase (for example "civilian clue does
 not reveal the word", "imposter guess quality") and LLM-as-judge metrics, complementing the
 tournament CLI.
-
-## Graph Workflow version of the GameRunnerAgent
-
-Re-express the game loop with ADK 2.x's graph `Workflow` API and compare readability and
-traces with the custom `BaseAgent`.
 
 ## CI/CD
 
