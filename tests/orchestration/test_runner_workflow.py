@@ -12,9 +12,7 @@ from google.adk.workflow import BaseNode
 from google.genai import types
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from opentelemetry import trace
-from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from imposter.config import GameConfig, GamePhase, PlayerConfig, SecretWord
@@ -392,17 +390,6 @@ async def test_workflow_without_any_request_fails() -> None:
         )
 
     assert store.get("game-1") is None
-
-
-@pytest.fixture(scope="module")
-def span_exporter() -> InMemorySpanExporter:
-    """Collect the spans of every test in this module in memory."""
-    exporter = InMemorySpanExporter()
-    provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
-    trace.set_tracer_provider(provider)
-
-    return exporter
 
 
 async def test_workflow_spans_have_a_node_span_per_phase_and_round(

@@ -2,19 +2,21 @@ import pytest
 from conftest import FakeGameSetup
 from typer.testing import CliRunner
 
-from imposter import __version__
+from imposter import __version__, cli
 from imposter.cli import app
 from imposter.orchestration.setup import GameSetup
+from imposter.telemetry.setup import TelemetryExporter
 
 
 @pytest.fixture(scope="function")
 def fake_setup(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Make `imposter play` seat random players instead of real models."""
+    """Make `imposter play` seat random players and export no traces."""
 
     def load(cls: type[GameSetup], seed: int | None = None) -> GameSetup:
         return FakeGameSetup()
 
     monkeypatch.setattr(GameSetup, "load", classmethod(load))
+    monkeypatch.setenv("IMPOSTER_TELEMETRY", "none")
 
 
 def test_version_prints_package_version() -> None:
@@ -59,3 +61,26 @@ def test_play_rejects_unknown_models() -> None:
     result = CliRunner().invoke(app, ["play", "-p", "nope", "-p", "nope", "-p", "nope"])
 
     assert result.exit_code == 2
+
+
+@pytest.mark.usefixtures("fake_setup", "span_exporter")
+def test_play_links_the_trace_when_it_goes_to_google_cloud(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporters: list[TelemetryExporter] = []
+
+    def setup_telemetry(exporter: TelemetryExporter) -> str:
+        exporters.append(exporter)
+        return "sandbox"
+
+    monkeypatch.setattr(cli, "setup_telemetry", setup_telemetry)
+
+    result = CliRunner().invoke(
+        app, ["play", "--word", "giraffe", "--telemetry", "cloud"]
+    )
+
+    assert result.exit_code == 0
+    assert exporters == [TelemetryExporter.CLOUD]
+    assert "https://console.cloud.google.com/traces/explorer?project=sandbox&tid=" in (
+        result.output
+    )

@@ -65,7 +65,7 @@ play:
 
 .PHONY: adk-web
 adk-web:
-	@uv run $(if $(wildcard .env),--env-file .env) adk web src
+	@uv run $(if $(wildcard .env),--env-file .env) adk web --otel_to_cloud src
 
 
 .PHONY: tf-require-project

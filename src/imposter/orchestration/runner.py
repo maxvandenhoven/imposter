@@ -2,6 +2,8 @@ import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from opentelemetry import trace
+from opentelemetry.trace import Span, Status, StatusCode
 from pydantic import BaseModel, ConfigDict, Field
 
 from imposter.config import GamePhase, PlayerRole
@@ -18,6 +20,8 @@ from imposter.players.base import (
     TurnUsage,
     VoteResponse,
 )
+from imposter.telemetry.spans import add_response_event, turn_span
+from imposter.utils.text import truncate_words
 
 MAX_ATTEMPTS = 2
 """Attempts per turn: the first answer plus one retry with the rejection reason."""
@@ -33,6 +37,7 @@ class TurnResult(BaseModel):
         guess_verdict: The judge's verdict on an inexact guess, if one was asked.
         usages: The tokens every attempt used.
         errors: What went wrong during the turn, for `player_error` events.
+        attempts: How many times the player was asked.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -43,6 +48,7 @@ class TurnResult(BaseModel):
     guess_verdict: JudgeVerdict | None = None
     usages: list[TurnUsage] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
+    attempts: int = 0
 
 
 @dataclass(frozen=True)
@@ -54,7 +60,7 @@ class GameRunner:
     phases (votes and debrief) every pending seat is asked at once, against the same
     game, and the answers are applied in seat order, so the event log does not depend on
     which model answered first. The nodes of the game workflow play a game through
-    these methods.
+    these methods. Each turn is a `turn` span.
 
     Attributes:
         players: The player at each seat, in seat order.
@@ -94,7 +100,23 @@ class GameRunner:
             self.apply(game=game, result=result)
 
     async def ask(self, *, game: Game, seat: int) -> TurnResult:
-        """Ask the player of a seat for its action, with one retry when it is invalid.
+        """Ask the player of a seat for its action, in the `turn` span of the seat.
+
+        Args:
+            game: The game, with the seat's turn started. It is not changed.
+            seat: The seat to ask.
+
+        Returns:
+            The answer of the player, with its usage and errors.
+        """
+        with turn_span(game=game, seat=seat) as span:
+            result = await self.answer(game=game, seat=seat)
+            self.trace_turn(span=span, game=game, result=result)
+
+        return result
+
+    async def answer(self, *, game: Game, seat: int) -> TurnResult:
+        """Get the action of a seat's player, with one retry when it is invalid.
 
         Args:
             game: The game, with the seat's turn started. It is not changed.
@@ -108,13 +130,17 @@ class GameRunner:
         rejection: ActionRejection | None = None
         usages: list[TurnUsage] = []
         errors: list[str] = []
+        attempts = 0
 
         for _ in range(MAX_ATTEMPTS):
+            attempts += 1
+
             try:
                 response = await self.players[seat].take_turn(
                     view=view, retry_reason=rejection.reason if rejection else None
                 )
             except Exception as error:
+                trace.get_current_span().record_exception(error)
                 errors.append(f"player failed: {error}")
                 break
 
@@ -154,7 +180,59 @@ class GameRunner:
             guess_verdict=guess_verdict,
             usages=usages,
             errors=errors,
+            attempts=attempts,
         )
+
+    def trace_turn(self, *, span: Span, game: Game, result: TurnResult) -> None:
+        """Set the outcome of a turn on its span: retries, fallback and errors.
+
+        The tokens of each model call are already on ADK's `generate_content` spans
+        below the turn, so they are not repeated here.
+
+        Args:
+            span: The span of the turn.
+            game: The game, not changed yet by the answer.
+            result: The answer of the player.
+        """
+        accepted = result.output is not None and result.rejection is None
+        span.set_attributes(
+            {
+                "imposter.turn.attempts": result.attempts,
+                "imposter.turn.fallback": not accepted,
+                "imposter.turn.truncated": self.is_truncated(
+                    game=game, output=result.output
+                ),
+            }
+        )
+
+        if result.output is not None:
+            add_response_event(span=span, response=result.output)
+
+        messages = [*result.errors]
+
+        if result.rejection is not None:
+            messages.append(f"invalid action: {result.rejection.reason}")
+
+        if messages:
+            span.set_status(Status(StatusCode.ERROR, " | ".join(messages)))
+
+    def is_truncated(self, *, game: Game, output: PhaseResponse | None) -> bool:
+        """Tell whether the game will cut an output's statement or reasoning to the cap.
+
+        Args:
+            game: The game.
+            output: The output of the player, if any.
+
+        Returns:
+            Whether the statement or the private reasoning is over its cap.
+        """
+        reasoning = getattr(output, "private_reasoning", "")
+        statement = output.statement if isinstance(output, DiscussionResponse) else ""
+        _, statement_truncated = truncate_words(
+            statement, cap=game.config.statement_word_cap
+        )
+
+        return statement_truncated or game.truncate_reasoning(reasoning)[1]
 
     async def rejection(
         self, *, game: Game, seat: int, output: PhaseResponse

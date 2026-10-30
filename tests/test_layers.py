@@ -16,12 +16,22 @@ LAYERS: dict[str, frozenset[str]] = {
     "engine": frozenset({"config", "utils"}),
     "models": frozenset({"config", "utils"}),
     "players": frozenset({"config", "utils", "engine", "models"}),
-    "judge": frozenset({"config", "utils", "models"}),
+    "telemetry": frozenset({"config", "utils", "engine", "models"}),
+    "judge": frozenset({"config", "utils", "engine", "models", "telemetry"}),
     "words": frozenset({"config", "utils", "models"}),
     "ports": frozenset({"config", "utils", "engine"}),
-    "telemetry": frozenset({"config", "utils", "engine", "models"}),
     "orchestration": frozenset(
-        {"config", "utils", "engine", "models", "players", "judge", "words", "ports"}
+        {
+            "config",
+            "utils",
+            "engine",
+            "models",
+            "players",
+            "telemetry",
+            "judge",
+            "words",
+            "ports",
+        }
     ),
 }
 """The parts of the package each part may import from, besides itself."""
