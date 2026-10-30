@@ -5,7 +5,7 @@ from google.adk.agents.context import Context
 from google.adk.events import Event, EventActions
 from google.adk.workflow import START, Edge, Node, Workflow
 from google.genai import types
-from pydantic import SkipValidation
+from pydantic import Field, SkipValidation
 
 from imposter.config import GamePhase
 from imposter.engine.events import BaseGameEvent
@@ -239,7 +239,8 @@ class GamePhaseNode(Node):
     """
 
     phase: GamePhase
-    sessions: SkipValidation[GameSessions]
+    # Live objects, left out when `adk web` serializes the graph.
+    sessions: SkipValidation[GameSessions] = Field(exclude=True)
 
     async def run_node_impl(
         self, *, ctx: Context, node_input: Any
