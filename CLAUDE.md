@@ -56,7 +56,7 @@ make check          # format + lint + type + Terraform fmt/validate (no tests)
 make test           # pytest with coverage, excluding `slow` tests
 make test-slow      # pytest -m slow (real Vertex AI calls)
 make play           # imposter play with real models (options in ARGS="...")
-make adk-web        # adk web src: the ADK developer UI, one game per session
+make adk-web        # adk web --otel_to_cloud src: the ADK developer UI, one game per session
 make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
 make tf-plan        # terraform plan for infra (tf-apply to apply)
 make install-hooks  # install pre-commit hooks (including commit-msg)

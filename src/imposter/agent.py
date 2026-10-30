@@ -1,6 +1,8 @@
 """The game workflow as the ADK `app` that `adk web src` loads, one game per session.
 
 The app carries the plugin that puts the game attributes on the root span of a game.
+`adk web --otel_to_cloud` exports the traces, and the telemetry defaults make ADK log
+the prompts and completions, as the CLI does.
 """
 
 from google.adk.apps import App
@@ -11,7 +13,10 @@ from imposter.orchestration.runner_workflow import GameSessions, game_workflow
 from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest, GameSetup
 from imposter.ports.event_bus import InMemoryEventBus
 from imposter.ports.game_store import InMemoryGameStore
+from imposter.telemetry.setup import set_telemetry_defaults
 from imposter.telemetry.spans import GameTracePlugin
+
+set_telemetry_defaults()
 
 setup = GameSetup.load()
 store = InMemoryGameStore()

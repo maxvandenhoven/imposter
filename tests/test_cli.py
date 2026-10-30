@@ -69,7 +69,7 @@ def test_play_links_the_trace_when_it_goes_to_google_cloud(
 ) -> None:
     exporters: list[TelemetryExporter] = []
 
-    def setup_telemetry(*, exporter: TelemetryExporter) -> str:
+    def setup_telemetry(exporter: TelemetryExporter) -> str:
         exporters.append(exporter)
         return "sandbox"
 

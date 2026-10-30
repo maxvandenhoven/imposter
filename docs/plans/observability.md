@@ -6,12 +6,18 @@ identity mode, with full prompts and completions one click away in Cloud Logging
 ## Setup
 
 - ADK emits OpenTelemetry spans out of the box (`invoke_workflow`, `invoke_node`,
-  `invoke_agent`, `generate_content` and tools, see §Span hierarchy). Export uses ADK's
-  own Google Cloud telemetry setup, the one behind `get_fast_api_app(otel_to_cloud=True)`:
-  `telemetry/setup.py` (`setup_telemetry`) calls `get_gcp_exporters` (Cloud Trace and
-  Cloud Logging over OTLP to `telemetry.googleapis.com`), `get_gcp_resource` and
-  `maybe_set_otel_providers` directly, because we build our own FastAPI app. Cloud
-  Monitoring metrics are left off.
+  `invoke_agent`, `generate_content` and tools, see §Span hierarchy). Export follows the
+  programmatic GCP setup of ADK's tracing guide (https://adk.dev/observability/traces/):
+  `telemetry/setup.py` (`setup_telemetry`) hands `get_gcp_exporters(enable_cloud_tracing=True,
+  enable_cloud_logging=True)` to `maybe_set_otel_providers`, which exports over OTLP to
+  `telemetry.googleapis.com` with ADC. The guide enables tracing only, and we add the
+  logging exporter because ADK's prompt and completion events are logs. As in the guide,
+  the resource comes from `OTEL_SERVICE_NAME` (`imposter`) and
+  `OTEL_RESOURCE_ATTRIBUTES`, which must carry `gcp.project_id`: without it the
+  telemetry API rejects the spans (400). Cloud Monitoring metrics are left off.
+- `make adk-web` runs `adk web --otel_to_cloud`, the guide's way for the developer UI.
+  `agent.py` sets the same defaults (`set_telemetry_defaults`), so games played there are
+  traced and logged like CLI games.
 - LiteLLM calls (Claude, open models) appear as spans too: ADK's `generate_content`
   span covers them, with token usage (checked in a real game), so no LiteLLM callback is
   needed.
@@ -113,8 +119,9 @@ Content capture is **on** (demo data, nothing sensitive):
 - Our own structured responses (clue, statement, vote, private reasoning) are added as
   a span event on the `turn` span, named after the response type, with every field cut
   to 200 characters, so a trace is readable without opening logs.
-- `setup_telemetry` sets the three variables above as defaults, so values already in the
-  environment win.
+- `setup_telemetry` (and `agent.py` for `adk web`) sets the three variables above as
+  defaults, so values already in the environment win. The deployed service can set them
+  in Terraform instead.
 
 GCS completion upload (`OTEL_INSTRUMENTATION_GENAI_COMPLETION_HOOK=upload`) and BigQuery
 Agent Analytics are future work.
@@ -129,10 +136,10 @@ total). Judge and word generator tokens are not counted there yet.
 
 ## Logging
 
-Python `logging` with a JSON formatter on Cloud Run (`JsonLogFormatter`, enabled with
-`setup_telemetry(json_logs=True)`): structured logs with `logging.googleapis.com/trace`
-and `logging.googleapis.com/spanId` from the current span, so app logs are linked to
-traces. The CLI keeps plain logs. No `print`.
+Python `logging`, no `print`. The CLI keeps plain logs. App logs on Cloud Run (JSON with
+`logging.googleapis.com/trace` and `logging.googleapis.com/spanId`, so they link to
+traces) belong to the deployment work (WP 12). ADK's own prompt and completion logs
+already carry the trace and span id.
 
 ## IAP identity
 

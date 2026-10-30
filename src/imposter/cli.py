@@ -386,6 +386,6 @@ def play(
         cloud = bool(os.environ.get("GOOGLE_CLOUD_PROJECT"))
         telemetry = TelemetryExporter.CLOUD if cloud else TelemetryExporter.NONE
 
-    project = setup_telemetry(exporter=telemetry)
+    project = setup_telemetry(telemetry)
     printer = GameEventPrinter(console=Console(), catalog=setup.catalog, god=god)
     asyncio.run(play_game(request=request, setup=setup, printer=printer, project=project))
