@@ -9,10 +9,8 @@ from opentelemetry.trace import Span, Status, StatusCode
 from pydantic import BaseModel
 
 from imposter.config import GamePhase
-from imposter.engine.events import GameAbortedEvent, UsageEvent
+from imposter.engine.events import GameAbortedEvent
 from imposter.engine.game import Game
-from imposter.models.catalog import ModelCatalog
-from imposter.telemetry.cost import catalog_cost
 
 TRACER = trace.get_tracer("imposter")
 """Opens the spans ADK has no span for: player turns and judge calls."""
@@ -32,22 +30,17 @@ class GameTracePlugin(BasePlugin):
 
     Attributes:
         find_game: Looks a game up by id, which is the ADK session id.
-        catalog: The models, for the cost estimate.
         trace_ids: The trace id of each game run so far, by game id.
     """
 
-    def __init__(
-        self, *, find_game: Callable[[str], Game | None], catalog: ModelCatalog
-    ) -> None:
+    def __init__(self, *, find_game: Callable[[str], Game | None]) -> None:
         """Initialize the plugin without traces.
 
         Args:
             find_game: Looks a game up by id, which is the ADK session id.
-            catalog: The models, for the cost estimate.
         """
         super().__init__(name="game_trace")
         self.find_game = find_game
-        self.catalog = catalog
         self.trace_ids: dict[str, int] = {}
 
     async def before_run_callback(self, *, invocation_context: InvocationContext) -> None:
@@ -94,17 +87,6 @@ class GameTracePlugin(BasePlugin):
             return
 
         span = trace.get_current_span()
-        usages = game.events_of_type(UsageEvent)
-        cost = sum(
-            catalog_cost(
-                catalog=self.catalog,
-                model_id=usage.model_id,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                thinking_tokens=usage.thinking_tokens,
-            )
-            for usage in usages
-        )
         word_hash = hashlib.sha256(game.secret.word.encode()).hexdigest()
         span.set_attributes(
             {
@@ -116,8 +98,6 @@ class GameTracePlugin(BasePlugin):
                 "imposter.game.category": game.secret.category or "",
                 "imposter.game.word_sha256": word_hash,
                 "imposter.game.outcome": game.outcome.value if game.outcome else "",
-                "imposter.game.total_tokens": game.tokens_used,
-                "imposter.game.cost_usd": cost,
             }
         )
         aborts = game.events_of_type(GameAbortedEvent)

@@ -34,10 +34,9 @@ highlights the phase of the selected event.
 
 Every game is one trace in Cloud Trace. ADK traces the workflow and every node, so the
 trace has a root span for the game and a span per phase and round. ADK also traces every
-model call, with its token usage. The app adds a span per player turn, with its estimated
-cost, and a span per judge decision, and the model calls of the players nest under their
-turn. The root span carries the lineup, the outcome and the totals, and the secret word
-only as a hash, so a list of traces does not spoil it. `make play` prints the Trace
+model call, with its token usage. The app adds a span per player turn and a span per
+judge decision, and the model calls of the players nest under their turn. The root span
+carries the lineup and the outcome, and the secret word only as a hash, so a list of traces does not spoil it. `make play` prints the Trace
 Explorer link of the game when it ends.
 
 The prompts and completions are logged by ADK itself, with no code of ours: three

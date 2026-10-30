@@ -59,7 +59,7 @@ async def run_game(
     """
     sessions = GameSessions(setup=setup, bus=bus, store=store)
     session_service = InMemorySessionService()
-    plugin = trace_plugin or GameTracePlugin(find_game=store.get, catalog=setup.catalog)
+    plugin = trace_plugin or GameTracePlugin(find_game=store.get)
     app = App(
         name=APP_NAME, root_agent=game_workflow(sessions=sessions), plugins=[plugin]
     )

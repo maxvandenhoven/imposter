@@ -10,7 +10,6 @@ from imposter.config import GamePhase, PlayerRole
 from imposter.engine.game import ActionRejection, Game
 from imposter.judge.base import JudgeProtocol, JudgeVerdict
 from imposter.judge.checks import clue_check
-from imposter.models.catalog import ModelCatalog
 from imposter.players.base import (
     ClueResponse,
     DebriefResponse,
@@ -21,7 +20,6 @@ from imposter.players.base import (
     TurnUsage,
     VoteResponse,
 )
-from imposter.telemetry.cost import catalog_cost
 from imposter.telemetry.spans import add_response_event, turn_span
 from imposter.utils.text import truncate_words
 
@@ -62,19 +60,17 @@ class GameRunner:
     phases (votes and debrief) every pending seat is asked at once, against the same
     game, and the answers are applied in seat order, so the event log does not depend on
     which model answered first. The nodes of the game workflow play a game through
-    these methods. Each turn is a `turn` span, with its cost.
+    these methods. Each turn is a `turn` span.
 
     Attributes:
         players: The player at each seat, in seat order.
         judge: Decides whether a clue that passed the code checks is valid, when the
             game's `model_clue_check` is on, and whether a guess that is not an exact
             match is the word, if set.
-        catalog: The models, for the cost of each turn on its span, if set.
     """
 
     players: Sequence[PlayerProtocol]
     judge: JudgeProtocol | None = None
-    catalog: ModelCatalog | None = None
 
     async def play(self, game: Game) -> None:
         """Play a game until it is done or aborted.
@@ -188,7 +184,7 @@ class GameRunner:
         )
 
     def trace_turn(self, *, span: Span, game: Game, result: TurnResult) -> None:
-        """Set the outcome of a turn on its span: cost, retries and errors.
+        """Set the outcome of a turn on its span: retries, fallback and errors.
 
         The tokens of each model call are already on ADK's `generate_content` spans
         below the turn, so they are not repeated here.
@@ -208,19 +204,6 @@ class GameRunner:
                 ),
             }
         )
-
-        if self.catalog is not None:
-            cost = sum(
-                catalog_cost(
-                    catalog=self.catalog,
-                    model_id=usage.model_id,
-                    input_tokens=usage.input_tokens,
-                    output_tokens=usage.output_tokens,
-                    thinking_tokens=usage.thinking_tokens,
-                )
-                for usage in result.usages
-            )
-            span.set_attribute("imposter.cost_usd", cost)
 
         if result.output is not None:
             add_response_event(span=span, response=result.output)

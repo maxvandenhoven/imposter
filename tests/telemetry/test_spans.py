@@ -42,7 +42,7 @@ async def play_traced(
     players = [PlayerConfig(model_id=model_id) for model_id in MODEL_IDS]
     config = GameConfig.model_validate({"players": players, "seed": 5, **options})
     store = InMemoryGameStore()
-    plugin = GameTracePlugin(find_game=store.get, catalog=setup.catalog)
+    plugin = GameTracePlugin(find_game=store.get)
     game = await run_game(
         request=GameRequest(config=config),
         setup=setup,
@@ -92,8 +92,6 @@ async def test_game_trace_has_game_phase_and_turn_levels(
         seat.player.model_id for seat in game.seats
     )
     assert game_attributes["imposter.game.outcome"] == game.outcome
-    assert game_attributes["imposter.game.total_tokens"] == game.tokens_used
-    assert float(game_attributes["imposter.game.cost_usd"]) > 0
     assert root.status.status_code is StatusCode.UNSET
 
     assert all(attributes(node)["imposter.phase.name"] in node.name for node in nodes)
@@ -111,7 +109,6 @@ async def test_game_trace_has_game_phase_and_turn_levels(
     assert first_turn["gen_ai.request.model"] == game.seats[0].player.model_id
     assert "gen_ai.usage.input_tokens" not in first_turn
     assert first_turn["imposter.turn.attempts"] >= 1
-    assert float(first_turn["imposter.cost_usd"]) > 0
     assert [event.name for event in turns[0].events] == ["ClueResponse"]
 
 

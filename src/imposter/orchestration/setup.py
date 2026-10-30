@@ -129,4 +129,4 @@ class GameSetup:
             for seat in game.seats
         ]
 
-        return GameRunner(players=players, judge=self.judge, catalog=self.catalog)
+        return GameRunner(players=players, judge=self.judge)

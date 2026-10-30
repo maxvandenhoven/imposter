@@ -56,9 +56,7 @@ class FakeGameSetup(GameSetup):
         self.players_for = players_for
 
     def runner_for(self, game: Game) -> GameRunner:
-        return GameRunner(
-            players=self.players_for(game), judge=self.judge, catalog=self.catalog
-        )
+        return GameRunner(players=self.players_for(game), judge=self.judge)
 
 
 class ReplayLlm(BaseLlm):

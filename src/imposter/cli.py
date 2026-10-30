@@ -248,7 +248,7 @@ async def play_game(
     """
     bus = InMemoryEventBus()
     store = InMemoryGameStore()
-    plugin = GameTracePlugin(find_game=store.get, catalog=setup.catalog)
+    plugin = GameTracePlugin(find_game=store.get)
     game_id = uuid.uuid4().hex
 
     async def print_events() -> None:

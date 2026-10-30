@@ -76,8 +76,8 @@ How our attributes and spans get there (`telemetry/spans.py`):
   `GamePhaseNode` calls `mark_phase` on it.
 - **Turn.** `GameRunner.ask` opens `turn {player name}` (`turn_span`) around the player's
   attempts and the judge calls of the turn. ADK has no span per turn: each attempt opens
-  its own nested `invoke_workflow`, and the retry, the fallback and the turn's cost only
-  exist at this level. The tokens are not repeated on the turn: ADK sets
+  its own nested `invoke_workflow`, and the retry and the fallback only exist at this
+  level. The tokens are not repeated on the turn: ADK sets
   `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` and
   `gen_ai.usage.reasoning.output_tokens` on every `generate_content` span, and the
   same numbers are in its log entry of the call.
@@ -92,9 +92,9 @@ Attributes (prefix `imposter.` for our own, OTel semantic conventions where they
 
 | Span | Attributes |
 |---|---|
-| game (`invoke_workflow game_runner`) | `imposter.game.id`, `enduser.id` (IAP email, when present, WP 13), `imposter.game.identity_mode`, `imposter.game.player_count`, `imposter.game.imposter_count`, `imposter.game.lineup` (models by seat), `imposter.game.category`, `imposter.game.word_sha256` (not the word in clear on the root, so traces lists do not spoil it), `imposter.game.outcome` (empty when aborted), `imposter.game.total_tokens`, `imposter.game.cost_usd` |
+| game (`invoke_workflow game_runner`) | `imposter.game.id`, `enduser.id` (IAP email, when present, WP 13), `imposter.game.identity_mode`, `imposter.game.player_count`, `imposter.game.imposter_count`, `imposter.game.lineup` (models by seat), `imposter.game.category`, `imposter.game.word_sha256` (not the word in clear on the root, so traces lists do not spoil it), `imposter.game.outcome` (empty when aborted) |
 | phase (`invoke_node {phase}`) | `imposter.phase.name`, `imposter.phase.round` (phases with rounds) |
-| `turn {player name}` | `imposter.phase.name`, `imposter.player.seat`, `imposter.player.name`, `imposter.player.role`, `gen_ai.request.model` (catalog id), `imposter.cost_usd`, `imposter.turn.attempts`, `imposter.turn.fallback` (bool), `imposter.turn.truncated` (bool) |
+| `turn {player name}` | `imposter.phase.name`, `imposter.player.seat`, `imposter.player.name`, `imposter.player.role`, `gen_ai.request.model` (catalog id), `imposter.turn.attempts`, `imposter.turn.fallback` (bool), `imposter.turn.truncated` (bool) |
 | `judge {kind}` | `imposter.judge.kind` (`guess`/`clue`), `imposter.judge.verdict`, `imposter.judge.confidence`, `gen_ai.request.model` (`code` for the code checks) |
 
 Errors set span status `ERROR`: a turn with a player error or an invalid action (with the
@@ -121,11 +121,11 @@ Agent Analytics are future work.
 
 ## Cost
 
-`telemetry/cost.py` computes cost from token usage and catalog prices (`catalog_cost`
-gives 0 for models outside the catalog, such as fake players). Per turn it goes on the
-`turn` span (and the engine records a `usage` event, from which the UI shows a running
-total), per game on the root span. Judge and word generator tokens are not counted
-yet.
+Traces carry no cost or token totals of ours. Token usage is on ADK's `generate_content`
+span of every model call, which is enough to see what a turn or a game used.
+`telemetry/cost.py` computes cost from token usage and catalog prices for the CLI's
+totals table, from the engine's `usage` events (from which the UI can show a running
+total). Judge and word generator tokens are not counted there yet.
 
 ## Logging
 

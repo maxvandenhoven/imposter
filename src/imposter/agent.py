@@ -28,7 +28,5 @@ root_agent = game_workflow(
 )
 
 app = App(
-    name=APP_NAME,
-    root_agent=root_agent,
-    plugins=[GameTracePlugin(find_game=store.get, catalog=setup.catalog)],
+    name=APP_NAME, root_agent=root_agent, plugins=[GameTracePlugin(find_game=store.get)]
 )
