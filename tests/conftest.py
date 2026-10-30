@@ -5,6 +5,10 @@ from collections.abc import AsyncGenerator, Callable, Sequence
 import pytest
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import types
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic import Field
 
 from imposter.engine.game import Game
@@ -52,7 +56,9 @@ class FakeGameSetup(GameSetup):
         self.players_for = players_for
 
     def runner_for(self, game: Game) -> GameRunner:
-        return GameRunner(players=self.players_for(game), judge=self.judge)
+        return GameRunner(
+            players=self.players_for(game), judge=self.judge, catalog=self.catalog
+        )
 
 
 class ReplayLlm(BaseLlm):
@@ -97,3 +103,14 @@ def replay_llm() -> ReplayLlm:
 def flash_lite() -> ModelCatalogEntry:
     """The catalog entry of Gemini Flash-Lite, the judge and generator model."""
     return ModelCatalog.load().entry("gemini-flash-lite")
+
+
+@pytest.fixture(scope="session")
+def span_exporter() -> InMemorySpanExporter:
+    """Collect spans in memory, through the global tracer provider, which is set once."""
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+
+    return exporter

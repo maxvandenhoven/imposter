@@ -1,6 +1,7 @@
 import json
 
 from conftest import ReplayLlm
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from imposter.judge.llm_judge import LlmJudge
 from imposter.models.catalog import ModelCatalogEntry
@@ -64,3 +65,29 @@ async def test_failing_model_gives_the_lenient_verdict(
 
     assert (guess.verdict, guess.confidence) == (False, 0.0)
     assert (clue.verdict, clue.confidence) == (True, 0.0)
+
+
+async def test_each_decision_is_a_judge_span_with_its_verdict(
+    flash_lite: ModelCatalogEntry,
+    replay_llm: ReplayLlm,
+    span_exporter: InMemorySpanExporter,
+) -> None:
+    span_exporter.clear()
+    replay_llm.replies = [reply(verdict=False, confidence=0.7)]
+    judge = LlmJudge(entry=flash_lite, model=replay_llm)
+
+    await judge.is_valid_clue(clue="firefighter", word="fire")
+    await judge.is_same_word(guess="couch", word="sofa")
+
+    spans = {
+        span.name: dict(span.attributes or {})
+        for span in span_exporter.get_finished_spans()
+        if span.name.startswith("judge ")
+    }
+
+    assert spans["judge clue"]["imposter.judge.kind"] == "clue"
+    assert spans["judge clue"]["imposter.judge.verdict"] is False
+    assert spans["judge clue"]["gen_ai.request.model"] == "code"
+    assert spans["judge guess"]["imposter.judge.verdict"] is False
+    assert spans["judge guess"]["imposter.judge.confidence"] == 0.7
+    assert spans["judge guess"]["gen_ai.request.model"] == "gemini-flash-lite"

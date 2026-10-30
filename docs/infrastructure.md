@@ -78,7 +78,7 @@ and writes its state in the state bucket.
 ```mermaid
 flowchart LR
   laptop(["Laptop"]) -->|"ADC, quota project = sandbox"| vertex["Vertex AI global"]
-  laptop -->|"ADC"| trace["Cloud Trace / Logging (planned)"]
+  laptop -->|"ADC"| trace["Cloud Trace / Logging"]
   laptop -->|"make tf-setup (gcloud): base APIs, bucket"| project
   laptop -->|"make tf-plan / tf-apply"| tf["Terraform"] -->|"enables APIs, creates resources"| project["Sandbox project"]
   tf <--> bucket[("State bucket")]
@@ -91,6 +91,10 @@ in `.env` point at the sandbox project, so all calls are billed to it. Terraform
 bills its own API calls to the project through `user_project_override`. For that to work,
 the Service Usage API must already be enabled in the project, which is why `make tf-setup`
 enables it with `gcloud` before Terraform runs for the first time.
+
+A game played on a laptop exports its trace with the same ADC, over OTLP to the
+telemetry API, and writes the prompts and completions to Cloud Logging. The owner's
+account already holds the roles to write traces and logs, so this needs no extra setup.
 
 ## Created outside Terraform
 
@@ -124,9 +128,9 @@ depend on them.
 | `run.googleapis.com` | Cloud Run hosts the service that serves the API, the UI and the SSE stream. | Hosting (planned) |
 | `billingbudgets.googleapis.com` | The budget sends email alerts when spending passes its thresholds. | Cost control (planned) |
 | `iap.googleapis.com` | Identity-Aware Proxy puts the org Google login in front of Cloud Run. | Access control (planned) |
-| `cloudtrace.googleapis.com` | Cloud Trace stores one trace per game, with spans for the game, its phases and its turns. | Tracing (planned) |
-| `telemetry.googleapis.com` | The telemetry API is the OTLP endpoint that receives the OpenTelemetry traces. | Tracing (planned) |
-| `logging.googleapis.com` | Cloud Logging stores the prompts and completions as log events that link to their trace. | Tracing (planned) |
+| `cloudtrace.googleapis.com` | Cloud Trace stores one trace per game, with spans for the game, its phases and its turns. | Tracing |
+| `telemetry.googleapis.com` | The telemetry API is the OTLP endpoint that receives the OpenTelemetry traces. | Tracing |
+| `logging.googleapis.com` | Cloud Logging stores the prompts and completions as log events that link to their trace. | Tracing |
 
 ### Provider settings (`infra/providers.tf`)
 

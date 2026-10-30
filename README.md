@@ -26,10 +26,23 @@ Each node plays its phase through the players, publishes the new game events and
 to the phase that the engine moved to.
 
 In the ADK developer UI (`make adk-web`), the graph shows the path a game took and
-highlights the phase of the selected event. ADK traces every node, so a game is one
-trace with a span per phase and round, and the model calls of the players nest under it.
+highlights the phase of the selected event.
 
 ![The phase graph of a finished game in the ADK developer UI](docs/images/adk-web-phase-graph.png)
+
+## Tracing
+
+Every game is one trace in Cloud Trace. ADK traces the workflow and every node, so the
+trace has a root span for the game and a span per phase and round. The app adds a span
+per player turn, with its tokens and estimated cost, and a span per judge decision, and
+the model calls of the players nest under their turn. The root span carries the lineup,
+the outcome and the totals, and the secret word only as a hash, so a list of traces does
+not spoil it. The prompts and completions go to Cloud Logging as events that link to
+their span. `make play` prints the Trace Explorer link of the game when it ends.
+
+Traces go to Cloud Trace when `GOOGLE_CLOUD_PROJECT` is set. `IMPOSTER_TELEMETRY` (or the
+`--telemetry` option) chooses `cloud`, `console` to print the spans in the terminal, or
+`none`.
 
 ## Design and setup
 

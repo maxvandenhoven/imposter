@@ -14,6 +14,7 @@ from imposter.orchestration.runner_workflow import (
 from imposter.orchestration.setup import GameRequest, GameSetup
 from imposter.ports.event_bus import EventBusProtocol
 from imposter.ports.game_store import GameStoreProtocol
+from imposter.telemetry.spans import GameTracePlugin
 
 APP_NAME = "imposter"
 """The ADK app name of the game runner."""
@@ -32,13 +33,15 @@ async def run_game(
     bus: EventBusProtocol,
     store: GameStoreProtocol,
     game_id: str | None = None,
+    trace_plugin: GameTracePlugin | None = None,
 ) -> Game:
     """Play one game with ADK's `Runner` and the game workflow, in a session per game.
 
     The session id is the game id. The request goes into the initial session state,
     where the setup node of the workflow reads it. Subscribe to the bus with the game id
     to follow the game while it runs. When the run stops early, for example because its
-    task was cancelled, the game is aborted and the bus closed.
+    task was cancelled, the game is aborted and the bus closed. The trace plugin puts
+    the game attributes on the root span of the run and notes its trace id.
 
     Args:
         request: The options and how to choose the word.
@@ -46,6 +49,7 @@ async def run_game(
         bus: Carries the engine events to subscribers.
         store: Keeps the game.
         game_id: The id of the game, a random id when not given.
+        trace_plugin: Puts the game attributes on the trace, a new one when not given.
 
     Returns:
         The game, done or aborted.
@@ -55,7 +59,10 @@ async def run_game(
     """
     sessions = GameSessions(setup=setup, bus=bus, store=store)
     session_service = InMemorySessionService()
-    app = App(name=APP_NAME, root_agent=game_workflow(sessions=sessions))
+    plugin = trace_plugin or GameTracePlugin(find_game=store.get, catalog=setup.catalog)
+    app = App(
+        name=APP_NAME, root_agent=game_workflow(sessions=sessions), plugins=[plugin]
+    )
     runner = Runner(app=app, session_service=session_service)
     session = await session_service.create_session(
         app_name=APP_NAME,

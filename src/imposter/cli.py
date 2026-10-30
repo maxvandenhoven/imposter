@@ -1,6 +1,7 @@
 """Command line interface for the `imposter` package."""
 
 import asyncio
+import os
 import uuid
 from typing import Annotated
 
@@ -35,6 +36,8 @@ from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest, GameSet
 from imposter.ports.event_bus import InMemoryEventBus
 from imposter.ports.game_store import InMemoryGameStore
 from imposter.telemetry.cost import estimated_cost
+from imposter.telemetry.setup import TelemetryExporter, setup_telemetry, trace_url
+from imposter.telemetry.spans import GameTracePlugin
 from imposter.words.options import WordMode, WordOptions
 
 app = typer.Typer(name="imposter", no_args_is_help=True)
@@ -226,19 +229,26 @@ class GameEventPrinter:
 
 
 async def play_game(
-    *, request: GameRequest, setup: GameSetup, printer: GameEventPrinter
+    *,
+    request: GameRequest,
+    setup: GameSetup,
+    printer: GameEventPrinter,
+    project: str | None = None,
 ) -> Game:
-    """Play a game and print its events as they arrive on the bus.
+    """Play a game, print its events as they arrive on the bus and link its trace.
 
     Args:
         request: The options and how to choose the word.
         setup: Creates the game and seats its players.
         printer: Prints the events.
+        project: The Google Cloud project the trace goes to, if it is exported there.
 
     Returns:
         The game, done or aborted.
     """
     bus = InMemoryEventBus()
+    store = InMemoryGameStore()
+    plugin = GameTracePlugin(find_game=store.get, catalog=setup.catalog)
     game_id = uuid.uuid4().hex
 
     async def print_events() -> None:
@@ -250,12 +260,17 @@ async def play_game(
             request=request,
             setup=setup,
             bus=bus,
-            store=InMemoryGameStore(),
+            store=store,
             game_id=game_id,
+            trace_plugin=plugin,
         ),
         print_events(),
     )
     printer.print_totals()
+
+    if project and game_id in plugin.trace_ids:
+        url = trace_url(project=project, trace_id=plugin.trace_ids[game_id])
+        printer.console.print(f"Trace: {url}", soft_wrap=True)
 
     return game
 
@@ -314,6 +329,14 @@ def play(
     god: Annotated[
         bool, typer.Option(help="Show the secrets and the private reasoning.")
     ] = False,
+    telemetry: Annotated[
+        TelemetryExporter | None,
+        typer.Option(
+            envvar="IMPOSTER_TELEMETRY",
+            help="Where traces go: cloud by default when GOOGLE_CLOUD_PROJECT is set, "
+            "otherwise none.",
+        ),
+    ] = None,
 ) -> None:
     """Play a game between models and print it as it happens.
 
@@ -332,6 +355,7 @@ def play(
         token_budget: The tokens the game may use before it is aborted.
         seed: An optional seed for reproducible games.
         god: Whether to show the secrets and the private reasoning.
+        telemetry: Where traces go, chosen from the environment when not given.
 
     Raises:
         BadParameter: When the options do not make a valid game.
@@ -358,5 +382,10 @@ def play(
     except (KeyError, ValidationError) as error:
         raise typer.BadParameter(str(error)) from error
 
+    if telemetry is None:
+        cloud = bool(os.environ.get("GOOGLE_CLOUD_PROJECT"))
+        telemetry = TelemetryExporter.CLOUD if cloud else TelemetryExporter.NONE
+
+    project = setup_telemetry(exporter=telemetry)
     printer = GameEventPrinter(console=Console(), catalog=setup.catalog, god=god)
-    asyncio.run(play_game(request=request, setup=setup, printer=printer))
+    asyncio.run(play_game(request=request, setup=setup, printer=printer, project=project))

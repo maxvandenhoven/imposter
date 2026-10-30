@@ -1,10 +1,12 @@
 from google.adk.models import BaseLlm
+from opentelemetry.trace import Span
 from pydantic import BaseModel, ConfigDict, Field
 
 from imposter.judge.base import JudgeVerdict
 from imposter.judge.checks import clue_check, same_word_check
 from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
 from imposter.models.structured import StructuredTaskAgent
+from imposter.telemetry.spans import judge_span
 
 JUDGE_MODEL_ID = "gemini-flash-lite"
 """The catalog id of the default judge model."""
@@ -93,14 +95,13 @@ class LlmJudge:
         Returns:
             The verdict, `True` when the guess is the same word.
         """
-        checked = same_word_check(guess=guess, word=word)
+        with judge_span(kind="guess") as span:
+            verdict = same_word_check(guess=guess, word=word) or await self.verdict(
+                task=SAME_WORD_TASK.format(word=word, guess=guess), fallback=False
+            )
+            record_verdict(span=span, verdict=verdict)
 
-        if checked is not None:
-            return checked
-
-        return await self.verdict(
-            task=SAME_WORD_TASK.format(word=word, guess=guess), fallback=False
-        )
+        return verdict
 
     async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict:
         """Decide whether a clue is allowed, that is not a trivial derivative of the word.
@@ -112,14 +113,13 @@ class LlmJudge:
         Returns:
             The verdict, `True` when the clue is valid.
         """
-        checked = clue_check(clue=clue, word=word)
+        with judge_span(kind="clue") as span:
+            verdict = clue_check(clue=clue, word=word) or await self.verdict(
+                task=VALID_CLUE_TASK.format(word=word, clue=clue), fallback=True
+            )
+            record_verdict(span=span, verdict=verdict)
 
-        if checked is not None:
-            return checked
-
-        return await self.verdict(
-            task=VALID_CLUE_TASK.format(word=word, clue=clue), fallback=True
-        )
+        return verdict
 
     async def verdict(self, *, task: str, fallback: bool) -> JudgeVerdict:
         """Ask the model one question.
@@ -144,3 +144,19 @@ class LlmJudge:
             )
 
         return JudgeVerdict(**answer.model_dump(), judge_model=model_id)
+
+
+def record_verdict(*, span: Span, verdict: JudgeVerdict) -> None:
+    """Set a verdict on the span of the judge decision.
+
+    Args:
+        span: The span of the decision.
+        verdict: The verdict.
+    """
+    span.set_attributes(
+        {
+            "imposter.judge.verdict": verdict.verdict,
+            "imposter.judge.confidence": verdict.confidence,
+            "gen_ai.request.model": verdict.judge_model,
+        }
+    )

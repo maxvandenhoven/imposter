@@ -14,6 +14,7 @@ from imposter.orchestration.runner import GameRunner
 from imposter.orchestration.setup import GameRequest, GameSetup
 from imposter.ports.event_bus import EventBusProtocol
 from imposter.ports.game_store import GameStoreProtocol
+from imposter.telemetry.spans import mark_phase
 from imposter.utils.phases import PHASE_TRANSITIONS, TERMINAL_PHASES
 
 REQUEST_STATE_KEY = "game:request"
@@ -273,7 +274,8 @@ class GamePhaseNode(Node):
             session = self.sessions.session(game_id)
 
         try:
-            phase, _ = session.segment
+            phase, round_ = session.segment
+            mark_phase(phase=phase, round_=round_)
 
             if phase is not self.phase:
                 message = f"Node {self.name} was reached in phase {phase} of the game."
