@@ -15,6 +15,13 @@ identity mode, with full prompts and completions one click away in Cloud Logging
   the resource comes from `OTEL_SERVICE_NAME` (`imposter`) and
   `OTEL_RESOURCE_ATTRIBUTES`, which must carry `gcp.project_id`: without it the
   telemetry API rejects the spans (400). Cloud Monitoring metrics are left off.
+- `setup_telemetry` also turns on OpenTelemetry's `aiohttp` client instrumentation, so
+  each HTTP attempt of a model call is a `POST` span below `generate_content`, with its
+  URL, status code and duration. The model clients retry timeouts, rate limits and server
+  errors inside one call, and without these spans a slow call cannot be told apart from a
+  retried one. google-genai and LiteLLM both send their async requests with `aiohttp`
+  (not `httpx`, which ADK instruments on Agent Engine). `adk web` does not get these
+  spans.
 - `make adk-web` runs `adk web --otel_to_cloud`, the guide's way for the developer UI.
   `agent.py` sets the same defaults (`set_telemetry_defaults`), so games played there are
   traced and logged like CLI games.
@@ -43,6 +50,7 @@ invoke_workflow game_runner                      game: one per game (ADK, attrib
 │  │  ├─ invoke_workflow player_0_clue           the player's own ADK Runner (nested)
 │  │  │  └─ invoke_agent player_0_clue
 │  │  │     └─ generate_content {model}          tokens, finish reason
+│  │  │        └─ POST                           one per HTTP attempt (aiohttp)
 │  │  └─ judge clue                              one per judge decision (ours)
 │  │     └─ invoke_workflow judge → invoke_agent judge → generate_content
 │  └─ ...

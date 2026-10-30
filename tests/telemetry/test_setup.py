@@ -21,16 +21,27 @@ def clean_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name)
 
 
+class FakeInstrumentor:
+    """Counts the calls to `instrument` instead of patching `aiohttp`."""
+
+    calls = 0
+
+    def instrument(self) -> None:
+        FakeInstrumentor.calls += 1
+
+
 @pytest.fixture(scope="function")
 def providers(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
     """Record the hooks handed to ADK instead of setting the global providers."""
     calls: list[Any] = []
+    FakeInstrumentor.calls = 0
     monkeypatch.setattr(setup, "maybe_set_otel_providers", calls.append)
+    monkeypatch.setattr(setup, "AioHttpClientInstrumentor", FakeInstrumentor)
 
     return calls
 
 
-@pytest.mark.usefixtures("clean_environment")
+@pytest.mark.usefixtures("clean_environment", "providers")
 def test_defaults_do_not_override_the_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -45,6 +56,7 @@ def test_defaults_do_not_override_the_environment(
     )
     assert os.environ["OTEL_SEMCONV_STABILITY_OPT_IN"] == "gen_ai_latest_experimental"
     assert os.environ["ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS"] == "true"
+    assert FakeInstrumentor.calls == 0
 
 
 @pytest.mark.usefixtures("clean_environment")
@@ -66,6 +78,7 @@ def test_cloud_exporter_hands_the_adk_google_cloud_exporters_to_adk(
     assert options == {"enable_cloud_tracing": True, "enable_cloud_logging": True}
     assert providers == [["gcp hooks"]]
     assert os.environ["OTEL_RESOURCE_ATTRIBUTES"] == "gcp.project_id=sandbox"
+    assert FakeInstrumentor.calls == 1
 
 
 def test_console_exporter_prints_spans(providers: list[Any]) -> None:
@@ -74,8 +87,10 @@ def test_console_exporter_prints_spans(providers: list[Any]) -> None:
 
     assert project is None
     assert isinstance(hooks.span_processors[0], SimpleSpanProcessor)
+    assert FakeInstrumentor.calls == 1
 
 
+@pytest.mark.usefixtures("providers")
 def test_cloud_exporter_needs_a_project(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
 

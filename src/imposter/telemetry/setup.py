@@ -5,6 +5,7 @@ from enum import StrEnum
 from google.adk.telemetry.google_cloud import get_gcp_exporters
 from google.adk.telemetry.setup import OTelHooks, maybe_set_otel_providers
 from opentelemetry import trace
+from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
 TELEMETRY_DEFAULTS = {
@@ -43,7 +44,9 @@ def setup_telemetry(exporter: TelemetryExporter) -> str | None:
     The `cloud` exporter follows ADK's tracing guide: `get_gcp_exporters` handed to
     `maybe_set_otel_providers`. Spans go to Cloud Trace and ADK's prompt and completion
     events to Cloud Logging, over OTLP to `telemetry.googleapis.com` with Application
-    Default Credentials. The `console` exporter prints spans to stderr.
+    Default Credentials. The `console` exporter prints spans to stderr. When traces are
+    exported, every HTTP request of the model clients is a span too, below ADK's
+    `generate_content` span, so timeouts, rate limits and retries show up in the trace.
 
     Args:
         exporter: Where traces and logs go.
@@ -55,6 +58,9 @@ def setup_telemetry(exporter: TelemetryExporter) -> str | None:
         ValueError: When the exporter is `cloud` but `GOOGLE_CLOUD_PROJECT` is not set.
     """
     set_telemetry_defaults()
+
+    if exporter is not TelemetryExporter.NONE:
+        AioHttpClientInstrumentor().instrument()
 
     match exporter:
         case TelemetryExporter.CLOUD:
