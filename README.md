@@ -14,6 +14,23 @@ claude-haiku -p gpt-oss"`, where `--god` also shows the secret word, the roles a
 private reasoning. `uv run imposter play --help` lists every option. `make adk-web`
 starts the ADK developer UI, in which every new session plays a game.
 
+## How a game runs
+
+A pure game engine owns the rules and the event log, and decides every phase change. The
+game is played by an ADK graph workflow with one node per phase (setup, clue,
+discussion, vote, resolution, guess, outcome, debrief, done and aborted). The edges are
+generated from the engine's table of phase transitions, so the graph shows every way a
+game can go: the clue and discussion rounds are loop edges, a player who says the secret
+word jumps straight to the outcome, and any phase in which players act can be aborted.
+Each node plays its phase through the players, publishes the new game events and routes
+to the phase that the engine moved to.
+
+In the ADK developer UI (`make adk-web`), the graph shows the path a game took and
+highlights the phase of the selected event. ADK traces every node, so a game is one
+trace with a span per phase and round, and the model calls of the players nest under it.
+
+![The phase graph of a finished game in the ADK developer UI](docs/images/adk-web-phase-graph.png)
+
 ## Design and setup
 
 The design notes and decisions behind the app are in [`docs/plans/`](docs/plans/README.md).

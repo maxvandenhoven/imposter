@@ -7,7 +7,7 @@ the order in which work happens. Topic files go deeper on each area:
 | File | Covers |
 |---|---|
 | [`game-rules.md`](game-rules.md) | The game as a precise state machine: setup options, phases, limits, vote tally, guess, outcome, debrief |
-| [`agents-and-orchestration.md`](agents-and-orchestration.md) | ADK setup, how engine, players and orchestration fit, the turn loop, `GameRunnerAgent`, `PlayerProtocol`, `PlayerView`, prompts, structured outputs, scratchpad, concurrency, failures, ports |
+| [`agents-and-orchestration.md`](agents-and-orchestration.md) | ADK setup, how engine, players and orchestration fit, the turn loop, the game workflow, `PlayerProtocol`, `PlayerView`, prompts, structured outputs, scratchpad, concurrency, failures, ports |
 | [`models-and-judge.md`](models-and-judge.md) | Model catalog, Vertex AI access (Gemini, Claude, open MaaS models), identity modes, words and categories, the `Judge` |
 | [`observability.md`](observability.md) | OpenTelemetry, Cloud Trace span hierarchy, content capture to Cloud Logging, token and cost attributes, IAP identity |
 | [`web-ui.md`](web-ui.md) | FastAPI + SSE API, static frontend (Alpine.js + Tailwind), setup screen, game board, audience and god mode, playback, export and import |
@@ -65,7 +65,7 @@ public multi-user access.
  ┌──────────────── Cloud Run service `imposter` (europe-west4, behind IAP) ─────────────────┐
  │ api (FastAPI) ── identity (IAP header) ── EventBus (in memory) ◀── events ──┐            │
  │    │                                                                        │            │
- │    └──▶ orchestration: GameRunnerAgent (custom ADK BaseAgent, run by ADK Runner) ┘        │
+ │    └──▶ orchestration: game workflow (ADK graph Workflow, a node per phase) ┘            │
  │              │   GameRunner: ask players (I/O) → apply to the pure Game engine            │
  │              ├──▶ players: AdkPlayer (LlmAgent, include_contents='none') × N              │
  │              ├──▶ judge: Gemini Flash-Lite (structured yes/no)                           │
@@ -93,7 +93,7 @@ layers.
 | D3 | Clues are exactly one word, no repeats of any earlier clue (own clues included), no trivial derivatives. Saying the secret word in a clue or statement ends the game at once and loses it for the speaker's side (playtest 1). Discussion statements and private reasoning are capped (100 and 60 words), enforced in the prompt and by hard truncation in code. | Prevents endless discussion and keeps costs predictable. |
 | D4 | Most votes is caught; a tie catches nobody. Imposter not caught wins; caught imposter who guesses the word steals the win; otherwise civilians win. Before that, whoever says the secret word loses for their side. | Deterministic, simple, matches the spirit of the app. |
 | D5 | All models via Vertex AI in the project: Gemini natively, Claude via Model Garden, open models via Vertex MaaS, non-Gemini models through ADK `LiteLlm` (`vertex_ai/...`). No OpenAI. | Keep everything GCP-native: one bill, IAM, quotas and logs in one project. |
-| D6 | Orchestration is deterministic code: a custom ADK `BaseAgent` (`GameRunnerAgent`) runs a `GameRunner`, which asks players for their action (I/O) and applies it to a pure `Game` object that owns the rules and the event log. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
+| D6 | Orchestration is deterministic code: an ADK graph `Workflow` with a node per phase (D32) runs a `GameRunner`, which asks players for their action (I/O) and applies it to a pure `Game` object that owns the rules and the event log. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
 | D7 | Players implement a `PlayerProtocol` (`take_turn(view, retry_reason) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. | No shared conversation history that could leak the word. The protocol leaves room for A2A remote players (future work). |
 | D8 | Each player has a private scratchpad with its own earlier actions and reasoning, derived by the engine from that seat's events and shown only to that player in its `PlayerView`. | Consistent strategy over rounds and material for the debrief. |
 | D9 | Structured output per phase with a `private_reasoning` field. Native structured output where supported, otherwise JSON in the prompt plus pydantic validation and one retry with the error, then a pass/abstain fallback. | Machine-checkable turns across all model families. |
@@ -119,7 +119,7 @@ layers.
 | D29 | Cost guardrails: max 8 players, `max_output_tokens` per phase, per-game token budget (default 200k, aborts cleanly), running cost estimate in the UI, Terraform billing budget with alerts. | No surprise bills. |
 | D30 | Testing: pure engine unit tests with scripted fake players; Hypothesis leak tests (imposter never sees the word, nobody sees others' private reasoning, votes hidden before the reveal); SSE tests with fakes; one `slow` smoke game against cheap real models; a tournament CLI for model statistics. ADK's eval framework is future work. | The leak invariant is the most important property and is cheap to guarantee. |
 | D31 | Region: app resources in `europe-west4`; models on the Vertex `global` endpoint, with a per-model `location` override in the catalog. | EU app, best model availability and quota. |
-| D32 | Orchestration uses a custom `BaseAgent` with imperative code, not the ADK 2.0 graph `Workflow` API. | The game loop has configurable round counts and per-player fan-out that read naturally as code; a `Workflow` version is a possible later experiment. |
+| D32 | Orchestration is an ADK 2.x graph `Workflow` (`orchestration/runner_workflow.py`) whose nodes are the game phases and whose edges are generated from the engine's transition table (`PHASE_TRANSITIONS`), routed by the next phase. Rounds are loop edges, so the graph is static. Each node plays one phase and round through the `GameRunner` and routes by the event log. Live objects (game, players, bus) stay outside ADK state, looked up by session id. This replaces the first version, a custom `BaseAgent` (`GameRunnerAgent`) with an imperative loop, which was deleted once the workflow played the same seeded games event for event. | The graph keeps D6: the engine still decides every transition. In return `adk web` draws the phase graph and highlights the active phase, and ADK's `invoke_workflow` and `invoke_node` spans give the game and phase levels of the trace for free (`observability.md`). Configurable round counts fit as loop edges, and per-seat fan-out stays in `GameRunner`, so the worry that made the first version imperative did not hold. |
 
 ## 5. Target repo structure
 
@@ -144,7 +144,7 @@ imposter/
 │  ├─ models/                  # catalog.py, catalog.yaml, factory.py (ADK model objects), structured.py
 │  ├─ words/                   # categories/*.yaml, picker.py, generator.py, options.py
 │  ├─ judge/                   # base.py (JudgeProtocol), llm_judge.py, checks.py (cheap code checks)
-│  ├─ orchestration/           # runner.py (GameRunner), runner_agent.py (GameRunnerAgent), adk_runner.py
+│  ├─ orchestration/           # runner.py (GameRunner), runner_workflow.py (game workflow), adk_runner.py
 │  ├─ ports/                   # game_store.py, event_bus.py (protocols + in-memory adapters)
 │  ├─ telemetry/               # setup.py (exporters), spans.py (game/phase/turn helpers), cost.py
 │  ├─ api/                     # app.py, settings.py, identity.py, routes/ (games, catalog, sse)
@@ -182,7 +182,8 @@ issue should not be started.
 | 04 | Model catalog and ADK player | M1 | 02, 03 | #4 |
 | 05 | Words, categories and the judge | M1 | 04 | #5 |
 | 06 | GameRunnerAgent and `imposter play` CLI | M1 | 04, 05 | #6 |
-| 07 | Tracing to Cloud Trace and Cloud Logging | M2 | 06 | #7 |
+| 15 | The game as an ADK graph workflow | M2 | 06 | #21 |
+| 07 | Tracing to Cloud Trace and Cloud Logging | M2 | 15 | #7 |
 | 08 | FastAPI app, SSE stream and in-memory ports | M3 | 06 | #8 |
 | 09 | Static frontend foundation and setup screen | M3 | 08 | #9 |
 | 10 | Live game board with audience and god mode | M3 | 09 | #10 |
@@ -196,14 +197,15 @@ flowchart LR
   WP01 --> WP02 & WP03
   WP02 & WP03 --> WP04 --> WP05
   WP04 & WP05 --> WP06
-  WP06 --> WP07 & WP08
+  WP06 --> WP15 & WP08
+  WP15 --> WP07
   WP08 --> WP09 --> WP10 --> WP11
   WP02 & WP08 --> WP12
   WP07 & WP11 & WP12 --> WP13
   WP07 --> WP14
 ```
 
-Recommended order: 01, 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14. WP 03 can run
+Recommended order: 01, 02, 03, 04, 05, 06, 15, 07, 08, 09, 10, 11, 12, 13, 14. WP 03 can run
 in parallel with WP 02; WP 12 can start after 08 and run alongside the UI work; WP 14 can
 start any time after 07.
 

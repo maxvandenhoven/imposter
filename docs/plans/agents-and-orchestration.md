@@ -7,9 +7,9 @@
 - Vertex AI mode via environment: `GOOGLE_GENAI_USE_VERTEXAI=TRUE`,
   `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global`. Credentials are ADC locally and
   the Cloud Run service account when deployed. No API keys.
-- `src/imposter/agent.py` exposes a `root_agent` (a `GameRunnerAgent` with a default
-  request) so `adk web src` (`make adk-web`) lists the `imposter` app and plays one game
-  per new session. `adk web` takes the directory that contains the agent packages, so it
+- `src/imposter/agent.py` exposes a `root_agent` (the game workflow with a default
+  request) so `adk web src` (`make adk-web`) lists the `imposter` app, draws the phase
+  graph and plays one game per new session. `adk web` takes the directory that contains the agent packages, so it
   is `src`, not `src/imposter`.
 - Before writing code, read the ADK cheatsheet (the `google-agents-cli-adk-code` skill) and
   check exact signatures in the installed package. The custom layout here replaces
@@ -34,7 +34,7 @@ a model. The players call models but know nothing of the rules beyond their own 
 
 `GameRunner` holds the players (one per seat) and the optional clue and guess judges. The
 turn logic is written once there and used by everything that runs a game: tests, the CLI
-and the ADK agent.
+and the game workflow.
 
 - `runner.ask(game=..., seat=...) -> TurnResult` is the only step that does I/O. It builds
   the seat's view, calls `take_turn`, runs the code checks and the clue judge, retries
@@ -50,49 +50,97 @@ and the ADK agent.
   game, and the answers are applied in seat order, so the event log does not depend on
   which model answered first.
 
-## GameRunnerAgent (custom `BaseAgent`)
+## Game workflow (`orchestration/runner_workflow.py`)
 
-`orchestration/runner_agent.py` defines `GameRunnerAgent(BaseAgent)`, the ADK face of a
-`GameRunner`. Its `_run_async_impl` plays the game step by step with the runner, yields
-an ADK `Event` for every new engine event (the event as JSON text, so `adk web` and the
-ADK runner see progress) and publishes each engine event to the `EventBusProtocol` port.
-Phase and turn spans follow with the tracing work package.
+A game is played by an ADK 2.x graph `Workflow` whose nodes are the game phases and whose
+edges are every phase change the engine can make (README D32). `game_workflow(sessions=...)`
+builds it from `PHASE_TRANSITIONS` in `utils/phases.py`, the single transition table that
+`next_phase` and the secret word exit also read, so the graph cannot drift from the
+engine. Every edge is routed by the name of the phase it enters, and rounds are loop
+edges, so the graph is static and shows every config:
 
 ```
-game = setup.create_game(request from session state, game_id = session id)
-runner = setup.runner_for(game)
-try:
-    loop:
-        publish and yield the events not seen yet
-        if game.is_over: break
-        await runner.play_step(game)
-finally:
-    abort the game if it is not over, publish the rest, close the bus
+START → setup → clue ─┬─ clue          (next round)
+                      ├─ discussion
+                      ├─ vote          (discussion_rounds = 0)
+                      └─ outcome       (secret word said)
+         discussion ─┬─ discussion     (next round)
+                     ├─ vote
+                     └─ outcome        (secret word said)
+         vote → resolution → guess → outcome → debrief → done
+         clue, discussion, vote, guess, debrief ── aborted   (token budget, cancellation)
 ```
 
-The `finally` block covers cancellation: when the task of the run is cancelled (for
-example after an SSE disconnect), the game ends with a `game_aborted` event and
-subscribers see the end of the stream. A second run in a session whose game was already
+Each node is a `GamePhaseNode` (a subclass of ADK's `Node`). A node run plays one
+segment, all events of one phase and round: it calls `runner.play_step(game)` until the
+game leaves that phase and round, publishes the events of the segment to the
+`EventBusProtocol` port, yields each as a content event (the event as JSON text, which
+`adk web` shows), and routes to the phase of the next event with `Event(route=...)`. The
+node never decides a transition itself (README D6): it follows the event log, and raises
+when it is reached in a phase other than its own. Phases in which nobody acts
+(resolution and outcome) are played by the engine as soon as the phase before them ends,
+so their nodes only publish. The setup node creates the game from the `GameRequest` in
+session state (or the default request, as in `adk web`), and the terminal nodes publish
+the last events and close the bus. A second run in a session whose game was already
 played yields a single message and plays nothing.
+
+```
+setup node:  game = setup.create_game(request from state, game_id = session id)
+every node:  try:
+                 check that the next unpublished event is in this node's phase
+                 play_step until the game leaves this phase and round
+                 publish the events of this phase and round
+             except anything, including cancellation:
+                 abort the game if it is not over, publish the rest, close the bus
+                 raise
+             yield a content event per engine event, then route to the next phase
+```
+
+Cancellation is handled in the node: when the task of the run is cancelled (for example
+after an SSE disconnect), the game ends with a `game_aborted` event and subscribers see
+the end of the stream. `run_game` finishes the game again in a `finally` block, which
+does nothing when the node already did.
+
+**Live objects.** ADK keeps node outputs and session state as JSON, but a `Game`, its
+players and the bus are live objects. `GameSessions` keeps them per ADK session
+(`GameSession`: the game, its `GameRunner` and how many events were published), and the
+nodes look them up by session id. Nodes pass nothing to each other: the route is the
+only output. This deviates from the Workflow API's replay and resumability model, which
+would rebuild the game from state. A game cannot resume mid-way anyway, because players
+are model calls and the engine has no resume from an event log yet.
+
+**Per-seat fan-out.** Votes and debrief fan out over seats inside `GameRunner.play_step`
+with `asyncio.gather`, not as `parallel_worker` nodes: players stay behind
+`PlayerProtocol`, and one node per seat and phase would clutter the graph.
 
 `orchestration/setup.py` holds `GameRequest` (the `GameConfig` plus the `WordOptions`)
 and `GameSetup`, which chooses the secret word, creates the `Game` and seats an
 `AdkPlayer` for every seat with the judge. Tests use a subclass that seats fake players.
 
-The `GameRunnerAgent` holds no game rules: legality, tallying and outcome live in the
-`Game`, and the turn logic in the `GameRunner`. It adds only what ADK, telemetry and the
-event bus need. The names say what each part is: the `Game` is the game itself, the
-`GameRunner` runs it, and the `GameRunnerAgent` runs the `GameRunner` inside ADK.
+The workflow holds no game rules: legality, tallying and outcome live in the `Game`, and
+the turn logic in the `GameRunner`. It adds only what ADK, telemetry and the event bus
+need. The names say what each part is: the `Game` is the game itself, the `GameRunner`
+runs it, and the game workflow runs the `GameRunner` inside ADK, one node per phase.
 
-`orchestration/adk_runner.py` wires ADK's own `Runner` with the `GameRunnerAgent`, an
-`InMemorySessionService` (behind ADK's `BaseSessionService`, swappable later), and creates
-one session per game (`session_id = game_id`). The `GameRequest` is passed in the initial
-state under `game:request`. `run_game(request=..., setup=..., bus=..., store=...)` is the
-coroutine the CLI uses and the API will use: subscribe to the bus with the game id to
-follow the game while it runs.
+`orchestration/adk_runner.py` wires ADK's own `Runner` with an `App` around the game
+workflow and an `InMemorySessionService` (behind ADK's `BaseSessionService`, swappable
+later), and creates one session per game (`session_id = game_id`). The `GameRequest` is
+passed in the initial state under `game:request`. `run_game(request=..., setup=...,
+bus=..., store=...)` is the coroutine the CLI uses and the API will use: subscribe to the
+bus with the game id to follow the game while it runs.
 
-ADK's graph `Workflow` API (2.x) was considered; the imperative `BaseAgent` reads more
-naturally for configurable round counts and per-player fan-out (README D32).
+**In `adk web`.** The dev UI draws the graph with ADK's workflow visualizer, with route
+names on the edges, and highlights the path of a game and the node of the selected event.
+Routing nodes carry a "no default" mark, because no edge has a `__DEFAULT__` route: every
+transition is explicit. ADK's older `/dev/apps/{app}/graph` endpoint (`agent_graph.py`)
+fails for workflows in ADK 2.13 because it reads a `_graph` attribute that `Workflow` no
+longer has. The UI does not use it.
+
+**The first version.** Before the workflow, a custom `BaseAgent` (`GameRunnerAgent`)
+played the whole game in one `_run_async_impl` loop. It was deleted once seeded games
+played through the workflow matched it event for event, including the secret word exit,
+the budget abort and cancellation. The workflow tests now compare its games with
+`GameRunner.play` directly.
 
 ## Player interface
 
@@ -141,9 +189,10 @@ class PlayerProtocol(Protocol):
 - The agent is called with a fresh user message per turn (the task). Each `AdkPlayer`
   runs its agents with its own ADK `Runner` and `InMemorySessionService`, with one
   session per game and phase (ADK warns about events from agents its runner does not
-  know). The players are not sub-agents of the `GameRunnerAgent`: that would tie
+  know). The players are not nodes or sub-agents of the game workflow: that would tie
   `PlayerProtocol` to ADK's invocation context. Their ADK spans still nest under the
-  game, because OpenTelemetry context travels with the asyncio task (checked in WP 07).
+  node of the phase, because OpenTelemetry context travels with the asyncio task
+  (checked in WP 15, see `observability.md`).
 
 ### Structured responses
 
@@ -215,7 +264,8 @@ touching the engine or orchestration:
   from_seq=0) -> AsyncIterator[GameEvent]` which first replays buffered events then tails
   new ones, `close(game_id)`. Adapter `InMemoryEventBus`, a per-game buffer plus an
   `asyncio.Event` that is set and replaced on every change. `publish` and `close` are
-  synchronous, so the agent can call them in its `finally` block after a cancellation.
+  synchronous, so a workflow node can call them in its `except` block after a
+  cancellation.
 - ADK `BaseSessionService`: `InMemorySessionService` now; `DatabaseSessionService` or
   Vertex AI sessions later.
 

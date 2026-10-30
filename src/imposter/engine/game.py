@@ -47,7 +47,9 @@ from imposter.utils.phases import (
     PARALLEL_PHASES,
     SEQUENTIAL_PHASES,
     TERMINAL_PHASES,
+    PhaseTransitionReason,
     next_phase,
+    transition_target,
 )
 from imposter.utils.tally import caught_seats, count_votes, decide_outcome
 from imposter.utils.text import (
@@ -650,6 +652,9 @@ class Game:
             private_reasoning: The reasoning of the seat, truncated to the cap.
         """
         reasoning, reasoning_truncated = self.truncate_reasoning(private_reasoning)
+        target = transition_target(
+            source=self.phase, reason=PhaseTransitionReason.SECRET_WORD_SAID
+        )
         self.emit(
             SecretWordSaidEvent,
             seat=seat,
@@ -657,7 +662,7 @@ class Game:
             private_reasoning=reasoning,
             reasoning_truncated=reasoning_truncated,
         )
-        self.emit(PhaseStartedEvent, phase=GamePhase.OUTCOME, round=None)
+        self.emit(PhaseStartedEvent, phase=target, round=None)
         self.reveal_outcome()
         self.advance()
 

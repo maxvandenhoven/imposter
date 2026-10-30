@@ -28,8 +28,8 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `src/imposter/models/` — model catalog (YAML) and ADK model factory
 - `src/imposter/words/` — word categories, picker and generator
 - `src/imposter/judge/` — `JudgeProtocol` port, LLM judge and cheap code checks
-- `src/imposter/orchestration/` — `GameRunner` (asks players, applies turns), the
-  `GameRunnerAgent` ADK agent and the ADK `Runner` wiring
+- `src/imposter/orchestration/` — `GameRunner` (asks players, applies turns), the game
+  workflow (an ADK graph `Workflow` with a node per phase) and the ADK `Runner` wiring
 - `src/imposter/ports/` — game store and event bus protocols with in-memory adapters
 - `src/imposter/telemetry/` — OpenTelemetry setup, span helpers, cost estimates
 - `src/imposter/api/` — FastAPI app, settings, identity, routes (games, catalog, SSE)
@@ -119,9 +119,10 @@ See `docs/plans/tooling.md` for the full rules and how each one is enforced.
   bare generic word (`Event`, `View`, `Verdict`). Related types share a pattern, for
   example the per-phase responses `ClueResponse`, `DiscussionResponse`, `VoteResponse`.
 - Name abstract types by their kind: base classes start with `Base` (`BaseGameEvent`),
-  protocols end with `Protocol` (`PlayerProtocol`), and ADK agents end with `Agent`
-  (`GameRunnerAgent`). Functions are named after what they return or do
-  (`pending_seats`, `start_turn`), not `get_` or `do_`.
+  protocols end with `Protocol` (`PlayerProtocol`), ADK agents end with `Agent`
+  (`StructuredTaskAgent`) and workflow nodes with `Node` (`GamePhaseNode`). Functions
+  are named after what they return or do (`pending_seats`, `start_turn`), not `get_` or
+  `do_`.
 - Prefer public over private. Do not prefix functions, methods, attributes or constants
   with `_` unless hiding them clearly matters (state that must only change through
   methods, or a subclass hook that callers must not use). Document public attributes in
