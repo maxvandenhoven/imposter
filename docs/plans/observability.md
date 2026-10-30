@@ -8,8 +8,8 @@ identity mode, with full prompts and completions one click away in Cloud Logging
 - ADK emits OpenTelemetry spans out of the box (`invoke_workflow`, `invoke_node`,
   `invoke_agent`, `generate_content` and tools, see §Span hierarchy). Export follows the
   programmatic GCP setup of ADK's tracing guide (https://adk.dev/observability/traces/):
-  `telemetry/setup.py` (`setup_telemetry`) hands `get_gcp_exporters(enable_cloud_tracing=True,
-  enable_cloud_logging=True)` to `maybe_set_otel_providers`, which exports over OTLP to
+  `telemetry/setup.py` (`setup_telemetry`) hands `get_gcp_exporters(...)` with tracing
+  and logging enabled to `maybe_set_otel_providers`, which exports over OTLP to
   `telemetry.googleapis.com` with ADC. The guide enables tracing only, and we add the
   logging exporter because ADK's prompt and completion events are logs. As in the guide,
   the resource comes from `OTEL_SERVICE_NAME` (`imposter`) and
