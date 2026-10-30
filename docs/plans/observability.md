@@ -146,4 +146,11 @@ IAP is the only ingress path (see `infrastructure.md`); validating the signed
 - The CLI prints the link of each game's trace at the end, and the UI links each game to
   its trace:
   `https://console.cloud.google.com/traces/explorer?project=<project>&tid=<trace id>`.
+- Prompts and completions are in Logs Explorer, one entry per model call, with the
+  prompt in the labels `gen_ai.system_instructions` and `gen_ai.input.messages` and the
+  answer in `gen_ai.output.messages`. ADK's exporter writes the bare trace id into the
+  `trace` field, not `projects/<project>/traces/<id>`, so Trace Explorer may not show the
+  entries next to a span. Find them with this query instead, where `spanId` is the
+  `generate_content` span of the call:
+  `logName:"gen_ai.client.inference.operation.details" trace="<trace id>"`.
 - Cloud Trace keeps traces 30 days, which serves as a free game archive.
