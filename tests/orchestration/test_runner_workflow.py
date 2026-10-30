@@ -31,7 +31,6 @@ from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
 from imposter.orchestration.adk_runner import run_game
 from imposter.orchestration.runner import GameRunner
-from imposter.orchestration.runner_agent import GameRunnerAgent
 from imposter.orchestration.runner_workflow import (
     REQUEST_STATE_KEY,
     STOPPED_REASON,
@@ -309,41 +308,30 @@ async def test_cancelled_game_is_aborted_and_the_bus_closed() -> None:
     ],
     ids=["default", "no-discussion", "secret-word-said", "abort-in-clue", "abort-late"],
 )
-async def test_workflow_plays_the_same_game_as_the_agent(
+async def test_workflow_plays_the_same_game_as_the_game_runner(
     players_for: object, options: dict[str, object]
 ) -> None:
     request = new_request(**options)
-    state = {REQUEST_STATE_KEY: request.model_dump(mode="json")}
-    agent_store = InMemoryGameStore()
-    agent = GameRunnerAgent(
-        name="game_runner",
-        setup=FakeGameSetup(players_for=players_for),  # ty: ignore[invalid-argument-type]
-        store=agent_store,
-    )
-    workflow_store = InMemoryGameStore()
+    reference_setup = FakeGameSetup(players_for=players_for)  # ty: ignore[invalid-argument-type]
+    reference = await reference_setup.create_game(request=request, game_id="game-1")
+    await reference_setup.runner_for(reference).play(reference)
+    store = InMemoryGameStore()
     sessions = GameSessions(
         setup=FakeGameSetup(players_for=players_for),  # ty: ignore[invalid-argument-type]
         bus=InMemoryEventBus(),
-        store=workflow_store,
+        store=store,
     )
+    state = {REQUEST_STATE_KEY: request.model_dump(mode="json")}
 
-    agent_texts = await run_session(agent, sessions=InMemorySessionService(), state=state)
-    workflow_texts = await run_session(
+    texts = await run_session(
         game_workflow(sessions=sessions), sessions=InMemorySessionService(), state=state
     )
-    agent_game = agent_store.get("game-1")
-    workflow_game = workflow_store.get("game-1")
+    game = store.get("game-1")
 
-    assert agent_game is not None
-    assert workflow_game is not None
-    assert workflow_game.is_over
-    assert without_timestamps(workflow_game.events) == without_timestamps(
-        agent_game.events
-    )
-    assert [GAME_EVENT_ADAPTER.validate_json(text) for text in workflow_texts] == list(
-        workflow_game.events
-    )
-    assert len(workflow_texts) == len(agent_texts)
+    assert game is not None
+    assert game.is_over
+    assert without_timestamps(game.events) == without_timestamps(reference.events)
+    assert [GAME_EVENT_ADAPTER.validate_json(text) for text in texts] == list(game.events)
 
 
 async def test_secret_word_exit_routes_from_the_round_to_the_outcome() -> None:
@@ -446,11 +434,19 @@ async def test_workflow_spans_have_a_node_span_per_phase_and_round(
     )
 
 
-async def cancelled_game(agent: BaseNode, *, blocking: BlockingPlayer) -> None:
-    """Run an agent in the session `game-1` until a player is asked, then cancel it."""
+async def test_cancelled_workflow_session_aborts_the_game_and_closes_the_bus() -> None:
+    blocking = BlockingPlayer()
+    store = InMemoryGameStore()
+    bus = InMemoryEventBus()
+    setup = FakeGameSetup(players_for=lambda game: [blocking, *random_players(game)[1:]])
+    sessions = GameSessions(setup=setup, bus=bus, store=store)
     state = {REQUEST_STATE_KEY: new_request().model_dump(mode="json")}
     task = asyncio.create_task(
-        run_session(agent, sessions=InMemorySessionService(), state=state)
+        run_session(
+            game_workflow(sessions=sessions),
+            sessions=InMemorySessionService(),
+            state=state,
+        )
     )
     await blocking.asked.wait()
     task.cancel()
@@ -458,43 +454,14 @@ async def cancelled_game(agent: BaseNode, *, blocking: BlockingPlayer) -> None:
     with pytest.raises(asyncio.CancelledError):
         await task
 
+    game = store.get("game-1")
+    published = [event async for event in bus.subscribe(game_id="game-1")]
 
-async def test_cancelled_workflow_aborts_the_same_game_as_the_agent() -> None:
-    agent_blocking = BlockingPlayer()
-    agent_store = InMemoryGameStore()
-    agent_bus = InMemoryEventBus()
-    agent = GameRunnerAgent(
-        name="game_runner",
-        setup=FakeGameSetup(
-            players_for=lambda game: [agent_blocking, *random_players(game)[1:]]
-        ),
-        bus=agent_bus,
-        store=agent_store,
-    )
-    workflow_blocking = BlockingPlayer()
-    workflow_store = InMemoryGameStore()
-    workflow_bus = InMemoryEventBus()
-    sessions = GameSessions(
-        setup=FakeGameSetup(
-            players_for=lambda game: [workflow_blocking, *random_players(game)[1:]]
-        ),
-        bus=workflow_bus,
-        store=workflow_store,
-    )
-
-    await cancelled_game(agent, blocking=agent_blocking)
-    await cancelled_game(game_workflow(sessions=sessions), blocking=workflow_blocking)
-    agent_game = agent_store.get("game-1")
-    workflow_game = workflow_store.get("game-1")
-    published = [event async for event in workflow_bus.subscribe(game_id="game-1")]
-
-    assert agent_game is not None
-    assert workflow_game is not None
-    assert workflow_game.phase is GamePhase.ABORTED
-    assert without_timestamps(workflow_game.events) == without_timestamps(
-        agent_game.events
-    )
-    assert published == list(workflow_game.events)
+    assert game is not None
+    assert game.phase is GamePhase.ABORTED
+    assert published == list(game.events)
+    assert isinstance(published[-1], GameAbortedEvent)
+    assert published[-1].reason == STOPPED_REASON
     assert sessions.active == {}
 
 

@@ -53,7 +53,8 @@ class GameRunner:
     plain engine calls. In sequential phases one seat is asked at a time. In parallel
     phases (votes and debrief) every pending seat is asked at once, against the same
     game, and the answers are applied in seat order, so the event log does not depend on
-    which model answered first. The ADK `GameRunnerAgent` uses the same methods.
+    which model answered first. The nodes of the game workflow play a game through
+    these methods.
 
     Attributes:
         players: The player at each seat, in seat order.

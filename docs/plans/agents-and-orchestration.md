@@ -136,11 +136,11 @@ transition is explicit. ADK's older `/dev/apps/{app}/graph` endpoint (`agent_gra
 fails for workflows in ADK 2.13 because it reads a `_graph` attribute that `Workflow` no
 longer has. The UI does not use it.
 
-**`GameRunnerAgent`.** `orchestration/runner_agent.py` keeps the earlier custom
-`BaseAgent`, which plays the whole game in one `_run_async_impl` loop. Tests play the
-same seeded games through both and compare the event logs, including the secret word
-exit, the budget abort and cancellation. Nothing else uses it, and it can be deleted
-once the workflow has been used for real games for a while.
+**The first version.** Before the workflow, a custom `BaseAgent` (`GameRunnerAgent`)
+played the whole game in one `_run_async_impl` loop. It was deleted once seeded games
+played through the workflow matched it event for event, including the secret word exit,
+the budget abort and cancellation. The workflow tests now compare its games with
+`GameRunner.play` directly.
 
 ## Player interface
 
