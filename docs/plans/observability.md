@@ -76,8 +76,11 @@ How our attributes and spans get there (`telemetry/spans.py`):
   `GamePhaseNode` calls `mark_phase` on it.
 - **Turn.** `GameRunner.ask` opens `turn {player name}` (`turn_span`) around the player's
   attempts and the judge calls of the turn. ADK has no span per turn: each attempt opens
-  its own nested `invoke_workflow`, and the retry, the fallback and the turn's tokens and
-  cost only exist at this level.
+  its own nested `invoke_workflow`, and the retry, the fallback and the turn's cost only
+  exist at this level. The tokens are not repeated on the turn: ADK sets
+  `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` and
+  `gen_ai.usage.reasoning.output_tokens` on every `generate_content` span, and the
+  same numbers are in its log entry of the call.
 - **Judge.** `LlmJudge` opens `judge {kind}` (`judge_span`) around each decision. Most
   decisions are made by the code checks, which ADK does not see, and ADK's spans of the
   model call do not carry the verdict.
@@ -91,7 +94,7 @@ Attributes (prefix `imposter.` for our own, OTel semantic conventions where they
 |---|---|
 | game (`invoke_workflow game_runner`) | `imposter.game.id`, `enduser.id` (IAP email, when present, WP 13), `imposter.game.identity_mode`, `imposter.game.player_count`, `imposter.game.imposter_count`, `imposter.game.lineup` (models by seat), `imposter.game.category`, `imposter.game.word_sha256` (not the word in clear on the root, so traces lists do not spoil it), `imposter.game.outcome` (empty when aborted), `imposter.game.total_tokens`, `imposter.game.cost_usd` |
 | phase (`invoke_node {phase}`) | `imposter.phase.name`, `imposter.phase.round` (phases with rounds) |
-| `turn {player name}` | `imposter.phase.name`, `imposter.player.seat`, `imposter.player.name`, `imposter.player.role`, `gen_ai.request.model` (catalog id), `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `imposter.usage.thinking_tokens`, `imposter.cost_usd`, `imposter.turn.attempts`, `imposter.turn.fallback` (bool), `imposter.turn.truncated` (bool) |
+| `turn {player name}` | `imposter.phase.name`, `imposter.player.seat`, `imposter.player.name`, `imposter.player.role`, `gen_ai.request.model` (catalog id), `imposter.cost_usd`, `imposter.turn.attempts`, `imposter.turn.fallback` (bool), `imposter.turn.truncated` (bool) |
 | `judge {kind}` | `imposter.judge.kind` (`guess`/`clue`), `imposter.judge.verdict`, `imposter.judge.confidence`, `gen_ai.request.model` (`code` for the code checks) |
 
 Errors set span status `ERROR`: a turn with a player error or an invalid action (with the

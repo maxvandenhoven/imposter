@@ -109,8 +109,7 @@ async def test_game_trace_has_game_phase_and_turn_levels(
     assert first_turn["imposter.player.name"] == game.seats[0].name
     assert first_turn["imposter.player.role"] == game.seats[0].role
     assert first_turn["gen_ai.request.model"] == game.seats[0].player.model_id
-    assert first_turn["gen_ai.usage.input_tokens"] == 90
-    assert first_turn["gen_ai.usage.output_tokens"] == 10
+    assert "gen_ai.usage.input_tokens" not in first_turn
     assert first_turn["imposter.turn.attempts"] >= 1
     assert float(first_turn["imposter.cost_usd"]) > 0
     assert [event.name for event in turns[0].events] == ["ClueResponse"]

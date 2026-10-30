@@ -33,12 +33,21 @@ highlights the phase of the selected event.
 ## Tracing
 
 Every game is one trace in Cloud Trace. ADK traces the workflow and every node, so the
-trace has a root span for the game and a span per phase and round. The app adds a span
-per player turn, with its tokens and estimated cost, and a span per judge decision, and
-the model calls of the players nest under their turn. The root span carries the lineup,
-the outcome and the totals, and the secret word only as a hash, so a list of traces does
-not spoil it. The prompts and completions go to Cloud Logging as events that link to
-their span. `make play` prints the Trace Explorer link of the game when it ends.
+trace has a root span for the game and a span per phase and round. ADK also traces every
+model call, with its token usage. The app adds a span per player turn, with its estimated
+cost, and a span per judge decision, and the model calls of the players nest under their
+turn. The root span carries the lineup, the outcome and the totals, and the secret word
+only as a hash, so a list of traces does not spoil it. `make play` prints the Trace
+Explorer link of the game when it ends.
+
+The prompts and completions are logged by ADK itself, with no code of ours: three
+environment variables (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY`,
+`ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false` and
+`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`) make ADK write one Cloud
+Logging entry per model call, with the prompt, the answer and the tokens, and the trace
+and span id of the call. The app sets them as defaults. In Logs Explorer, the query
+`logName:"gen_ai.client.inference.operation.details" trace="<trace id>"` lists the
+entries of one game.
 
 Traces go to Cloud Trace when `GOOGLE_CLOUD_PROJECT` is set. `IMPOSTER_TELEMETRY` (or the
 `--telemetry` option) chooses `cloud`, `console` to print the spans in the terminal, or

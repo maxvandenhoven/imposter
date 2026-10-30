@@ -62,7 +62,7 @@ class GameRunner:
     phases (votes and debrief) every pending seat is asked at once, against the same
     game, and the answers are applied in seat order, so the event log does not depend on
     which model answered first. The nodes of the game workflow play a game through
-    these methods. Each turn is a `turn` span, with its tokens and cost.
+    these methods. Each turn is a `turn` span, with its cost.
 
     Attributes:
         players: The player at each seat, in seat order.
@@ -188,22 +188,19 @@ class GameRunner:
         )
 
     def trace_turn(self, *, span: Span, game: Game, result: TurnResult) -> None:
-        """Set the outcome of a turn on its span: tokens, cost, retries and errors.
+        """Set the outcome of a turn on its span: cost, retries and errors.
+
+        The tokens of each model call are already on ADK's `generate_content` spans
+        below the turn, so they are not repeated here.
 
         Args:
             span: The span of the turn.
             game: The game, not changed yet by the answer.
             result: The answer of the player.
         """
-        input_tokens = sum(usage.input_tokens for usage in result.usages)
-        output_tokens = sum(usage.output_tokens for usage in result.usages)
-        thinking_tokens = sum(usage.thinking_tokens for usage in result.usages)
         accepted = result.output is not None and result.rejection is None
         span.set_attributes(
             {
-                "gen_ai.usage.input_tokens": input_tokens,
-                "gen_ai.usage.output_tokens": output_tokens,
-                "imposter.usage.thinking_tokens": thinking_tokens,
                 "imposter.turn.attempts": result.attempts,
                 "imposter.turn.fallback": not accepted,
                 "imposter.turn.truncated": self.is_truncated(
