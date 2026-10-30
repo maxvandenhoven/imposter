@@ -8,20 +8,17 @@ from pydantic import Field, SkipValidation
 
 from imposter.engine.events import BaseGameEvent
 from imposter.engine.game import Game
+from imposter.orchestration.runner_workflow import REQUEST_STATE_KEY, STOPPED_REASON
 from imposter.orchestration.setup import GameRequest, GameSetup
 from imposter.ports.event_bus import EventBusProtocol, InMemoryEventBus
 from imposter.ports.game_store import GameStoreProtocol, InMemoryGameStore
 
-REQUEST_STATE_KEY = "game:request"
-"""The session state key of the `GameRequest`, set when the session is created."""
-
-STOPPED_REASON = "the game run stopped early"
-"""The abort reason of a game whose run stopped before the game was over, for example
-because its task was cancelled or a player raised an unexpected error."""
-
 
 class GameRunnerAgent(BaseAgent):
-    """The ADK agent that plays one game per session (README D6, D32).
+    """The ADK agent that plays one game per session in a single custom agent.
+
+    Games are played by the game workflow (`runner_workflow.py`, README D32). This agent
+    is kept to check that the workflow plays the same games, event for event.
 
     It holds no game rules: the `Game` owns them and the `GameRunner` the turn logic.
     The session id is the game id. The first run of a session creates the game from the
