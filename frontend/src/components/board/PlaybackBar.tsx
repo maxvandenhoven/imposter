@@ -1,10 +1,53 @@
-import { ListEnd, Pause, Play, Radio, SkipForward } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ListEnd,
+  Pause,
+  Play,
+  Radio,
+  SkipForward,
+} from "lucide-react";
+
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GamePlayback } from "@/lib/playback";
+
+/** A step button of the cursor: an icon with its label and a change to the playback. */
+function CursorButton({
+  label,
+  icon,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  icon: ReactNode;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          className="rounded-full"
+          aria-label={label}
+          disabled={disabled}
+          onClick={onClick}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 /** The speeds the audience can pick. */
 const SPEEDS = [1, 2, 4];
@@ -20,7 +63,7 @@ export function PlaybackBar({
   playback: GamePlayback;
   onChange: (change: (playback: GamePlayback) => void) => void;
 }) {
-  const behind = playback.responsesBehind;
+  const ahead = playback.eventsAhead;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
@@ -46,6 +89,48 @@ export function PlaybackBar({
           </TooltipTrigger>
           <TooltipContent>{playback.playing ? "Pause" : "Play"}</TooltipContent>
         </Tooltip>
+        <div className="flex items-center gap-1">
+          <CursorButton
+            label="Previous phase"
+            icon={<ChevronsLeft />}
+            disabled={playback.eventsShown === 0}
+            onClick={() => {
+              onChange((current) => {
+                current.previousPhase();
+              });
+            }}
+          />
+          <CursorButton
+            label="Previous event (←)"
+            icon={<ChevronLeft />}
+            disabled={playback.eventsShown === 0}
+            onClick={() => {
+              onChange((current) => {
+                current.stepBack();
+              });
+            }}
+          />
+          <CursorButton
+            label="Next event (→)"
+            icon={<ChevronRight />}
+            disabled={ahead === 0}
+            onClick={() => {
+              onChange((current) => {
+                current.stepForward();
+              });
+            }}
+          />
+          <CursorButton
+            label="Next phase"
+            icon={<ChevronsRight />}
+            disabled={ahead === 0}
+            onClick={() => {
+              onChange((current) => {
+                current.nextPhase();
+              });
+            }}
+          />
+        </div>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -109,7 +194,7 @@ export function PlaybackBar({
         {playback.pausedFor === "round" && (
           <span className="px-1 text-sm text-muted-foreground">Round over</span>
         )}
-        {behind > 0 && (
+        {ahead > 0 && (
           <Button
             variant="ghost"
             size="sm"
@@ -121,7 +206,7 @@ export function PlaybackBar({
             }}
           >
             <Radio data-icon="inline-start" />
-            {behind === 1 ? "1 response behind" : `${behind} responses behind`} · Go live
+            {ahead === 1 ? "1 event ahead" : `${ahead} events ahead`} · Go live
           </Button>
         )}
       </div>

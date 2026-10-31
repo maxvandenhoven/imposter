@@ -1,8 +1,8 @@
-import { Play } from "lucide-react";
-import { useState } from "react";
+import { Play, Upload } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { useCatalog } from "@/api/catalog";
-import type { CatalogResponse, GameRequest } from "@/api/types";
+import type { CatalogResponse, GameEvent, GameRequest } from "@/api/types";
 import { AdvancedOptions } from "@/components/setup/AdvancedOptions";
 import { IdentityModeField } from "@/components/setup/IdentityModeField";
 import { OptionSwitch } from "@/components/setup/OptionSwitch";
@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { parseGameExport } from "@/lib/gameExport";
 import {
   defaultSetupForm,
   gameRequest,
@@ -135,8 +136,70 @@ export function SetupForm({
   );
 }
 
-/** The setup view: loads the catalog and shows the setup form. */
-export function SetupPage({ onStart }: { onStart: (request: GameRequest) => void }) {
+/** A game that was read from an export file. */
+export interface ImportedGame {
+  config: GameRequest;
+  events: GameEvent[];
+}
+
+/** Import an exported game from a file, to replay it without a backend game. */
+function ImportGame({ onImport }: { onImport: (game: ImportedGame) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const read = async (file: File) => {
+    try {
+      onImport(parseGameExport(await file.text()));
+      setProblem(null);
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : "The file could not be read.");
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-2">
+      <input
+        ref={input}
+        type="file"
+        accept="application/json,.json"
+        aria-label="Exported game"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+
+          if (file !== undefined) {
+            void read(file);
+          }
+        }}
+      />
+      <Button
+        variant="outline"
+        onClick={() => {
+          input.current?.click();
+        }}
+      >
+        <Upload data-icon="inline-start" />
+        Import a game
+      </Button>
+      {problem !== null && (
+        <Alert variant="destructive">
+          <AlertTitle>The game could not be imported</AlertTitle>
+          <AlertDescription>{problem}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+/** The setup view: loads the catalog and shows the setup form, with a way to import. */
+export function SetupPage({
+  onStart,
+  onImport,
+}: {
+  onStart: (request: GameRequest) => void;
+  onImport: (game: ImportedGame) => void;
+}) {
   const catalog = useCatalog();
 
   if (catalog.isPending) {
@@ -152,5 +215,10 @@ export function SetupPage({ onStart }: { onStart: (request: GameRequest) => void
     );
   }
 
-  return <SetupForm catalog={catalog.data} onStart={onStart} />;
+  return (
+    <>
+      <ImportGame onImport={onImport} />
+      <SetupForm catalog={catalog.data} onStart={onStart} />
+    </>
+  );
 }

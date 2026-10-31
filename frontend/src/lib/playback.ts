@@ -84,6 +84,8 @@ function isResponse(item: TimelineItem): boolean {
  */
 export class GameTimeline {
   readonly items: TimedItem[] = [];
+  /** The engine events among the items, in the order they arrived. */
+  readonly events: GameEvent[] = [];
   /** The time all items take at normal speed, in milliseconds. */
   totalDuration = 0;
   /** The last answer of each seat, to tell how much of a new one is new. */
@@ -92,6 +94,7 @@ export class GameTimeline {
   /** Add the next item of the stream. */
   push(item: TimelineItem): void {
     if (item.kind === "event") {
+      this.events.push(item.event);
       this.add({ item, duration: eventPause(item.event), shownBefore: 0 });
       return;
     }
@@ -169,6 +172,16 @@ export class GamePlayback {
     return Math.max(waiting - (this.started ? this.elapsed : 0), 0);
   }
 
+  /** The number of engine events the board shows, the one playing included. */
+  get eventsShown(): number {
+    return this.played.events.length;
+  }
+
+  /** The engine events that arrived and the board does not show yet. */
+  get eventsAhead(): number {
+    return this.timeline.events.length - this.eventsShown;
+  }
+
   /** The responses that arrived and have not played yet. */
   get responsesBehind(): number {
     return this.timeline.items.slice(this.index).filter((timed) => isResponse(timed.item))
@@ -203,6 +216,79 @@ export class GamePlayback {
     this.playing = true;
     this.stepping = true;
     this.resume();
+  }
+
+  /**
+   * Jump to the board after the first `count` engine events, and pause there.
+   *
+   * The answers before the events are skipped, so the board shows no answer being
+   * written. They are written again if playback runs on from here.
+   */
+  seek(count: number): void {
+    const target = Math.min(Math.max(count, 0), this.timeline.events.length);
+    let board = INITIAL_BOARD;
+    let duration = 0;
+    let shown = 0;
+    let index = 0;
+
+    while (index < this.timeline.length && shown < target) {
+      const timed = this.timeline.items[index];
+
+      if (timed === undefined) {
+        break;
+      }
+
+      if (timed.item.kind === "event") {
+        board = boardReducer(board, { type: "game_event", event: timed.item.event });
+        shown += 1;
+      }
+
+      duration += timed.duration;
+      index += 1;
+    }
+
+    this.played = board;
+    this.playedDuration = duration;
+    this.index = index;
+    this.elapsed = 0;
+    this.started = false;
+    this.playing = false;
+    this.stepping = false;
+    this.pausedFor = null;
+  }
+
+  /** Show the next engine event and pause. */
+  stepForward(): void {
+    this.seek(this.eventsShown + 1);
+  }
+
+  /** Show the board one engine event earlier and pause. */
+  stepBack(): void {
+    this.seek(this.eventsShown - 1);
+  }
+
+  /** Show the board at the start of the next phase and pause. */
+  nextPhase(): void {
+    const events = this.timeline.events;
+    const next = events.findIndex(
+      (event, position) => position >= this.eventsShown && event.type === "phase_started",
+    );
+
+    this.seek(next === -1 ? events.length : next + 1);
+  }
+
+  /** Show the board at the start of this phase, or the one before it, and pause. */
+  previousPhase(): void {
+    const events = this.timeline.events;
+    // Standing on the start of a phase, the phase before it is meant.
+    const before = events[this.eventsShown - 1]?.type === "phase_started" ? 1 : 0;
+    let position = this.eventsShown - 1 - before;
+
+    while (position >= 0 && events[position]?.type !== "phase_started") {
+      position -= 1;
+    }
+
+    this.seek(position + 1);
   }
 
   /** Play everything that arrived at once and follow the live game from there. */

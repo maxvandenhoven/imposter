@@ -3,9 +3,10 @@ import { MotionConfig } from "motion/react";
 import { useState } from "react";
 
 import { createQueryClient } from "@/api/queryClient";
-import type { GameRequest } from "@/api/types";
+import type { GameEvent, GameRequest } from "@/api/types";
 import { AppLayout } from "@/components/AppLayout";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { buildGameExport, downloadJson, exportFileName } from "@/lib/gameExport";
 import { useGameRun } from "@/hooks/useGameRun";
 import { BoardPage } from "@/pages/BoardPage";
 import { SetupPage } from "@/pages/SetupPage";
@@ -22,6 +23,19 @@ export function App() {
     run.start(gameRequest);
   };
 
+  const importGame = (imported: { config: GameRequest; events: GameEvent[] }) => {
+    setRequest(imported.config);
+    run.load(imported.events);
+  };
+
+  const exportGame = () => {
+    if (request !== null) {
+      const events = run.board.events;
+      const text = JSON.stringify(buildGameExport({ config: request, events }), null, 2);
+      downloadJson({ name: exportFileName(events), text });
+    }
+  };
+
   const newGame = () => {
     run.stop();
     setRequest(null);
@@ -34,11 +48,12 @@ export function App() {
         <TooltipProvider delayDuration={200}>
           <AppLayout wide={request !== null}>
             {request === null ? (
-              <SetupPage onStart={startGame} />
+              <SetupPage onStart={startGame} onImport={importGame} />
             ) : (
               <BoardPage
                 board={run.board}
                 playback={run.playback}
+                onExport={exportGame}
                 onStop={run.stop}
                 onNewGame={newGame}
               />

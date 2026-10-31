@@ -1,4 +1,4 @@
-import { Activity, Coins, Eye, RotateCcw, Square } from "lucide-react";
+import { Activity, Coins, Download, Eye, RotateCcw, Square } from "lucide-react";
 
 import { PhaseStepper } from "@/components/board/PhaseStepper";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { formatCost, formatTokens, phaseSteps } from "@/lib/table";
 
 /** How the game looks from the board: live, replaying a backlog, or how it ended. */
 export type BoardStatusLabel =
-  "Live" | "Catching up" | "Finished" | "Aborted" | "Failed" | "Stopped";
+  "Live" | "Catching up" | "Replay" | "Finished" | "Aborted" | "Failed" | "Stopped";
 
 /**
  * The bar above the board: the status and cost on the left, the phases in the middle,
@@ -24,6 +24,7 @@ export function BoardHeader({
   mode,
   traceUrl,
   onModeChange,
+  onExport,
   onStop,
   onNewGame,
 }: {
@@ -33,6 +34,7 @@ export function BoardHeader({
   mode: BoardMode;
   traceUrl: string | null;
   onModeChange: (mode: BoardMode) => void;
+  onExport: () => void;
   onStop: () => void;
   onNewGame: () => void;
 }) {
@@ -80,6 +82,17 @@ export function BoardHeader({
             </a>
           </Button>
         )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="sm" onClick={onExport}>
+              <Download data-icon="inline-start" />
+              Export
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            Download the game as JSON. It holds the secrets of the game.
+          </TooltipContent>
+        </Tooltip>
         <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1">
           <Eye className="size-4 text-muted-foreground" />
           <Label htmlFor="god-mode" className="text-sm">

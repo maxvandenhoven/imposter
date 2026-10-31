@@ -1,16 +1,20 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "@/api/queryClient";
 import type { GameRequest } from "@/api/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SetupPage } from "@/pages/SetupPage";
+import { type ImportedGame, SetupPage } from "@/pages/SetupPage";
 import { mockApi } from "@/test/api";
-import { CATALOG } from "@/test/fixtures";
+import { buildGameExport } from "@/lib/gameExport";
+import { CATALOG, wholeGame } from "@/test/fixtures";
 
-function renderSetup(onStart: (request: GameRequest) => void = vi.fn()) {
+function renderSetup(
+  onStart: (request: GameRequest) => void = vi.fn(),
+  onImport: (game: ImportedGame) => void = vi.fn(),
+) {
   // The default imposter sits on the first seat.
   vi.spyOn(Math, "random").mockReturnValue(0);
   mockApi({ "GET /catalog": () => ({ body: CATALOG }) });
@@ -18,13 +22,42 @@ function renderSetup(onStart: (request: GameRequest) => void = vi.fn()) {
   return render(
     <QueryClientProvider client={createQueryClient()}>
       <TooltipProvider>
-        <SetupPage onStart={onStart} />
+        <SetupPage onStart={onStart} onImport={onImport} />
       </TooltipProvider>
     </QueryClientProvider>,
   );
 }
 
 describe("SetupPage", () => {
+  it("imports an exported game", async () => {
+    const onImport = vi.fn();
+    renderSetup(vi.fn(), onImport);
+    const config = { config: {}, words: {} } as unknown as GameRequest;
+    const file = new File(
+      [JSON.stringify(buildGameExport({ config, events: wholeGame() }))],
+      "game.json",
+      { type: "application/json" },
+    );
+
+    await userEvent.upload(await screen.findByLabelText("Exported game"), file);
+
+    await waitFor(() => {
+      expect(onImport).toHaveBeenCalledTimes(1);
+    });
+    expect(onImport.mock.calls[0]?.[0]).toMatchObject({ events: wholeGame() });
+  });
+
+  it("reports a file that is not an export", async () => {
+    const onImport = vi.fn();
+    renderSetup(vi.fn(), onImport);
+    const file = new File(["nope"], "game.json", { type: "application/json" });
+
+    await userEvent.upload(await screen.findByLabelText("Exported game"), file);
+
+    expect(await screen.findByText("The file is not valid JSON.")).toBeInTheDocument();
+    expect(onImport).not.toHaveBeenCalled();
+  });
+
   it("starts a game with the default lineup from the catalog", async () => {
     const onStart = vi.fn();
     renderSetup(onStart);
