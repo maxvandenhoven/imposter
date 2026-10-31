@@ -1,42 +1,5 @@
 import type { GamePhase } from "@/api/types";
 
-/** A cell of the 3 by 3 table grid, rows and columns counted from 1. */
-export interface TableCell {
-  row: number;
-  column: number;
-}
-
-const TOP_LEFT = { row: 1, column: 1 };
-const TOP = { row: 1, column: 2 };
-const TOP_RIGHT = { row: 1, column: 3 };
-const RIGHT = { row: 2, column: 3 };
-const BOTTOM_RIGHT = { row: 3, column: 3 };
-const BOTTOM = { row: 3, column: 2 };
-const BOTTOM_LEFT = { row: 3, column: 1 };
-const LEFT = { row: 2, column: 1 };
-
-/** The cells around the table for each number of seats, clockwise from the top. */
-const SEAT_CELLS: Record<number, TableCell[]> = {
-  1: [TOP],
-  2: [LEFT, RIGHT],
-  3: [TOP, BOTTOM_RIGHT, BOTTOM_LEFT],
-  4: [TOP, RIGHT, BOTTOM, LEFT],
-  5: [TOP_LEFT, TOP_RIGHT, RIGHT, BOTTOM, LEFT],
-  6: [TOP_LEFT, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT, LEFT],
-  7: [TOP_LEFT, TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT, LEFT],
-  8: [TOP_LEFT, TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT, LEFT],
-};
-
-/**
- * Place the seats around the table, which takes the middle cell of a 3 by 3 grid.
- *
- * Seats go clockwise in turn order and spread evenly, up to the eight cells around the
- * middle. Returns one cell per seat, in seat order.
- */
-export function seatCells(count: number): TableCell[] {
-  return SEAT_CELLS[Math.min(Math.max(count, 0), 8)] ?? [];
-}
-
 /** A step of the phase indicator. */
 export interface PhaseStep {
   phase: GamePhase;
@@ -146,20 +109,27 @@ function edgePoint(rect: BoardRect, dx: number, dy: number): { x: number; y: num
   return { x: cx + dx * scale, y: cy + dy * scale };
 }
 
+/** How much more the second of two votes between the same seats bends. */
+const RETURN_BEND = 1.7;
+
 /**
  * The arrow of a vote from the voter's card to the target's card.
  *
- * It runs from edge to edge, leaves `gap` pixels before the target and bends to its
- * left by `bend` times its length, so two votes between the same seats do not overlap.
+ * It runs from edge to edge, leaves `gap` pixels before the target and bends by `bend`
+ * times its length. Without `towards` it bends to its left. With it, it bends towards
+ * that point, the table, and a vote from right to left bends further, so two votes
+ * between the same seats do not overlap.
  */
 export function voteArrow({
   from,
   to,
+  towards,
   bend = 0.18,
   gap = 6,
 }: {
   from: BoardRect;
   to: BoardRect;
+  towards?: { x: number; y: number };
   bend?: number;
   gap?: number;
 }): VoteArrow {
@@ -171,9 +141,20 @@ export function voteArrow({
   const ux = (edge.x - start.x) / length;
   const uy = (edge.y - start.y) / length;
   const end = { x: edge.x - ux * gap, y: edge.y - uy * gap };
+  const middle = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  let side = 1;
+  let amount = bend;
+
+  if (towards !== undefined) {
+    // The left of the arrow is (uy, -ux): pick the side that faces the point.
+    const facing = uy * (towards.x - middle.x) - ux * (towards.y - middle.y);
+    side = facing >= 0 ? 1 : -1;
+    amount = ux < 0 ? bend * RETURN_BEND : bend;
+  }
+
   const control = {
-    x: (start.x + end.x) / 2 + uy * bend * length,
-    y: (start.y + end.y) / 2 - ux * bend * length,
+    x: middle.x + side * uy * amount * length,
+    y: middle.y - side * ux * amount * length,
   };
   const angle = (Math.atan2(end.y - control.y, end.x - control.x) * 180) / Math.PI;
   const round = (value: number) => Math.round(value * 10) / 10;

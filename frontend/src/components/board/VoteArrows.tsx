@@ -10,12 +10,13 @@ const STAGGER_SECONDS = 0.45;
 /**
  * The votes as curved arrows between the seat cards, drawn one after another.
  *
- * Secret votes in god mode are dashed, revealed votes solid. Arrows to a caught seat
- * take the imposter colour.
+ * The arrows bend towards `towards`, the table. Secret votes in god mode are dashed,
+ * revealed votes solid, and arrows to a caught seat take the imposter colour.
  */
 export function VoteArrows({
   votes,
   rects,
+  towards,
   revealed,
   caught,
   width,
@@ -23,6 +24,7 @@ export function VoteArrows({
 }: {
   votes: VoteView[];
   rects: Map<number, BoardRect>;
+  towards?: { x: number; y: number };
   revealed: boolean;
   caught: number[];
   width: number;
@@ -43,7 +45,7 @@ export function VoteArrows({
           return null;
         }
 
-        const arrow = voteArrow({ from, to });
+        const arrow = voteArrow({ from, to, towards });
         const delay = index * STAGGER_SECONDS;
         const isCaught = vote.target !== null && caught.includes(vote.target);
         const colour = isCaught ? "var(--imposter)" : "var(--primary)";

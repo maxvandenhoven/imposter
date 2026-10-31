@@ -27,18 +27,20 @@ export function ThoughtBubble({
         aria-hidden
         className="absolute top-3.5 left-2 size-1.5 rounded-full border border-dashed border-thought-foreground/40 bg-thought"
       />
-      <p
+      <div
         data-testid="thought-bubble"
-        data-clamp={clamp}
-        className="rounded-2xl border border-dashed border-thought-foreground/35 bg-thought px-3 py-2 text-sm text-thought-foreground italic data-[clamp=true]:line-clamp-4"
+        className="rounded-2xl border border-dashed border-thought-foreground/35 bg-thought px-3 py-2 text-sm text-thought-foreground italic"
       >
-        <Brain
-          aria-hidden
-          className="mr-1.5 inline size-3.5 -translate-y-px not-italic"
-        />
-        {text}
-        {live && <span className="ml-0.5 inline-block w-1.5 animate-pulse">▍</span>}
-      </p>
+        {/* The clamp sits inside the padding, so no part of a hidden line shows. */}
+        <p data-clamp={clamp} className="data-[clamp=true]:line-clamp-4">
+          <Brain
+            aria-hidden
+            className="mr-1.5 inline size-3.5 -translate-y-px not-italic"
+          />
+          {text}
+          {live && <span className="ml-0.5 inline-block w-1.5 animate-pulse">▍</span>}
+        </p>
+      </div>
     </div>
   );
 }

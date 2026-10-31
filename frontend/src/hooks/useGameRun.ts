@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { playGame } from "@/api/gameStream";
 import type { GameRequest } from "@/api/types";
@@ -8,6 +8,7 @@ import {
   type BoardState,
   INITIAL_BOARD,
 } from "@/lib/board";
+import { GamePlayback, GameTimeline } from "@/lib/playback";
 
 type GameRunAction = BoardAction | { type: "restart" };
 
@@ -16,24 +17,29 @@ function gameRunReducer(state: BoardState, action: GameRunAction): BoardState {
 }
 
 /**
- * Run games one at a time and keep the board of the current one.
+ * Run games one at a time and keep the live board and the playback of the current one.
  *
- * `start` creates a game and streams it into the board, `stop` closes the stream, which
- * aborts the game on the server. The stream is also closed when the component unmounts.
+ * `start` creates a game and streams it into the live board and into the timeline that
+ * the playback plays at the audience's pace. `stop` closes the stream, which aborts the
+ * game on the server. The stream is also closed when the component unmounts.
  */
 export function useGameRun() {
   const [board, dispatch] = useReducer(gameRunReducer, INITIAL_BOARD);
+  const [playback, setPlayback] = useState(() => new GamePlayback(new GameTimeline()));
   const controller = useRef<AbortController | null>(null);
 
   const start = useCallback((request: GameRequest) => {
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
+    const timeline = new GameTimeline();
+    setPlayback(new GamePlayback(timeline));
     dispatch({ type: "restart" });
 
     // Events of a game that was replaced do not reach the board of the new one.
+    const live = () => controller.current === current;
     const send = (action: BoardAction) => {
-      if (controller.current === current) {
+      if (live()) {
         dispatch(action);
       }
     };
@@ -46,10 +52,16 @@ export function useGameRun() {
           send({ type: "session", gameId });
         },
         onGameEvent: (event) => {
+          if (live()) {
+            timeline.push({ kind: "event", event });
+          }
+
           send({ type: "game_event", event });
         },
         onAnswer: (answer) => {
-          send({ type: "answer", answer });
+          if (live()) {
+            timeline.push({ kind: "answer", answer });
+          }
         },
         onError: (message) => {
           send({ type: "error", message });
@@ -71,5 +83,5 @@ export function useGameRun() {
     [],
   );
 
-  return { board, start, stop };
+  return { board, playback, start, stop };
 }

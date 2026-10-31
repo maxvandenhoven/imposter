@@ -36,7 +36,12 @@ export function App() {
             {request === null ? (
               <SetupPage onStart={startGame} />
             ) : (
-              <BoardPage board={run.board} onStop={run.stop} onNewGame={newGame} />
+              <BoardPage
+                board={run.board}
+                playback={run.playback}
+                onStop={run.stop}
+                onNewGame={newGame}
+              />
             )}
           </AppLayout>
         </TooltipProvider>

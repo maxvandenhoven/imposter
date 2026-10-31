@@ -277,6 +277,24 @@ function liveAnswers(events: GameEvent[]): Partial<Record<number, PartialAnswer>
 }
 
 describe("buildBoardView bubbles", () => {
+  it("writes the answer of the one speaking seat on the table", () => {
+    const events = [gameStarted(0), phaseStarted(1, "clue", 1), turnStarted(2, 1)];
+    const board = view({ events, answers: { 1: answer(1, "clue", '{"clue": "coa') } });
+
+    expect(board.stage).toEqual({
+      seat: 1,
+      text: "coa",
+      bubbleKey: "bubble-1-clue-1",
+    });
+  });
+
+  it("writes no answer on the table while every seat votes", () => {
+    const voteTurn = { ...turnStarted(2, 0), phase: "vote", round: null } as GameEvent;
+    const events = [gameStarted(0), phaseStarted(1, "vote"), voteTurn];
+
+    expect(view({ events }).stage).toBeNull();
+  });
+
   it("keeps what a seat said while its phase and round last", () => {
     const events = wholeGame();
     const discussing = view({ events: events.slice(0, 11), mode: "god" });

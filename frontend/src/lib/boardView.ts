@@ -41,7 +41,7 @@ export interface SeatClueView {
 export interface SeatSaidView {
   phase: GamePhase;
   round: number | null;
-  /** The public text: a statement, guess or reflection, `null` for clues and votes. */
+  /** The public text: a clue, statement, guess or reflection, `null` for votes. */
   text: string | null;
   /** The private reasoning, when it may be shown. */
   reasoning: string | null;
@@ -140,6 +140,15 @@ export type TranscriptEntry =
   | (BaseTranscriptEntry & { kind: "error"; seat: number; message: string })
   | (BaseTranscriptEntry & { kind: "aborted"; reason: string });
 
+/** The seat whose answer is written on the table, in a turn that one seat takes alone. */
+export interface StageView {
+  seat: number;
+  /** The public text so far, `null` until it starts. */
+  text: string | null;
+  /** The key its bubble keeps when it moves from the table to the seat. */
+  bubbleKey: string;
+}
+
 /** What the board shows at the cursor, in one mode. */
 export interface BoardView {
   /** Whether the `game_started` event arrived. */
@@ -161,6 +170,8 @@ export interface BoardView {
   /** Whether private fields are shown: in god mode or after the reveal. */
   showPrivate: boolean;
   seats: SeatView[];
+  /** The answer being written on the table, in clue, discussion and guess turns. */
+  stage: StageView | null;
   votes: VotesView | null;
   guesses: GuessView[];
   outcome: OutcomeView | null;
@@ -188,6 +199,9 @@ const PUBLIC_ANSWER_FIELDS: Partial<Record<string, string>> = {
   guess: "guess",
   debrief: "reflection",
 };
+
+/** The phases in which one seat speaks at a time, with its answer on the table. */
+const STAGE_PHASES = new Set<string>(["clue", "discussion", "guess"]);
 
 /** The phases whose public answer could say the secret word before the reveal. */
 const MASKED_PHASES = new Set(["clue", "discussion"]);
@@ -287,6 +301,11 @@ function liveAnswer({
     reasoning: showPrivate ? (fields.private_reasoning ?? null) : null,
     thought: showPrivate && answer.thought !== "" ? answer.thought : null,
   };
+}
+
+/** The key of a seat's speech bubble in a phase and round, the same on table and seat. */
+export function bubbleKey(seat: number, phase: string, round: number | null): string {
+  return `bubble-${seat}-${phase}-${round ?? ""}`;
 }
 
 function turnKey(seat: number, phase: string, round: number | null): string {
@@ -419,7 +438,7 @@ export function buildBoardView({
         break;
       case "clue_given":
         seatAt(event.seat)?.clues.push({ round: event.round ?? 0, clue: event.clue });
-        noteSaid(event, null);
+        noteSaid(event, event.clue);
         addSeatEntry(
           {
             key,
@@ -601,6 +620,17 @@ export function buildBoardView({
     }
   }
 
+  const speakers = seats.filter((seat) => seat.speaking);
+  const speaker = speakers.length === 1 ? speakers[0] : undefined;
+  const stage: StageView | null =
+    speaker !== undefined && STAGE_PHASES.has(phase ?? "")
+      ? {
+          seat: speaker.seat,
+          text: speaker.live?.text ?? null,
+          bubbleKey: bubbleKey(speaker.seat, phase ?? "", round),
+        }
+      : null;
+
   const votes: VotesView | null =
     revealedVotes ??
     (showPrivate && castVotes.length > 0
@@ -622,6 +652,7 @@ export function buildBoardView({
     revealed,
     showPrivate,
     seats,
+    stage,
     votes,
     guesses,
     outcome: outcomeEvent === undefined ? null : describeOutcome(outcomeEvent, names),

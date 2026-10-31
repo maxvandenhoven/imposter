@@ -1,27 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  formatCost,
-  formatTokens,
-  phaseSteps,
-  phaseTitle,
-  seatCells,
-  voteArrow,
-} from "@/lib/table";
-
-describe("seatCells", () => {
-  it.each([3, 4, 5, 6, 7, 8])(
-    "places %i seats in distinct cells around the middle",
-    (n) => {
-      const cells = seatCells(n);
-      const keys = new Set(cells.map((cell) => `${cell.row},${cell.column}`));
-
-      expect(cells).toHaveLength(n);
-      expect(keys.size).toBe(n);
-      expect(keys.has("2,2")).toBe(false);
-    },
-  );
-});
+import { formatCost, formatTokens, phaseSteps, phaseTitle, voteArrow } from "@/lib/table";
 
 describe("phaseSteps", () => {
   it("marks the steps before the current phase as done", () => {
@@ -67,6 +46,19 @@ describe("voteArrow", () => {
 
     expect(arrow.path).toBe("M 100 50 Q 195 50 290 50");
     expect(arrow.tip).toEqual({ x: 290, y: 50, angle: 0 });
+  });
+
+  it("bends towards the table, the return vote further", () => {
+    const a = { x: 0, y: 300, width: 100, height: 100 };
+    const b = { x: 300, y: 300, width: 100, height: 100 };
+    const table = { x: 200, y: 0 };
+
+    expect(voteArrow({ from: a, to: b, towards: table }).path).toBe(
+      "M 100 350 Q 197 314 294 350",
+    );
+    expect(voteArrow({ from: b, to: a, towards: table }).path).toBe(
+      "M 300 350 Q 203 288.8 106 350",
+    );
   });
 
   it("bends the two votes between the same seats to opposite sides", () => {

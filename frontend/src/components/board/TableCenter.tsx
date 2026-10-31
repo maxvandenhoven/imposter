@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import type { CatalogModel } from "@/api/types";
 import { SeatAvatar } from "@/components/board/SeatAvatar";
+import { SpeechBubble } from "@/components/board/SpeechBubble";
 import { TypingDots } from "@/components/board/TypingDots";
 import { Card } from "@/components/ui/card";
 import type { BoardView, SeatView } from "@/lib/boardView";
@@ -126,14 +127,52 @@ function Guesses({ view }: { view: BoardView }) {
   );
 }
 
-/** What the middle of the table shows in the current phase. */
-function PhaseBody({
-  view,
-  models,
-}: {
-  view: BoardView;
-  models: Map<string, CatalogModel>;
-}) {
+/**
+ * The answer being written on the table by the one seat whose turn it is, with its
+ * avatar and name. The bubble keeps its key when it moves down to the seat's column.
+ */
+function Stage({ view, models }: { view: BoardView; models: Map<string, CatalogModel> }) {
+  const stage = view.stage;
+  const seat = stage === null ? undefined : view.seats[stage.seat];
+
+  if (stage === null || seat === undefined) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-start justify-center gap-3">
+      <div className="flex shrink-0 flex-col items-center gap-1 pt-1">
+        <SeatAvatar
+          model={models.get(seat.modelId ?? "")}
+          role={seat.role}
+          className="ring-offset-table"
+        />
+        <span className="text-xs font-medium text-table-muted">{seat.name}</span>
+      </div>
+      {stage.text === null || stage.text === "" ? (
+        <div className="flex h-12 items-center gap-2 text-table-muted">
+          <span className="text-sm">{seat.name} is thinking</span>
+          <TypingDots />
+        </div>
+      ) : (
+        <motion.div
+          key={stage.bubbleKey}
+          layoutId={stage.bubbleKey}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-3xl min-w-0 text-foreground"
+        >
+          <SpeechBubble live tail="left" className="text-base">
+            {stage.text}
+          </SpeechBubble>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+/** The secret word: hidden, in god mode on a card, or revealed after the outcome. */
+function SecretWord({ view }: { view: BoardView }) {
   if (view.revealed && view.outcome !== null) {
     return (
       <div className="flex flex-col items-center gap-1">
@@ -150,6 +189,40 @@ function PhaseBody({
     );
   }
 
+  if (view.word !== null) {
+    return (
+      <div className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-table-muted/40 bg-white/6 px-6 py-2">
+        <span className="flex items-center gap-1.5 text-xs tracking-wider text-table-muted uppercase">
+          <Eye className="size-3.5" />
+          Secret word
+        </span>
+        <span className="font-heading text-3xl font-bold text-speaking">{view.word}</span>
+        {view.hint !== null && (
+          <span className="flex items-center gap-1 text-xs text-table-muted">
+            <Lightbulb className="size-3" />
+            Imposter hint: {view.hint}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <p className="flex items-center gap-1.5 text-sm text-table-muted">
+      <EyeOff className="size-4" />
+      The word stays hidden until the reveal
+    </p>
+  );
+}
+
+/** What the table shows about the current phase. */
+function PhaseBody({
+  view,
+  models,
+}: {
+  view: BoardView;
+  models: Map<string, CatalogModel>;
+}) {
   if (view.guesses.length > 0) {
     return <Guesses view={view} />;
   }
@@ -176,8 +249,9 @@ function PhaseBody({
 }
 
 /**
- * The table in the middle of the board: the phase and round, the category and, in god
- * mode, the secret word, with what the current phase is about below.
+ * The table across the top of the board: the phase, round and category on the left, the
+ * secret word in the middle (in god mode, or once revealed) and what the current phase
+ * is about on the right.
  */
 export function TableCenter({
   view,
@@ -189,12 +263,12 @@ export function TableCenter({
   const round = roundOf(view);
 
   return (
-    <Card className="relative h-full min-h-64 justify-center gap-5 overflow-hidden bg-table px-6 text-center text-table-foreground shadow-xl ring-0">
+    <Card className="relative grid min-h-40 items-center gap-5 overflow-hidden bg-table px-6 text-table-foreground shadow-xl ring-0 lg:grid-cols-[1fr_auto_1fr] lg:gap-8 lg:px-8">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--primary)_55%,transparent),transparent_70%)] opacity-60"
       />
-      <div className="relative flex flex-col items-center gap-1">
+      <div className="relative flex flex-col items-center gap-1 lg:items-start">
         <AnimatePresence mode="wait">
           <motion.h2
             key={`${view.phase}-${view.round}`}
@@ -214,32 +288,17 @@ export function TableCenter({
           {view.category === null ? "Secret category" : `Category: ${view.category}`}
         </p>
       </div>
-      {view.word !== null && !view.revealed && (
-        <div className="relative mx-auto flex flex-col items-center gap-1 rounded-xl border border-dashed border-table-muted/40 bg-white/6 px-5 py-2">
-          <span className="flex items-center gap-1.5 text-xs tracking-wider text-table-muted uppercase">
-            <Eye className="size-3.5" />
-            Secret word
-          </span>
-          <span className="font-heading text-2xl font-bold text-speaking">
-            {view.word}
-          </span>
-          {view.hint !== null && (
-            <span className="flex items-center gap-1 text-xs text-table-muted">
-              <Lightbulb className="size-3" />
-              Imposter hint: {view.hint}
-            </span>
-          )}
+      <div className="relative flex justify-center">
+        <SecretWord view={view} />
+      </div>
+      <div className="relative flex justify-center lg:justify-end">
+        {view.stage === null && <PhaseBody view={view} models={models} />}
+      </div>
+      {view.stage !== null && (
+        <div className="relative lg:col-span-3">
+          <Stage view={view} models={models} />
         </div>
       )}
-      {view.word === null && view.started && (
-        <p className="relative flex items-center justify-center gap-1.5 text-xs text-table-muted">
-          <EyeOff className="size-3.5" />
-          The word stays hidden until the reveal
-        </p>
-      )}
-      <div className="relative">
-        <PhaseBody view={view} models={models} />
-      </div>
     </Card>
   );
 }
