@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { GameEvent } from "@/api/types";
-import {
-  boardReducer,
-  type BoardState,
-  describeEvent,
-  INITIAL_BOARD,
-  seatNames,
-  thinkingSeats,
-} from "@/lib/board";
+import { boardReducer, type BoardState, INITIAL_BOARD, thinkingSeats } from "@/lib/board";
 import { clueGiven, gameStarted, turnStarted, voteCast } from "@/test/fixtures";
 
 function boardWith(events: GameEvent[]): BoardState {
@@ -24,6 +17,23 @@ describe("boardReducer", () => {
     const board = boardReducer(INITIAL_BOARD, { type: "answer", answer });
 
     expect(board.answers[1]).toEqual(answer);
+  });
+
+  it("clears a seat's answer when its turn ends or a new turn starts", () => {
+    const answer = { seat: 1, phase: "clue", path: "p@1", text: '{"clue"', thought: "" };
+    const writing = boardReducer(boardWith([gameStarted(0)]), { type: "answer", answer });
+    const answered = boardReducer(writing, {
+      type: "game_event",
+      event: clueGiven(1, 1, "beacon"),
+    });
+    const restarted = boardReducer(writing, {
+      type: "game_event",
+      event: turnStarted(1, 1),
+    });
+
+    expect(writing.answers[1]).toEqual(answer);
+    expect(answered.answers[1]).toBeUndefined();
+    expect(restarted.answers[1]).toBeUndefined();
   });
 
   it.each([
@@ -64,20 +74,5 @@ describe("thinkingSeats", () => {
     ];
 
     expect(thinkingSeats(events)).toEqual([1]);
-  });
-});
-
-describe("describeEvent", () => {
-  const names = seatNames([gameStarted(0)]);
-
-  it("names the seats", () => {
-    expect(describeEvent(clueGiven(1, 2, "beacon"), names)).toBe(
-      'Charlie gives the clue "beacon".',
-    );
-    expect(describeEvent(clueGiven(1, 0, null), names)).toBe("Alice passes.");
-  });
-
-  it("keeps a vote secret until the votes are revealed", () => {
-    expect(describeEvent(voteCast(1, 0, 1), names)).toBe("Alice has voted.");
   });
 });

@@ -1,6 +1,7 @@
 """The game workflow as the ADK `app` of `adk web src` and the API, one game per session.
 
-The app carries the plugin that puts the game attributes on the root span of a game.
+The app carries the plugin that puts the game attributes on the root span of a game
+and notes the trace id of each game, which the API links to.
 `adk web --otel_to_cloud` exports the traces, and the telemetry defaults make ADK log
 the prompts and completions, as the CLI does.
 """
@@ -31,6 +32,6 @@ sessions = GameSessions(
 
 root_agent = game_workflow(sessions=sessions)
 
-app = App(
-    name=APP_NAME, root_agent=root_agent, plugins=[GameTracePlugin(find_game=store.get)]
-)
+trace_plugin = GameTracePlugin(find_game=store.get)
+
+app = App(name=APP_NAME, root_agent=root_agent, plugins=[trace_plugin])

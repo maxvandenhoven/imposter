@@ -9,13 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  CLUE_ROUNDS,
-  DISCUSSION_ROUNDS,
-  maxImposters,
-  type SetupForm,
-  TEMPERATURE,
-} from "@/lib/setup";
+import { CLUE_ROUNDS, DISCUSSION_ROUNDS, type SetupForm, TEMPERATURE } from "@/lib/setup";
 
 /** The options most games keep at their defaults, collapsed until opened. */
 export function AdvancedOptions({
@@ -58,16 +52,6 @@ export function AdvancedOptions({
             value={form.discussionRounds}
             onChange={(discussionRounds) => {
               onChange({ discussionRounds });
-            }}
-          />
-          <NumberField
-            id="imposters"
-            label="Imposters"
-            min={1}
-            max={Math.max(1, maxImposters(form.seats.length))}
-            value={form.imposterCount}
-            onChange={(imposterCount) => {
-              onChange({ imposterCount });
             }}
           />
           <NumberField

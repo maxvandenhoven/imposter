@@ -2,11 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/bricolage-grotesque";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: "Bricolage Grotesque Variable", var(--font-sans);
   --font-sans: "Geist Variable", sans-serif;
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -34,6 +35,11 @@
   --color-speaking: var(--speaking);
   --color-imposter: var(--imposter);
   --color-civilian: var(--civilian);
+  --color-table: var(--table);
+  --color-table-foreground: var(--table-foreground);
+  --color-table-muted: var(--table-muted);
+  --color-thought: var(--thought);
+  --color-thought-foreground: var(--thought-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -44,37 +50,44 @@
 }
 
 :root {
-  /* Game night: a dark midnight table with warm amber light and a crimson imposter. */
-  color-scheme: dark;
-  --background: #0d0f1a;
-  --foreground: #ecebf5;
-  --card: #161929;
-  --card-foreground: #ecebf5;
-  --popover: #1c2033;
-  --popover-foreground: #ecebf5;
-  --primary: #f4b740;
-  --primary-foreground: #1a1406;
-  --secondary: #23283f;
-  --secondary-foreground: #ecebf5;
-  --muted: #1f2338;
-  --muted-foreground: #9a9bb8;
-  --accent: #2a2f4a;
-  --accent-foreground: #ecebf5;
-  --destructive: #f0506e;
-  --border: #2b3050;
-  --input: #3a4066;
-  --ring: #f4b740;
-  --chart-1: #f4b740;
-  --chart-2: #5ab0f5;
-  --chart-3: #48c9a0;
-  --chart-4: #a98bfa;
-  --chart-5: #f0506e;
-  --radius: 0.75rem;
+  /* Game night, lights on: warm paper, ink, a violet felt table and three game colours. */
+  color-scheme: light;
+  --background: #f6f2ea;
+  --foreground: #1f1b2e;
+  --card: #fffdf9;
+  --card-foreground: #1f1b2e;
+  --popover: #fffdf9;
+  --popover-foreground: #1f1b2e;
+  --primary: #5b45d6;
+  --primary-foreground: #ffffff;
+  --secondary: #ece7fb;
+  --secondary-foreground: #2f2577;
+  --muted: #f0ebe1;
+  --muted-foreground: #6e6880;
+  --accent: #efe9dd;
+  --accent-foreground: #1f1b2e;
+  --destructive: #d93a4a;
+  --border: #e4ddcf;
+  --input: #d9d0bf;
+  --ring: #5b45d6;
+  --chart-1: #5b45d6;
+  --chart-2: #f2a516;
+  --chart-3: #10a08d;
+  --chart-4: #e0477a;
+  --chart-5: #3b82f6;
+  --radius: 0.85rem;
 
   /* Game colours, one meaning each. */
-  --speaking: #f4b740;
-  --imposter: #f0506e;
-  --civilian: #48c9a0;
+  --speaking: #f2a516;
+  --imposter: #e0384f;
+  --civilian: #0f9b88;
+
+  /* The table in the middle of the board, and the private thought bubbles. */
+  --table: #2e2566;
+  --table-foreground: #f7f3ff;
+  --table-muted: #b9b0e8;
+  --thought: #f1edff;
+  --thought-foreground: #4a3aa8;
 }
 
 @layer base {
@@ -83,13 +96,85 @@
   }
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
-    background-image: radial-gradient(
-      ellipse at top,
-      color-mix(in srgb, var(--primary) 8%, transparent),
-      transparent 60%
-    );
+    background-image:
+      radial-gradient(
+        ellipse at top left,
+        color-mix(in srgb, var(--primary) 9%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse at bottom right,
+        color-mix(in srgb, var(--speaking) 10%, transparent),
+        transparent 50%
+      ),
+      radial-gradient(
+        color-mix(in srgb, var(--foreground) 6%, transparent) 1px,
+        transparent 1px
+      );
+    background-size:
+      auto,
+      auto,
+      22px 22px;
   }
   html {
     @apply font-sans;
+  }
+  /* Projector sizes: everything in rem grows a little, so it reads from across a room. */
+  @media (min-width: 1800px) {
+    html {
+      font-size: 112.5%;
+    }
+  }
+}
+
+@layer utilities {
+  /*
+   * The soft pulsing glow behind the seat whose turn it is. Only its opacity animates,
+   * which the compositor handles without repainting the shadow on every frame.
+   */
+  @keyframes speaking-halo {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .speaking-halo {
+    box-shadow: 0 0 28px 6px color-mix(in srgb, var(--speaking) 45%, transparent);
+    opacity: 0.7;
+    will-change: opacity;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .speaking-halo {
+      animation: speaking-halo 2.4s ease-in-out infinite;
+    }
+  }
+
+  /* The dots of a seat that is typing. */
+  @keyframes typing-dot {
+    0%,
+    80%,
+    100% {
+      opacity: 0.3;
+      transform: translateY(0);
+    }
+    40% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  .typing-dot {
+    opacity: 0.6;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .typing-dot {
+      animation: typing-dot 1.2s ease-in-out infinite;
+    }
   }
 }

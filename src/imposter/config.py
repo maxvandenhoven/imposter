@@ -63,6 +63,8 @@ class PlayerConfig(BaseModel):
         model_display_name: The display name of the model, used as the player name in
             `models` identity mode. Falls back to `model_id` when not given.
         persona: An optional persona id, reserved for future work (README D23).
+        imposter: Whether this player must be an imposter. Players without it are
+            picked at random for the imposter seats that remain.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -70,6 +72,7 @@ class PlayerConfig(BaseModel):
     model_id: str = Field(min_length=1)
     model_display_name: str | None = None
     persona: str | None = None
+    imposter: bool = False
 
 
 class GameConfig(BaseModel):
@@ -113,13 +116,14 @@ class GameConfig(BaseModel):
 
     @model_validator(mode="after")
     def check_imposter_count(self) -> Self:
-        """Check that the imposters are a minority among the seats.
+        """Check that the imposters are a minority and the chosen ones fit their number.
 
         Returns:
             The validated config.
 
         Raises:
-            ValueError: When there are too many imposters for the number of seats.
+            ValueError: When there are too many imposters for the number of seats, or
+                more players are chosen as imposters than there are imposters.
         """
         allowed = max_imposters(len(self.players))
 
@@ -127,6 +131,15 @@ class GameConfig(BaseModel):
             message = (
                 f"A game with {len(self.players)} players allows at most {allowed} "
                 f"imposters, got {self.imposter_count}."
+            )
+            raise ValueError(message)
+
+        chosen = sum(player.imposter for player in self.players)
+
+        if chosen > self.imposter_count:
+            message = (
+                f"{chosen} players are chosen as imposters, but the game has only "
+                f"{self.imposter_count}."
             )
             raise ValueError(message)
 

@@ -335,6 +335,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/traces/{game_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Trace
+         * @description Link to the trace of a game in Cloud Trace, once its run started.
+         */
+        get: operations["read_trace_traces__game_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1453,6 +1473,18 @@ export interface components {
          * @enum {string}
          */
         FunctionResponseScheduling: "SCHEDULING_UNSPECIFIED" | "SILENT" | "WHEN_IDLE" | "INTERRUPT";
+        /**
+         * GameTraceResponse
+         * @description Where the trace of a game can be seen.
+         *
+         *     Attributes:
+         *         url: The Trace Explorer link of the game's run, `None` when traces are not sent
+         *             to Google Cloud or the run has not started.
+         */
+        GameTraceResponse: {
+            /** Url */
+            url: string | null;
+        };
         /**
          * GenerateContentResponseUsageMetadata
          * @description Usage metadata about the content generation request and response.
@@ -3839,6 +3871,8 @@ export interface components {
          *         model_display_name: The display name of the model, used as the player name in
          *             `models` identity mode. Falls back to `model_id` when not given.
          *         persona: An optional persona id, reserved for future work (README D23).
+         *         imposter: Whether this player must be an imposter. Players without it are
+         *             picked at random for the imposter seats that remain.
          */
         PlayerConfig: {
             /** Model Id */
@@ -3853,6 +3887,11 @@ export interface components {
              * @default null
              */
             persona: string | null;
+            /**
+             * Imposter
+             * @default false
+             */
+            imposter: boolean;
         };
         /**
          * PlayerErrorEvent
@@ -5007,6 +5046,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CatalogResponse"];
+                };
+            };
+        };
+    };
+    read_trace_traces__game_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameTraceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

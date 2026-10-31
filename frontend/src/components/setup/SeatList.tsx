@@ -1,4 +1,4 @@
-import { Plus, Shuffle, X } from "lucide-react";
+import { Plus, Shuffle, VenetianMask, X } from "lucide-react";
 
 import type { CatalogModel } from "@/api/types";
 import { ModelLogo } from "@/components/ModelLogo";
@@ -10,28 +10,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MAX_PLAYERS, MIN_PLAYERS, randomLineup } from "@/lib/setup";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  imposterCount,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  randomImposters,
+  randomLineup,
+  removeSeat,
+  type SetupSeat,
+} from "@/lib/setup";
 
-/** The seats of the game, each with a model, which can be added, removed and shuffled. */
+/**
+ * The seats of the game, each with a model, which can be added, removed and shuffled.
+ *
+ * The seats chosen with the mask are the imposters, and their number is the number of
+ * imposters. "Randomise imposters" moves the masks to random seats, keeping their number.
+ */
 export function SeatList({
   seats,
   models,
   onChange,
 }: {
-  seats: string[];
+  seats: SetupSeat[];
   models: CatalogModel[];
-  onChange: (seats: string[]) => void;
+  onChange: (seats: SetupSeat[]) => void;
 }) {
   const byId = new Map(models.map((model) => [model.id, model]));
 
-  const setSeat = (index: number, modelId: string) => {
-    onChange(seats.map((seat, other) => (other === index ? modelId : seat)));
+  const setSeat = (index: number, change: Partial<SetupSeat>) => {
+    onChange(
+      seats.map((seat, other) => (other === index ? { ...seat, ...change } : seat)),
+    );
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          onClick={() => {
+            const lineup = randomLineup(
+              models.map((model) => model.id),
+              seats.length,
+            );
+            onChange(
+              lineup.map((modelId, index) => ({
+                modelId,
+                imposter: seats[index]?.imposter ?? false,
+              })),
+            );
+          }}
+        >
+          <Shuffle data-icon="inline-start" />
+          Randomise lineup
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            onChange(randomImposters(seats));
+          }}
+        >
+          <VenetianMask data-icon="inline-start" />
+          Randomise imposters
+        </Button>
+        <span className="ml-auto text-sm text-muted-foreground">
+          {imposterCount(seats) === 1
+            ? "1 imposter"
+            : `${imposterCount(seats)} imposters`}
+        </span>
+      </div>
       <ol className="flex flex-col gap-2">
-        {seats.map((modelId, index) => (
+        {seats.map(({ modelId, imposter }, index) => (
           <li key={index} className="flex items-center gap-2">
             <span className="w-14 shrink-0 text-sm text-muted-foreground">
               Seat {index + 1}
@@ -39,7 +90,7 @@ export function SeatList({
             <Select
               value={modelId}
               onValueChange={(value) => {
-                setSeat(index, value);
+                setSeat(index, { modelId: value });
               }}
             >
               <SelectTrigger
@@ -57,6 +108,25 @@ export function SeatList({
                 ))}
               </SelectContent>
             </Select>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Toggle
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Seat ${index + 1} is an imposter`}
+                  pressed={imposter}
+                  onPressedChange={(pressed) => {
+                    setSeat(index, { imposter: pressed });
+                  }}
+                  className="text-muted-foreground aria-pressed:border-imposter aria-pressed:bg-imposter aria-pressed:text-white aria-pressed:hover:bg-imposter/90"
+                >
+                  <VenetianMask />
+                </Toggle>
+              </TooltipTrigger>
+              <TooltipContent>
+                {imposter ? "This player is an imposter" : "Make this player an imposter"}
+              </TooltipContent>
+            </Tooltip>
             <Button
               variant="ghost"
               size="icon"
@@ -64,7 +134,7 @@ export function SeatList({
               title={`Remove seat ${index + 1}`}
               disabled={seats.length <= MIN_PLAYERS}
               onClick={() => {
-                onChange(seats.filter((_, other) => other !== index));
+                onChange(removeSeat(seats, index));
               }}
             >
               <X />
@@ -80,25 +150,12 @@ export function SeatList({
           variant="outline"
           disabled={seats.length >= MAX_PLAYERS || models.length === 0}
           onClick={() => {
-            onChange([...seats, seats.at(-1) ?? models[0]?.id ?? ""]);
+            const modelId = seats.at(-1)?.modelId ?? models[0]?.id ?? "";
+            onChange([...seats, { modelId, imposter: false }]);
           }}
         >
           <Plus data-icon="inline-start" />
           Add seat
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            onChange(
-              randomLineup(
-                models.map((model) => model.id),
-                seats.length,
-              ),
-            );
-          }}
-        >
-          <Shuffle data-icon="inline-start" />
-          Randomise lineup
         </Button>
       </div>
     </div>

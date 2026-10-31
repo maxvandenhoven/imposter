@@ -7,7 +7,7 @@ import { defineConfig } from "vitest/config";
 // The API server that `make dev` starts. The dev server forwards the API paths to it
 // with the browser's `Host`, since ADK refuses requests whose `Origin` is another host.
 const API_TARGET = process.env.IMPOSTER_API_URL ?? "http://127.0.0.1:8000";
-const API_PATHS = ["/catalog", "/apps", "/run_sse"];
+const API_PATHS = ["/catalog", "/apps", "/run_sse", "/traces"];
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

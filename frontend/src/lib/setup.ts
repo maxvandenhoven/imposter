@@ -30,6 +30,13 @@ const SINGLE_WORD = /^[\p{L}\p{N}]+(?:['-][\p{L}\p{N}]+)*$/u;
 /** Characters the server strips from both ends of a typed word. */
 const SURROUNDING_PUNCTUATION = /^[\s"'.,;:!?()[\]{}]+|[\s"'.,;:!?()[\]{}]+$/g;
 
+/** A seat of the setup screen: its model and whether it must be an imposter. */
+export interface SetupSeat {
+  modelId: string;
+  /** Whether this player is an imposter, wherever its seat ends up. */
+  imposter: boolean;
+}
+
 /** The options of the setup screen, as the form holds them. */
 export interface SetupForm {
   wordMode: WordMode;
@@ -37,13 +44,12 @@ export interface SetupForm {
   word: string;
   /** The category of a random or typed word, `ANY_CATEGORY` for none. */
   category: string;
-  /** The catalog id of each seat's model, in seat order before shuffling. */
-  seats: string[];
+  /** The seats in order before shuffling, with their models and chosen imposters. */
+  seats: SetupSeat[];
   identityMode: IdentityMode;
   publicCategory: boolean;
   imposterHint: boolean;
   modelClueCheck: boolean;
-  imposterCount: number;
   clueRounds: number;
   discussionRounds: number;
   statementWordCap: number;
@@ -53,18 +59,27 @@ export interface SetupForm {
   temperature: number | null;
 }
 
-/** The setup form with the defaults of `game-rules.md` and the catalog's lineup. */
-export function defaultSetupForm(catalog: CatalogResponse): SetupForm {
+/**
+ * The setup form with the defaults of `game-rules.md` and the catalog's lineup, with one
+ * imposter on a random seat.
+ *
+ * `random` returns numbers in `[0, 1)`, like `Math.random`, which tests replace.
+ */
+export function defaultSetupForm(
+  catalog: CatalogResponse,
+  random: () => number = Math.random,
+): SetupForm {
+  const seats = catalog.default_lineup.map((modelId) => ({ modelId, imposter: false }));
+
   return {
     wordMode: "random",
     word: "",
     category: ANY_CATEGORY,
-    seats: [...catalog.default_lineup],
+    seats: randomImposters(seats, random),
     identityMode: "names",
     publicCategory: false,
     imposterHint: false,
     modelClueCheck: true,
-    imposterCount: 1,
     clueRounds: 2,
     discussionRounds: 2,
     statementWordCap: 100,
@@ -72,6 +87,49 @@ export function defaultSetupForm(catalog: CatalogResponse): SetupForm {
     tokenBudget: 200_000,
     temperature: null,
   };
+}
+
+/** The number of imposters: the seats chosen as imposters. */
+export function imposterCount(seats: SetupSeat[]): number {
+  return seats.filter((seat) => seat.imposter).length;
+}
+
+/**
+ * Choose the imposters again at random, as many as are chosen now and at least one.
+ *
+ * The number is capped at what the number of seats allows.
+ */
+export function randomImposters(
+  seats: SetupSeat[],
+  random: () => number = Math.random,
+): SetupSeat[] {
+  const count = Math.min(
+    Math.max(imposterCount(seats), 1),
+    Math.max(maxImposters(seats.length), 1),
+  );
+  const pool = seats.map((_, index) => index);
+  const chosen = new Set<number>();
+
+  while (chosen.size < count && pool.length > 0) {
+    const [picked] = pool.splice(Math.floor(random() * pool.length), 1);
+
+    if (picked !== undefined) {
+      chosen.add(picked);
+    }
+  }
+
+  return seats.map((seat, index) => ({ ...seat, imposter: chosen.has(index) }));
+}
+
+/** Remove a seat, giving the imposter role to a random seat when no imposter is left. */
+export function removeSeat(
+  seats: SetupSeat[],
+  index: number,
+  random: () => number = Math.random,
+): SetupSeat[] {
+  const rest = seats.filter((_, other) => other !== index);
+
+  return imposterCount(rest) === 0 ? randomImposters(rest, random) : rest;
 }
 
 /** The largest number of imposters for a number of seats: fewer than half the others. */
@@ -104,9 +162,11 @@ export function setupProblems(form: SetupForm): string[] {
 
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) {
     problems.push(`A game needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players.`);
-  } else if (!isWholeNumberBetween(form.imposterCount, 1, maxImposters(players))) {
+  } else if (imposterCount(form.seats) === 0) {
+    problems.push("Choose at least one imposter.");
+  } else if (imposterCount(form.seats) > maxImposters(players)) {
     problems.push(
-      `${players} players allow 1 to ${maxImposters(players)} imposters, not ${form.imposterCount}.`,
+      `${players} players allow at most ${maxImposters(players)} imposters, not ${imposterCount(form.seats)}.`,
     );
   }
 
@@ -156,12 +216,13 @@ export function gameRequest(form: SetupForm, models: CatalogModel[]): GameReques
 
   return {
     config: {
-      players: form.seats.map((modelId) => ({
+      players: form.seats.map(({ modelId, imposter }) => ({
         model_id: modelId,
         model_display_name: names.get(modelId) ?? null,
         persona: null,
+        imposter,
       })),
-      imposter_count: form.imposterCount,
+      imposter_count: imposterCount(form.seats),
       identity_mode: form.identityMode,
       public_category: form.publicCategory,
       imposter_hint: form.imposterHint,

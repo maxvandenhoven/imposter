@@ -9,8 +9,9 @@ mode, with sessions in memory. A client starts a game in two calls:
    streams its ADK events as server-sent events while it runs.
 
 The game runs as long as that request is open. When the client goes away, ADK cancels
-the run and the game is aborted. `GET /catalog` lists what the setup screen offers, and
-the built frontend is served at `/` when it exists.
+the run and the game is aborted. `GET /catalog` lists what the setup screen offers, `GET
+/traces/{game_id}` links to the trace of a game, and the built frontend is served at
+`/` when it exists.
 """
 
 import logging
@@ -21,7 +22,9 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from google.adk.cli.fast_api import get_fast_api_app
 
+from imposter.agent import trace_plugin
 from imposter.api.catalog import catalog_router
+from imposter.api.trace import trace_router
 from imposter.models.catalog import ModelCatalog
 from imposter.telemetry.setup import exporter_from_environment, setup_telemetry
 from imposter.words.picker import WordPicker
@@ -47,13 +50,14 @@ def create_app() -> FastAPI:
     Returns:
         The app, for uvicorn (`uvicorn --factory imposter.api.app:create_app`).
     """
-    setup_telemetry(exporter_from_environment())
+    project = setup_telemetry(exporter_from_environment())
     app = get_fast_api_app(
         agents_dir=str(PACKAGE_DIR), web=False, use_local_storage=False
     )
     app.include_router(
         catalog_router(catalog=ModelCatalog.load(), picker=WordPicker.load())
     )
+    app.include_router(trace_router(trace_ids=trace_plugin.trace_ids, project=project))
     # Mounted last, so every API route takes precedence over the files.
     frontend_dir = Path(os.environ.get(FRONTEND_DIR_ENV) or DEFAULT_FRONTEND_DIR)
 

@@ -7,7 +7,7 @@
 # structured output for Claude with a forced tool choice, which Claude Sonnet rejects, so
 # it gets the JSON schema in the prompt instead.
 - id: gemini-pro
-  display_name: Gemini Pro
+  display_name: Gemini 3.1 Pro
   provider: google
   adk_model: gemini-3.1-pro-preview
   via: native
@@ -19,7 +19,7 @@
   price_per_mtok: {input: 2.0, output: 12.0}
 
 - id: gemini-flash
-  display_name: Gemini Flash
+  display_name: Gemini 3.8 Flash
   provider: google
   adk_model: gemini-3.8-flash
   via: native
@@ -31,7 +31,7 @@
   price_per_mtok: {input: 0.75, output: 3.75}
 
 - id: gemini-flash-lite
-  display_name: Gemini Flash-Lite
+  display_name: Gemini 3.5 Flash-Lite
   provider: google
   adk_model: gemini-3.5-flash-lite
   via: native
@@ -43,7 +43,7 @@
   price_per_mtok: {input: 0.3, output: 2.5}
 
 - id: claude-sonnet
-  display_name: Claude Sonnet
+  display_name: Claude Sonnet 5.5
   provider: anthropic
   adk_model: vertex_ai/claude-sonnet-5-5
   via: litellm
@@ -55,7 +55,7 @@
   price_per_mtok: {input: 2.0, output: 10.0}
 
 - id: claude-haiku
-  display_name: Claude Haiku
+  display_name: Claude Haiku 5.5
   provider: anthropic
   adk_model: vertex_ai/claude-haiku-5-5
   via: litellm
@@ -72,7 +72,7 @@
   adk_model: vertex_ai/openai/gpt-oss-120b-maas
   via: litellm
   location: global
-  logo: logos/gpt-oss.svg
+  logo: logos/openai.svg
   supports_structured_output: false
   thinking: "off"
   temperature: 1.0

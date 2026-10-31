@@ -11,6 +11,7 @@ export type GameConfig = Schemas["GameConfig"];
 /** An engine event, as the event log and the stream carry it. */
 export type GameEvent = Schemas["GameEvent"];
 export type GameEventType = GameEvent["type"];
+export type GameOutcome = Schemas["GameOutcome"];
 export type GamePhase = Schemas["GamePhase"];
 export type GameRequest = Schemas["GameRequest"];
 export type IdentityMode = Schemas["IdentityMode"];

@@ -120,6 +120,24 @@ class TestCreate:
         assert len(game.imposters) == 3
         assert sum(seat.role is PlayerRole.CIVILIAN for seat in game.seats) == 5
 
+    def test_chosen_imposters_keep_the_role_wherever_they_sit(self) -> None:
+        players = [
+            PlayerConfig(model_id=f"model-{seat}", imposter=seat == 4)
+            for seat in range(6)
+        ]
+
+        for seed in range(10):
+            game = Game.create(
+                config=GameConfig(players=players, imposter_count=2, seed=seed),
+                secret=SecretWord(word=WORD),
+            )
+            imposter_models = {
+                game.seats[seat].player.model_id for seat in game.imposters
+            }
+
+            assert "model-4" in imposter_models
+            assert len(game.imposters) == 2
+
     def test_enabled_hint_must_exist(self) -> None:
         with pytest.raises(ValueError, match="no hint"):
             new_game(imposter_hint=True)

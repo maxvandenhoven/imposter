@@ -1,9 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "motion/react";
 import { useState } from "react";
 
 import { createQueryClient } from "@/api/queryClient";
 import type { GameRequest } from "@/api/types";
 import { AppLayout } from "@/components/AppLayout";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useGameRun } from "@/hooks/useGameRun";
 import { BoardPage } from "@/pages/BoardPage";
 import { SetupPage } from "@/pages/SetupPage";
@@ -27,13 +29,23 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppLayout>
-        {request === null ? (
-          <SetupPage onStart={startGame} />
-        ) : (
-          <BoardPage board={run.board} onStop={run.stop} onNewGame={newGame} />
-        )}
-      </AppLayout>
+      {/* Animations follow the reduced motion setting of the system. */}
+      <MotionConfig reducedMotion="user">
+        <TooltipProvider delayDuration={200}>
+          <AppLayout wide={request !== null}>
+            {request === null ? (
+              <SetupPage onStart={startGame} />
+            ) : (
+              <BoardPage
+                board={run.board}
+                playback={run.playback}
+                onStop={run.stop}
+                onNewGame={newGame}
+              />
+            )}
+          </AppLayout>
+        </TooltipProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

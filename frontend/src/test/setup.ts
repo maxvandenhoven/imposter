@@ -17,4 +17,5 @@ globalThis.ResizeObserver = class {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });

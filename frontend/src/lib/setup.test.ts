@@ -5,14 +5,25 @@ import {
   defaultSetupForm,
   gameRequest,
   maxImposters,
+  randomImposters,
   randomLineup,
+  removeSeat,
   type SetupForm,
   setupProblems,
+  type SetupSeat,
 } from "@/lib/setup";
 import { CATALOG } from "@/test/fixtures";
 
 function form(patch: Partial<SetupForm> = {}): SetupForm {
-  return { ...defaultSetupForm(CATALOG), ...patch };
+  return { ...defaultSetupForm(CATALOG, () => 0), ...patch };
+}
+
+/** `count` seats of one model, the first `imposters` of them chosen as imposters. */
+function seats(count: number, imposters = 0): SetupSeat[] {
+  return Array.from({ length: count }, (_, index) => ({
+    modelId: "gpt-oss",
+    imposter: index < imposters,
+  }));
 }
 
 describe("setupProblems", () => {
@@ -21,10 +32,10 @@ describe("setupProblems", () => {
   });
 
   it.each([
-    [{ seats: Array<string>(2).fill("gpt-oss") }, "A game needs 3 to 8 players."],
-    [{ seats: Array<string>(9).fill("gpt-oss") }, "A game needs 3 to 8 players."],
-    [{ imposterCount: 2 }, "4 players allow 1 to 1 imposters, not 2."],
-    [{ imposterCount: 0 }, "4 players allow 1 to 1 imposters, not 0."],
+    [{ seats: seats(2, 1) }, "A game needs 3 to 8 players."],
+    [{ seats: seats(9, 1) }, "A game needs 3 to 8 players."],
+    [{ seats: seats(4, 2) }, "4 players allow at most 1 imposters, not 2."],
+    [{ seats: seats(4) }, "Choose at least one imposter."],
     [{ clueRounds: 0 }, "Clue rounds must be 1 to 3."],
     [{ clueRounds: 4 }, "Clue rounds must be 1 to 3."],
     [{ discussionRounds: 4 }, "Discussion rounds must be 0 to 3."],
@@ -57,9 +68,7 @@ describe("setupProblems", () => {
 
   it("allows more imposters in larger games", () => {
     expect(maxImposters(7)).toBe(3);
-    expect(
-      setupProblems(form({ seats: Array<string>(7).fill("gpt-oss"), imposterCount: 3 })),
-    ).toEqual([]);
+    expect(setupProblems(form({ seats: seats(7, 3) }))).toEqual([]);
   });
 });
 
@@ -74,10 +83,23 @@ describe("gameRequest", () => {
       model_id: "gemini-flash",
       model_display_name: "Gemini Flash",
       persona: null,
+      imposter: true,
     });
+    expect(request.config.imposter_count).toBe(1);
     expect(request.config.clue_rounds).toBe(3);
     expect(request.config.temperature).toBe(0.5);
     expect(request.words).toEqual({ mode: "random", word: null, category: null });
+  });
+
+  it("sends the players chosen as imposters", () => {
+    const request = gameRequest(form({ seats: seats(4, 1) }), CATALOG.models);
+
+    expect(request.config.players.map((player) => player.imposter)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 
   it("sends the cleaned typed word with its category", () => {
@@ -102,6 +124,35 @@ describe("gameRequest", () => {
     const request = gameRequest(form({ category: ANY_CATEGORY }), CATALOG.models);
 
     expect(request.words.category).toBeNull();
+  });
+});
+
+describe("imposter allocation", () => {
+  it("puts one imposter on a random seat by default", () => {
+    const { seats: lineup } = defaultSetupForm(CATALOG, () => 0.99);
+
+    expect(lineup.map((seat) => seat.imposter)).toEqual([false, false, false, true]);
+  });
+
+  it("moves the imposters to random seats and keeps their number", () => {
+    const moved = randomImposters(seats(7, 2), () => 0.99);
+
+    expect(moved.map((seat) => seat.imposter)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it("gives the role to another seat when the last imposter's seat is removed", () => {
+    const rest = removeSeat(seats(4, 1), 0, () => 0);
+
+    expect(rest.map((seat) => seat.imposter)).toEqual([true, false, false]);
+    expect(removeSeat(seats(5, 2), 0).filter((seat) => seat.imposter)).toHaveLength(1);
   });
 });
 
