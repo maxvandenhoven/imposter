@@ -65,6 +65,9 @@ class ModelCatalogEntry(BaseModel):
         supports_structured_output: Whether the model takes a response schema, otherwise
             the prompt asks for JSON.
         thinking: How much native thinking the model does.
+        always_reasons: Whether the model reasons by default and takes a reasoning
+            effort, so that `thinking` is sent to it as one (`off` becomes the lowest
+            effort). Only for models called through LiteLLM.
         temperature: The default sampling temperature.
         price_per_mtok: The price per million tokens.
     """
@@ -80,6 +83,7 @@ class ModelCatalogEntry(BaseModel):
     logo: str | None = None
     supports_structured_output: bool = False
     thinking: ModelThinking = ModelThinking.OFF
+    always_reasons: bool = False
     temperature: float = Field(default=1.0, ge=0, le=2)
     price_per_mtok: ModelPrice
 

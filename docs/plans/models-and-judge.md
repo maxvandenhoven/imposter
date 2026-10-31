@@ -56,6 +56,38 @@ Findings from WP 04, also noted in `catalog.yaml`:
 - More open models need their terms accepted in Model Garden first. Add them to
   `scripts/check_models.py` and the catalog once they answer.
 
+### Turn times and reasoning (WP 16)
+
+`scripts/measure_models.py` plays random players up to a clue turn and the imposter's
+guess, renders those real prompts and times a streamed answer per catalog model with the
+settings the players use. Median total time of four runs, in seconds:
+
+| Model | Clue | Guess | Note |
+|---|---|---|---|
+| `gemini-pro` | 6.7 | 8.4 | Thinks at `low`, 250 to 300 thinking tokens. |
+| `gemini-flash` | 3.4 | 7.1 | Thinks at `low`. |
+| `gemini-flash-lite` | 1.0 | 1.0 | No thinking. |
+| `claude-sonnet` | 1.5 | 4.9 | No thinking. |
+| `claude-haiku` | 1.2 | 2.9 | No thinking. |
+| `gpt-oss` before | 21.1 (max 41.2) | not measured | Default reasoning effort, 60 s timeout. |
+| `gpt-oss` after | 0.8 (max 1.7) | 2.7 (max 3.1) | `reasoning_effort: low`, 10 s timeout. |
+
+Findings:
+
+- Vertex MaaS honours `reasoning_effort` for `gpt-oss`: a clue turn went from 70 to 110
+  thinking tokens to 20 to 35. A guess turn still thinks 280 to 520 tokens at `low`.
+- Most of the slow turns were not caused by reasoning. `gpt-oss` on Vertex MaaS often
+  stalls for 20 to 40 s before the first chunk or midway, whatever the answer length.
+  The 60 s timeout never fired, so a stalled call took the whole stall, and a call that
+  did time out was retried after another 60 s. LiteLLM models now have a 10 s limit
+  (`LITELLM_CALL_TIMEOUT_SECONDS`), which for a stream is the wait for the first chunk
+  and every pause between chunks, and a retry is usually fast again.
+- LiteLLM retries only a call that fails before the first chunk. A stream that breaks
+  off midway (`MidStreamFallbackError`) reached the runner as a failed turn, so
+  `AdkPlayer` now asks again (`ANSWER_ATTEMPTS`, 3 calls).
+- The other open models in the table above are not enabled in the project, so `gpt-oss`
+  stays in the default lineup. With the short timeout its slow tail is bounded.
+
 ## Catalog (`models/catalog.yaml`)
 
 ```yaml
@@ -77,7 +109,9 @@ and word generation), Claude Sonnet, Claude Haiku, and the open models enabled i
 project (only `gpt-oss` so far). `models/factory.py` turns an entry into an ADK model
 object (`Gemini` on Vertex AI or `LiteLlm`) and a `GenerateContentConfig` per phase:
 temperature, `max_output_tokens` (a per-phase answer budget plus room for thinking) and
-the thinking level.
+the thinking level. Models that always reason (`always_reasons: true`, `gpt-oss`) get
+the setting as LiteLLM `reasoning_effort` (`off` and `low` become `low`, `high` stays
+`high`), because they have no way to switch reasoning off.
 `GET /catalog` serves the catalog to the setup screen (`web-ui.md` §API).
 
 ## Identity

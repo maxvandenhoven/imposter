@@ -12,9 +12,11 @@ from imposter.models.catalog import (
     ModelVia,
 )
 from imposter.models.factory import (
+    LITELLM_CALL_TIMEOUT_SECONDS,
     MODEL_CALL_RETRIES,
     MODEL_CALL_TIMEOUT_SECONDS,
     PHASE_MAX_OUTPUT_TOKENS,
+    REASONING_EFFORTS,
     RETRY_STATUS_CODES,
     THINKING_TOKENS,
     adk_model,
@@ -23,7 +25,10 @@ from imposter.models.factory import (
 
 
 def entry(
-    *, via: ModelVia, thinking: ModelThinking = ModelThinking.OFF
+    *,
+    via: ModelVia,
+    thinking: ModelThinking = ModelThinking.OFF,
+    always_reasons: bool = False,
 ) -> ModelCatalogEntry:
     """Build a catalog entry for a native or LiteLLM model."""
     return ModelCatalogEntry(
@@ -36,6 +41,7 @@ def entry(
         via=via,
         location="us-central1",
         thinking=thinking,
+        always_reasons=always_reasons,
         temperature=0.7,
         price_per_mtok=ModelPrice(input=1, output=2),
     )
@@ -68,8 +74,35 @@ def test_adk_model_builds_litellm_with_project_and_location(
     assert model.model == "vertex_ai/claude-x"
     assert model._additional_args["vertex_project"] == "sandbox"
     assert model._additional_args["vertex_location"] == "us-central1"
-    assert model._additional_args["timeout"] == MODEL_CALL_TIMEOUT_SECONDS
+    assert model._additional_args["timeout"] == LITELLM_CALL_TIMEOUT_SECONDS
     assert model._additional_args["num_retries"] == MODEL_CALL_RETRIES
+
+
+@pytest.mark.parametrize(
+    ("thinking", "effort"),
+    [
+        (ModelThinking.OFF, "low"),
+        (ModelThinking.LOW, "low"),
+        (ModelThinking.HIGH, "high"),
+    ],
+)
+def test_adk_model_maps_thinking_to_reasoning_effort_for_reasoning_models(
+    thinking: ModelThinking, effort: str
+) -> None:
+    model = adk_model(entry(via=ModelVia.LITELLM, thinking=thinking, always_reasons=True))
+
+    assert isinstance(model, LiteLlm)
+    assert model._additional_args["reasoning_effort"] == effort
+    assert REASONING_EFFORTS[thinking] == effort
+
+
+def test_adk_model_sends_no_reasoning_effort_to_models_that_do_not_always_reason() -> (
+    None
+):
+    model = adk_model(entry(via=ModelVia.LITELLM))
+
+    assert isinstance(model, LiteLlm)
+    assert "reasoning_effort" not in model._additional_args
 
 
 @pytest.mark.parametrize("phase", list(PHASE_MAX_OUTPUT_TOKENS))

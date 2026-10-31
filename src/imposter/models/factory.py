@@ -11,6 +11,12 @@ from imposter.models.catalog import ModelCatalogEntry, ModelThinking, ModelVia
 MODEL_CALL_TIMEOUT_SECONDS = 60
 """The time limit of one model call (README D28)."""
 
+LITELLM_CALL_TIMEOUT_SECONDS = 10
+"""The time limit of one call to a model through LiteLLM. For a streamed answer it limits
+the wait for the first chunk and every pause between chunks. Open models on Vertex MaaS
+answer in 0.5 to 2 s but often stall for 20 to 40 s, and a retry is usually fast
+again, so a short limit with retries beats waiting out a stall."""
+
 MODEL_CALL_RETRIES = 2
 """The retries of a model call on a timeout, rate limit or server error (README D28)."""
 
@@ -41,6 +47,15 @@ THINKING_LEVELS: dict[ModelThinking, types.ThinkingLevel] = {
     ModelThinking.HIGH: types.ThinkingLevel.HIGH,
 }
 """The Gemini thinking level of each catalog setting. LiteLLM maps it for other models."""
+
+
+REASONING_EFFORTS: dict[ModelThinking, str] = {
+    ModelThinking.OFF: "low",
+    ModelThinking.LOW: "low",
+    ModelThinking.HIGH: "high",
+}
+"""The LiteLLM `reasoning_effort` of each catalog setting, for models that always reason.
+`off` is the lowest effort such a model accepts."""
 
 
 def adk_model(entry: ModelCatalogEntry) -> BaseLlm:
@@ -75,13 +90,19 @@ def adk_model(entry: ModelCatalogEntry) -> BaseLlm:
     litellm.suppress_debug_info = True
     project = os.environ.get("GOOGLE_CLOUD_PROJECT")
     vertex_args = {"vertex_project": project} if project else {}
+    reasoning_args = (
+        {"reasoning_effort": REASONING_EFFORTS[entry.thinking]}
+        if entry.always_reasons
+        else {}
+    )
 
     return LiteLlm(
         model=entry.adk_model,
         vertex_location=entry.location,
-        timeout=MODEL_CALL_TIMEOUT_SECONDS,
+        timeout=LITELLM_CALL_TIMEOUT_SECONDS,
         num_retries=MODEL_CALL_RETRIES,
         **vertex_args,
+        **reasoning_args,
     )
 
 

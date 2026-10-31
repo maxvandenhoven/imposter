@@ -14,9 +14,15 @@ from imposter.models.factory import adk_model, generate_content_config
 from imposter.players.base import PHASE_RESPONSE_TYPES, PlayerResponse, TurnUsage
 from imposter.players.prompt import PlayerPromptRenderer
 
-ANSWER_ATTEMPTS = 2
-"""Model calls per turn: the first answer plus one retry when it does not match the
-schema."""
+ANSWER_ATTEMPTS = 3
+"""Model calls per turn: the first answer plus two retries when it does not match the
+schema or when the stream broke off midway."""
+
+BROKEN_STREAM_ERROR_CODES = frozenset(
+    {"MidStreamFallbackError", "APIConnectionError", "Timeout"}
+)
+"""The error codes of a stream that broke off after the first chunk. The model client
+retries only a call that fails before the first chunk, so the player asks again."""
 
 SCHEMA_ERROR_CODE = "ValidationError"
 """The error code of an answer that does not match the schema."""
@@ -247,10 +253,12 @@ class AdkPlayer:
 
             error = f"{result.error_code}: {result.error_message}"
 
-            if result.error_code != SCHEMA_ERROR_CODE:
+            if result.error_code == SCHEMA_ERROR_CODE:
+                reason = (
+                    f"the answer did not match the JSON schema ({result.error_message})"
+                )
+            elif result.error_code not in BROKEN_STREAM_ERROR_CODES:
                 break
-
-            reason = f"the answer did not match the JSON schema ({result.error_message})"
 
         return PlayerResponse(
             output=None, usage=self.total_usage(), error=f"no valid answer: {error}"
