@@ -32,6 +32,8 @@ const SURROUNDING_PUNCTUATION = /^[\s"'.,;:!?()[\]{}]+|[\s"'.,;:!?()[\]{}]+$/g;
 
 /** A seat of the setup screen: its model and whether it must be an imposter. */
 export interface SetupSeat {
+  /** A stable id, so a seat keeps its row when the seats are reordered. */
+  id: number;
   modelId: string;
   /** Whether this player is an imposter, wherever its seat ends up. */
   imposter: boolean;
@@ -59,6 +61,41 @@ export interface SetupForm {
   temperature: number | null;
 }
 
+/** The id of the next new seat. */
+let nextSeatId = 0;
+
+/** A new seat with a model, not an imposter, with an id no other seat has. */
+export function newSeat(modelId: string): SetupSeat {
+  nextSeatId += 1;
+
+  return { id: nextSeatId, modelId, imposter: false };
+}
+
+/**
+ * Move the seat at `from` to `to`, keeping its model and whether it is an imposter.
+ *
+ * An index out of range leaves the seats as they are.
+ */
+export function moveSeat({
+  seats,
+  from,
+  to,
+}: {
+  seats: SetupSeat[];
+  from: number;
+  to: number;
+}): SetupSeat[] {
+  const moved = seats[from];
+
+  if (moved === undefined || to < 0 || to >= seats.length || from === to) {
+    return seats;
+  }
+
+  const rest = seats.filter((_, index) => index !== from);
+
+  return [...rest.slice(0, to), moved, ...rest.slice(to)];
+}
+
 /**
  * The setup form with the defaults of `game-rules.md` and the catalog's lineup, with one
  * imposter on a random seat.
@@ -69,7 +106,7 @@ export function defaultSetupForm(
   catalog: CatalogResponse,
   random: () => number = Math.random,
 ): SetupForm {
-  const seats = catalog.default_lineup.map((modelId) => ({ modelId, imposter: false }));
+  const seats = catalog.default_lineup.map((modelId) => newSeat(modelId));
 
   return {
     wordMode: "random",

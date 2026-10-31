@@ -56,7 +56,12 @@ export function SetupForm({
           icon={Eye}
           step={1}
           title="Secret word"
-          intro={<p>Civilians learn it, the imposter does not.</p>}
+          intro={
+            <p>
+              Choose how the secret word is picked. Every civilian is told the word, while
+              the imposters have to work it out from the clues.
+            </p>
+          }
         >
           <WordOptions form={form} categories={catalog.categories} onChange={update} />
         </NumberedSection>
@@ -67,8 +72,9 @@ export function SetupForm({
           title="Players"
           intro={
             <p>
-              Seats are shuffled before the game starts. The players with the mask are the
-              imposters.
+              Pick a model for each seat and mark the imposters with the mask. Drag a seat
+              by its handle to move it. The seats are shuffled when the game starts, so
+              the order here does not decide who goes first.
             </p>
           }
         >
@@ -85,7 +91,12 @@ export function SetupForm({
           icon={SlidersHorizontal}
           step={3}
           title="Rules"
-          intro={<p>How players are named and what everyone is told.</p>}
+          intro={
+            <p>
+              Decide what the players know about each other and about the word. The
+              defaults suit most games, and Advanced sets the length and the limits.
+            </p>
+          }
         >
           <IdentityModeField
             value={form.identityMode}
@@ -97,7 +108,7 @@ export function SetupForm({
             <OptionSwitch
               id="public-category"
               label="Public category"
-              description="Everyone, the imposter too, learns the category of the word."
+              description="Every player, the imposters too, is told the category of the word. This gives the imposters a head start, so they are harder to catch."
               checked={form.publicCategory}
               onChange={(publicCategory) => {
                 update({ publicCategory });
@@ -106,7 +117,7 @@ export function SetupForm({
             <OptionSwitch
               id="imposter-hint"
               label="Imposter hint"
-              description="The imposter gets a related word as a hint."
+              description="Gemini 3.5 Flash-Lite generates one related word that does not give the secret word away, and the imposters get it at the start. This makes them harder to catch."
               checked={form.imposterHint}
               onChange={(imposterHint) => {
                 update({ imposterHint });

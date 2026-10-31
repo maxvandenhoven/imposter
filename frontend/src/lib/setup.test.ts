@@ -5,6 +5,7 @@ import {
   defaultSetupForm,
   gameRequest,
   maxImposters,
+  moveSeat,
   randomImposters,
   randomLineup,
   removeSeat,
@@ -21,6 +22,7 @@ function form(patch: Partial<SetupForm> = {}): SetupForm {
 /** `count` seats of one model, the first `imposters` of them chosen as imposters. */
 function seats(count: number, imposters = 0): SetupSeat[] {
   return Array.from({ length: count }, (_, index) => ({
+    id: index,
     modelId: "gpt-oss",
     imposter: index < imposters,
   }));
@@ -165,5 +167,23 @@ describe("randomLineup", () => {
 
   it("gives no seats without models", () => {
     expect(randomLineup([], 3)).toEqual([]);
+  });
+});
+
+describe("moveSeat", () => {
+  it("moves a seat with its model and imposter mask", () => {
+    const lineup = seats(4, 1).map((seat, index) => ({ ...seat, modelId: `m${index}` }));
+
+    const moved = moveSeat({ seats: lineup, from: 0, to: 2 });
+
+    expect(moved.map((seat) => seat.modelId)).toEqual(["m1", "m2", "m0", "m3"]);
+    expect(moved[2]).toEqual({ id: 0, modelId: "m0", imposter: true });
+  });
+
+  it("leaves the seats as they are for an index out of range", () => {
+    const lineup = seats(3, 1);
+
+    expect(moveSeat({ seats: lineup, from: 0, to: 3 })).toBe(lineup);
+    expect(moveSeat({ seats: lineup, from: 5, to: 0 })).toBe(lineup);
   });
 });
