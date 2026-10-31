@@ -120,33 +120,33 @@ def mark_phase(*, phase: GamePhase, round_: int | None) -> None:
         span.set_attribute("imposter.phase.round", round_)
 
 
-@contextmanager
-def turn_span(*, game: Game, seat: int) -> Generator[Span]:
-    """Open the span of one player turn, with the seat and its model.
+def mark_turn(*, game: Game, seat: int) -> Span:
+    """Set the turn attributes on the current span, ADK's `invoke_node` span of a turn.
 
-    ADK has no span per turn: each attempt of a player runs its own nested
-    `invoke_workflow`, and this span groups them with the judge calls of the turn.
+    In the game workflow each turn runs in a turn node of its own (`PlayerTurnNode`),
+    and the player's agent runs as a child node of it, so the turn node's span groups
+    the attempts of the turn with its judge calls.
 
     Args:
         game: The game.
         seat: The seat whose turn it is.
 
-    Yields:
-        The span, current while the turn runs.
+    Returns:
+        The span of the turn.
     """
     info = game.seats[seat]
-
-    with TRACER.start_as_current_span(
-        f"turn {info.name}",
-        attributes={
+    span = trace.get_current_span()
+    span.set_attributes(
+        {
             "imposter.phase.name": game.phase.value,
             "imposter.player.seat": seat,
             "imposter.player.name": info.name,
             "imposter.player.role": info.role.value,
             "gen_ai.request.model": info.player.model_id,
-        },
-    ) as span:
-        yield span
+        }
+    )
+
+    return span
 
 
 @contextmanager

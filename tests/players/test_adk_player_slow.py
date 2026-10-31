@@ -3,8 +3,9 @@
 import os
 
 import pytest
+from conftest import FakeGameSetup
 
-from imposter.config import GameConfig, GamePhase, PlayerConfig, SecretWord
+from imposter.config import GameConfig, GamePhase, PlayerConfig
 from imposter.engine.events import (
     ClueGivenEvent,
     GuessMadeEvent,
@@ -15,7 +16,8 @@ from imposter.engine.events import (
 )
 from imposter.engine.game import Game
 from imposter.models.catalog import ModelCatalog
-from imposter.orchestration.runner import GameRunner
+from imposter.orchestration.adk_runner import run_game
+from imposter.orchestration.setup import GameRequest
 from imposter.players.adk_player import AdkPlayer
 from imposter.players.base import (
     ClueResponse,
@@ -25,6 +27,9 @@ from imposter.players.base import (
     VoteResponse,
 )
 from imposter.players.fake import ScriptedPlayer
+from imposter.ports.event_bus import InMemoryEventBus
+from imposter.ports.game_store import InMemoryGameStore
+from imposter.words.options import WordMode, WordOptions
 
 pytestmark = [
     pytest.mark.slow,
@@ -42,32 +47,44 @@ infer and say it, which would end the game before the vote and the guess."""
 async def test_real_model_gives_valid_responses_in_every_phase(model_id: str) -> None:
     """The real model plays the imposter, which acts in all five phases."""
     entry = ModelCatalog.load().entry(model_id)
+
+    def lineup(game: Game) -> list[PlayerProtocol]:
+        imposter = game.imposters[0]
+        civilians = [seat.seat for seat in game.seats if seat.seat != imposter]
+        players: list[PlayerProtocol] = []
+
+        for seat in game.seats:
+            if seat.seat == imposter:
+                players.append(AdkPlayer(entry=entry, seat=seat.seat))
+                continue
+
+            clue = VAGUE_CLUES[civilians.index(seat.seat)]
+            script = [
+                ClueResponse(clue=clue),
+                DiscussionResponse(statement="I am not sure yet, the clues are vague."),
+                VoteResponse(vote_for=game.seats[imposter].name),
+                DebriefResponse(reflection="Good game."),
+            ]
+            players.append(ScriptedPlayer(script=script))
+
+        return players
+
     config = GameConfig(
         players=[PlayerConfig(model_id=model_id)] * 3,
         clue_rounds=1,
         discussion_rounds=1,
         seed=7,
     )
-    game = Game.create(config=config, secret=SecretWord(word="giraffe"))
+    request = GameRequest(
+        config=config, words=WordOptions(mode=WordMode.TYPED, word="giraffe")
+    )
+    game = await run_game(
+        request=request,
+        setup=FakeGameSetup(players_for=lineup),
+        bus=InMemoryEventBus(),
+        store=InMemoryGameStore(),
+    )
     imposter = game.imposters[0]
-    civilians = [seat.seat for seat in game.seats if seat.seat != imposter]
-    players: list[PlayerProtocol] = []
-
-    for seat in game.seats:
-        if seat.seat == imposter:
-            players.append(AdkPlayer(entry=entry, seat=seat.seat))
-            continue
-
-        clue = VAGUE_CLUES[civilians.index(seat.seat)]
-        script = [
-            ClueResponse(clue=clue),
-            DiscussionResponse(statement="I am not sure yet, the clues are vague."),
-            VoteResponse(vote_for=game.seats[imposter].name),
-            DebriefResponse(reflection="Good game."),
-        ]
-        players.append(ScriptedPlayer(script=script))
-
-    await GameRunner(players=players).play(game)
 
     def of_imposter[EventT](events: list[EventT]) -> list[EventT]:
         return [event for event in events if getattr(event, "seat", None) == imposter]

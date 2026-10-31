@@ -1,6 +1,8 @@
 import random
 from collections.abc import Sequence
 
+from google.adk.agents.context import Context
+
 from imposter.config import GamePhase, PlayerRole
 from imposter.engine.views import PlayerView, other_players
 from imposter.players.base import (
@@ -81,13 +83,17 @@ class ScriptedPlayer:
         self.retry_reasons: list[str | None] = []
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         """Replay the next canned turn.
 
         Args:
             view: Everything the seat may know.
             retry_reason: Why the previous attempt in this turn was rejected, if any.
+            ctx: The context of the turn node, unused.
 
         Returns:
             The next canned response.
@@ -146,13 +152,17 @@ class RandomPlayer:
         self.views: list[PlayerView] = []
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         """Act at random in the phase of the view.
 
         Args:
             view: Everything the seat may know.
             retry_reason: Why the previous attempt was rejected, ignored by this player.
+            ctx: The context of the turn node, unused.
 
         Returns:
             A random response for the phase.

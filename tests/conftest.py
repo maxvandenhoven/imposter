@@ -1,22 +1,31 @@
 """Fixtures shared by the tests of several packages."""
 
 from collections.abc import AsyncGenerator, Callable, Sequence
+from typing import Any
 
 import pytest
+from google.adk.agents.context import Context
+from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.adk.apps import App
+from google.adk.events import Event
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.adk.workflow import START, Edge, Node, Workflow
 from google.genai import types
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from pydantic import Field
+from pydantic import Field, SkipValidation
 
 from imposter.engine.game import Game
+from imposter.engine.views import PlayerView
 from imposter.judge.base import JudgeProtocol
 from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
 from imposter.orchestration.runner import GameRunner
 from imposter.orchestration.setup import GameSetup
-from imposter.players.base import PlayerProtocol, TurnUsage
+from imposter.players.base import PlayerProtocol, PlayerResponse, TurnUsage
 from imposter.players.fake import RandomPlayer
 from imposter.words.options import SecretWordResolver
 from imposter.words.picker import WordPicker
@@ -57,6 +66,60 @@ class FakeGameSetup(GameSetup):
 
     def runner_for(self, game: Game) -> GameRunner:
         return GameRunner(players=self.players_for(game), judge=self.judge)
+
+
+class TurnsNode(Node):
+    """A workflow node that has a player take turns, the way a turn node does.
+
+    Attributes:
+        player: The player.
+        turns: The view and retry reason of each turn, in order.
+        rerun_on_resume: Set, because ADK requires it of nodes that run child nodes.
+    """
+
+    player: SkipValidation[PlayerProtocol]
+    turns: list[tuple[PlayerView, str | None]]
+    rerun_on_resume: bool = True
+
+    async def run_node_impl(
+        self, *, ctx: Context, node_input: Any
+    ) -> AsyncGenerator[Event]:
+        responses = [
+            await self.player.take_turn(view=view, retry_reason=reason, ctx=ctx)
+            for view, reason in self.turns
+        ]
+
+        yield Event(output=responses)
+
+
+async def run_turns(
+    player: PlayerProtocol,
+    turns: list[tuple[PlayerView, str | None]],
+    *,
+    streaming: bool = False,
+) -> tuple[list[PlayerResponse], list[Event]]:
+    """Have a player take turns in one workflow run and collect every event of the run."""
+    sessions = InMemorySessionService()
+    node = TurnsNode(name="turn", player=player, turns=turns)
+    workflow = Workflow(name="turns", edges=[Edge(from_node=START, to_node=node)])
+    runner = Runner(app=App(name="test", root_agent=workflow), session_service=sessions)
+    session = await sessions.create_session(app_name="test", user_id="u")
+    message = types.Content(role="user", parts=[types.Part(text="Play.")])
+    mode = StreamingMode.SSE if streaming else StreamingMode.NONE
+    events = [
+        event
+        async for event in runner.run_async(
+            user_id="u",
+            session_id=session.id,
+            new_message=message,
+            run_config=RunConfig(streaming_mode=mode),
+        )
+    ]
+    [responses] = [
+        event.output for event in events if event.author == "turns" and event.output
+    ]
+
+    return responses, events
 
 
 class ReplayLlm(BaseLlm):

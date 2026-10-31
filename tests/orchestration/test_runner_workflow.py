@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 from conftest import FakeGameSetup, random_players
+from google.adk.agents.context import Context
 from google.adk.apps import App
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -131,18 +132,24 @@ class DelayedPlayer:
         self.delay = delay
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         await asyncio.sleep(self.delay)
 
-        return await self.player.take_turn(view=view, retry_reason=retry_reason)
+        return await self.player.take_turn(view=view, retry_reason=retry_reason, ctx=ctx)
 
 
 class FailingPlayer:
     """A player whose model always fails."""
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         message = "The model is unavailable."
         raise RuntimeError(message)
@@ -159,7 +166,10 @@ class BlockingPlayer:
         self.asked = asyncio.Event()
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         self.asked.set()
         await asyncio.Event().wait()
