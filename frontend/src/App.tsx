@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 import { createQueryClient } from "@/api/queryClient";
 import type { GameEvent, GameRequest } from "@/api/types";
@@ -17,6 +17,13 @@ const queryClient = createQueryClient();
 export function App() {
   const [request, setRequest] = useState<GameRequest | null>(null);
   const run = useGameRun();
+  const onBoard = request !== null;
+
+  // The setup and the board share one page, so each view starts at the top, with its
+  // header in full, instead of where the other view was scrolled to.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [onBoard]);
 
   const startGame = (gameRequest: GameRequest) => {
     setRequest(gameRequest);
@@ -46,7 +53,7 @@ export function App() {
       {/* Animations follow the reduced motion setting of the system. */}
       <MotionConfig reducedMotion="user">
         <TooltipProvider delayDuration={200}>
-          <AppLayout wide={request !== null}>
+          <AppLayout wide={onBoard}>
             {request === null ? (
               <SetupPage onStart={startGame} onImport={importGame} />
             ) : (
