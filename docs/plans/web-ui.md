@@ -15,6 +15,7 @@ playing it is an ADK run.
 | `POST` | `/run_sse` | Play the game and stream its events. Body: `app_name`, `user_id`, `session_id`, `new_message` (any user message, for example "Play the game."), `"streaming": true` |
 | `GET` | `/apps/imposter/users/{user_id}/sessions/{session_id}` | The session with every stored event, for a finished game |
 | `GET` | `/health` | Liveness |
+| `GET` | `/` | Ours: the built frontend (`frontend/dist`), when it exists |
 
 ADK's other routes (artifacts, memory, `/list-apps`, `/run`) are there too and unused.
 
@@ -65,17 +66,42 @@ state, and ADK's server streams its runs over SSE and cancels a run when its cli
 leaves. Own routes would add a second event stream, replay and reconnect logic that ADK
 does not need. What that gives up is reconnecting to a running game.
 
-## Frontend (`src/imposter/web/`)
+## Frontend (`frontend/`)
 
-- One `index.html`, one `app.js` (Alpine.js component, loaded from a pinned CDN version or
-  vendored), `input.css` compiled to `tailwind.css` by the **standalone Tailwind CLI**
-  (binary, no Node): `make css` locally, a build stage in the Dockerfile. The compiled CSS
-  is not committed.
-- Logos: small SVGs per provider in `web/logos/`.
-- `fetch` with a stream reader for `/run_sse` (a `POST`, so not `EventSource`).
-- Style: dark, "game night" look; cards per seat; subtle animations with Tailwind
-  transitions/keyframes and Alpine `x-transition`. Works at laptop and projector sizes;
-  phone layout is nice-to-have.
+A single-page React app in `frontend/` at the repo root, with the stack and tooling of the
+hive repo (`maxvandenhoven/hive`, see its `docs/plans/frontend.md`). It is built to static
+files, which the API app serves at `/` after ADK's routes, so one container and one origin
+serve both.
+
+| Concern | Choice |
+|---|---|
+| Build | Vite + React + TypeScript (strict, `noUncheckedIndexedAccess`), Node pinned in `.nvmrc` |
+| Package manager | npm, lockfile committed |
+| Styling | Tailwind CSS through `@tailwindcss/vite`, with a dark "game night" theme in the shadcn theme tokens of `index.css` and the Geist font |
+| Components | shadcn/ui (Radix base, Lucide icons), copied into `frontend/src/components/ui/` and themed. App components build on them |
+| Animation | `motion` for chips, bubbles, the vote reveal and layout changes, with `prefers-reduced-motion` respected |
+| Server state | TanStack Query for the catalog |
+| API types | `imposter openapi` writes the app's OpenAPI schema, with the `GameRequest` and engine event schemas added because ADK types the session state and `custom_metadata` as free objects. `make api-client` generates `frontend/src/api/schema.ts` from it with `openapi-typescript` |
+| Streaming | `fetch` with a stream reader for `/run_sse` (a `POST`, so not `EventSource`), in a small stream client that sorts the events as §API describes |
+| Lint, format, test | ESLint, Prettier, Vitest with Testing Library |
+
+There is no router: the app has a setup view and a board view. In development, `make dev`
+runs the API on port 8000 and the Vite dev server on port 5173, which forwards
+`/catalog`, `/apps` and `/run_sse` to the API. In the image, a Node stage builds
+`frontend/dist` (`infrastructure.md` §Build and deploy).
+
+Rules that keep the look consistent:
+
+- Every control and surface comes from shadcn/ui. Pages compose app components, app
+  components compose the primitives in `components/ui/`, and nothing outside `ui/` styles
+  raw buttons, inputs or dialogs.
+- Colours, radii and fonts come from the theme tokens, not from one-off values.
+- Logic that turns events into what is shown (the board state, the partial answers, the
+  playback cursor) lives in plain TypeScript functions in `frontend/src/lib/`, tested
+  with Vitest, and components only render it.
+- Provider logos are small SVGs in `frontend/public/logos/`, at the paths the catalog's
+  `logo` field names.
+- It works at laptop and projector sizes, and a phone layout is nice to have.
 
 ### Setup screen
 
@@ -89,17 +115,25 @@ Kept simple: the essentials up front, the rest under "Advanced".
 - Toggles: public category, imposter hint.
 - Advanced: clue rounds, discussion rounds, imposters, word caps, token budget,
   temperature override.
-- Start → `POST /api/games`, then open the board and subscribe.
+- The limits are checked in the browser before Start, because invalid options only fail
+  once the run starts.
+- Start creates the session with the request in its state, opens the board and starts the
+  run on `/run_sse`. Leaving the page during a game aborts it, so the page warns first.
 
 ### Game board
 
-- Seats in a circle or row: name, model logo (god mode or after reveal), role badge (god
-  mode or after reveal), speaking indicator for the current turn.
+- Seat cards around a central table card with the phase, round and category (and the
+  word in god mode), and a transcript next to it. Seats show the name, the model logo and
+  the role badge (in god mode or after the reveal), and a speaking indicator with a soft
+  glow and typing dots during the seat's turn.
+- Live answers: the partial JSON of the current answer is parsed as it grows, so the clue
+  or statement appears on the speaking seat's card while it is written.
 - Timeline/transcript: clues appear as chips per round sliding in; discussion as speech
   bubbles; votes as a reveal sequence with arrows/counts; the imposter's guess and the
   judge verdict; an outcome banner.
 - God mode: the word, roles, and each turn's private reasoning shown live as a
-  "thought bubble" next to the public action.
+  "thought bubble" next to the public action. The models' own thought parts are shown
+  collapsed. Audience mode hides all of these until the reveal, also in the partial text.
 - Header: phase indicator, running token and cost estimate, link to the trace in Cloud
   Trace, mode toggle (audience / god).
 - Errors (`player_error`) shown inline as a small warning on the turn.
@@ -133,5 +167,7 @@ side, plus tokens and cost.
   `agent.py`: the catalog, ADK serving only the game app, and a game created as a
   session and streamed over `/run_sse` to the end. Streaming of model tokens is tested on
   the player with a fake model, and was checked against real models with `curl`.
-- Frontend: no JS test framework in v1. Keep logic in `app.js` small and render from the
-  event list; manual check list in the PR description of each UI work package.
+- Frontend: Vitest with Testing Library and jsdom. The stream client is tested against a
+  mocked `fetch`, and the functions in `lib/` (board state, partial answers, playback,
+  export) directly, including that audience mode shows nothing private. The look is
+  checked by hand, with a check list and screenshots in the PR of each UI work package.

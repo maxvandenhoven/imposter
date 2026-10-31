@@ -3,7 +3,7 @@
 Tooling mirrors the hive repo (`maxvandenhoven/hive`, locally `~/Documents/repos/hive`).
 WP 01 copies the setup and adapts names; when in doubt, hive's `pyproject.toml`,
 `Makefile`, `.pre-commit-config.yaml`, `CLAUDE.md`, `.claude/` and `scripts/tooling/` are
-the reference.
+the reference. WP 09 copies hive's frontend tooling the same way (§Frontend).
 
 ## Python
 
@@ -31,7 +31,7 @@ Same rules as hive (see its `docs/plans/tooling.md` and `CLAUDE.md`), summarised
 | Pytest fixtures state their scope explicitly | review |
 | Simple code with objects where state or shared logic lives: behaviour is a method on the object whose state it reads or changes, objects change in place, plain functions only for logic on plain values. Data models and enums hold no behaviour. I/O at the edges | review |
 | Specific, domain-prefixed names (`GameEvent`, `PlayerView`, `JudgeVerdict`) | review |
-| Base classes start with `Base`, protocols end with `Protocol`, ADK agents end with `Agent` | review |
+| Base classes start with `Base`, protocols end with `Protocol`, ADK agents end with `Agent`, workflow nodes end with `Node` | review |
 | Public by default; underscore only when hiding matters | review |
 | Blank lines around compound statements and before a multi-step `return` | review |
 | Keyword arguments for own calls with 2+ arguments | review |
@@ -52,8 +52,10 @@ make type           # ty check
 make check          # format + lint + type
 make test           # pytest, excluding `slow`, with coverage
 make test-slow      # pytest -m slow (real Vertex AI calls)
-make css            # standalone Tailwind CLI build (downloads the pinned binary to .bin/)
-make dev            # imposter serve --reload: the game API with uvicorn (css too, once WP 09 adds it)
+make frontend       # npm run build: frontend/dist, which the API serves at /
+make api-client     # imposter openapi, then openapi-typescript into frontend/src/api/schema.ts
+make dev            # the API with reload on :8000 and the Vite dev server on :5173
+make docker         # build the image and run it on :8080 with .env and ADC
 make adk-web        # adk web --otel_to_cloud src
 make play ARGS=...  # imposter play
 make build          # Cloud Build image
@@ -68,6 +70,27 @@ make install-hooks  # pre-commit hooks (including commit-msg)
 Terraform is formatted and validated by `make check` (`terraform fmt -check -recursive
 infra` and `terraform validate` per root) when Terraform is installed.
 
+`format`, `lint`, `type` and `test` each run a `-python` and a `-frontend` half (for
+example `make lint-python`), as in hive. The frontend halves run `npm ci` first when
+`frontend/node_modules` is missing or older than the lockfile, and `make sync` runs it
+too. The frontend targets and `make frontend`, `make api-client` and `make docker` are
+added by WP 09.
+
+## Frontend
+
+The same tools and settings as hive's `frontend/` (its `docs/plans/tooling.md`):
+
+- ESLint with `typescript-eslint` `strictTypeChecked` and the React hooks and React refresh
+  rules. The shadcn/ui primitives in `src/components/ui/` and the generated
+  `src/api/schema.ts` are not linted.
+- Prettier with a print width of 90 and Tailwind class sorting. The generated file is not
+  formatted.
+- `tsc -b --noEmit` for types, and Vitest with Testing Library and jsdom for tests.
+- TypeScript is pinned to the version hive uses, because `openapi-typescript` 7 declares a
+  TypeScript 5 peer dependency.
+- After changing an API model, an engine event or the `GameRequest`, run `make api-client`
+  and commit `frontend/src/api/schema.ts`.
+
 ## Pre-commit and git
 
 - `.pre-commit-config.yaml`: `end-of-file-fixer`, commitizen (`commit-msg`), `make check`.
@@ -80,4 +103,5 @@ infra` and `terraform validate` per root) when Terraform is installed.
   style rules above, git workflow.
 - `.claude/settings.json`: PostToolUse on `Edit|Write|MultiEdit` runs
   `.claude/hooks/format-file.sh` (ruff format, ruff check --fix, comment checker on edited
-  `.py` files); Stop runs `make check`.
+  `.py` files, and from WP 09 Prettier on edited `frontend/src/**/*.{ts,tsx,css}` files),
+  and Stop runs `make check`.

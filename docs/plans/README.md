@@ -10,7 +10,7 @@ the order in which work happens. Topic files go deeper on each area:
 | [`agents-and-orchestration.md`](agents-and-orchestration.md) | ADK setup, how engine, players and orchestration fit, the turn loop, the game workflow, `PlayerProtocol`, `PlayerView`, prompts, structured outputs, scratchpad, concurrency, failures, ports |
 | [`models-and-judge.md`](models-and-judge.md) | Model catalog, Vertex AI access (Gemini, Claude, open MaaS models), identity modes, words and categories, the `Judge` |
 | [`observability.md`](observability.md) | OpenTelemetry, Cloud Trace span hierarchy, content capture to Cloud Logging, token usage, IAP identity |
-| [`web-ui.md`](web-ui.md) | ADK's API server with the event stream a client reads, static frontend (Alpine.js + Tailwind), setup screen, game board, audience and god mode, playback, export and import |
+| [`web-ui.md`](web-ui.md) | ADK's API server with the event stream a client reads, React frontend (Vite, TypeScript, Tailwind, shadcn/ui), setup screen, game board, audience and god mode, playback, export and import |
 | [`infrastructure.md`](infrastructure.md) | GCP basics, organising resources in the shared sandbox project, Terraform layout, Cloud Run, IAP, budget, Dockerfile, `make deploy` |
 | [`tooling.md`](tooling.md) | Code style, ruff/ty/pytest, custom checkers, Makefile, pre-commit, Claude Code hooks (mirrors the hive repo) |
 | [`playtests.md`](playtests.md) | Real games worth remembering: transcripts, findings and the rule changes they led to |
@@ -59,7 +59,7 @@ public multi-user access.
 ## 3. Architecture overview
 
 ```
- browser (static page, served by the same container)
+ browser (React app, built into the same container and served at /)
     │  GET /catalog    POST /apps/imposter/users/{user}/sessions (request in state)
     │  POST /run_sse (streaming: engine events, turn starts, token deltas)
     ▼
@@ -99,7 +99,7 @@ layers.
 | D7 | Players implement a `PlayerProtocol` (`take_turn(view, retry_reason, ctx) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. In the game workflow it runs as a child node of the turn (`ctx` is the turn node's context), so its tokens stream to the client and its spans sit below the turn. | No shared conversation history that could leak the word. Running inside the game run is what lets ADK stream the answers (WP 08). The protocol leaves room for A2A remote players (future work). |
 | D8 | Each player has a private scratchpad with its own earlier actions and reasoning, derived by the engine from that seat's events and shown only to that player in its `PlayerView`. | Consistent strategy over rounds and material for the debrief. |
 | D9 | Structured output per phase with a `private_reasoning` field. Native structured output where supported, otherwise JSON in the prompt plus pydantic validation and one retry with the error, then a pass/abstain fallback. | Machine-checkable turns across all model families. |
-| D10 | The backend is ADK's API server (`get_fast_api_app`) serving the game app, plus a `/catalog` route: a game is an ADK session with the `GameRequest` in state, played and streamed with `/run_sse`. Engine events carry their JSON in `custom_metadata`, and with `streaming: true` the players' answers stream token by token as partial events. The frontend is a single static page (Alpine.js + Tailwind, standalone Tailwind CLI, no Node) served from the same container. `adk web` stays available for development. | No API of our own to maintain: ADK already streams runs over SSE and cancels a run when its client leaves (changed in WP 08, which first planned FastAPI routes with own SSE, replay and reconnect). One container and one origin, so IAP needs no CORS. |
+| D10 | The backend is ADK's API server (`get_fast_api_app`) serving the game app, plus a `/catalog` route: a game is an ADK session with the `GameRequest` in state, played and streamed with `/run_sse`. Engine events carry their JSON in `custom_metadata`, and with `streaming: true` the players' answers stream token by token as partial events. The frontend is a React app in `frontend/` (Vite, TypeScript, Tailwind, shadcn/ui, with the stack and tooling of the hive repo), built in the Docker image and served by the API app at `/`, so one container serves both. `adk web` stays available for development. | No API of our own to maintain: ADK already streams runs over SSE and cancels a run when its client leaves (changed in WP 08, which first planned FastAPI routes with own SSE, replay and reconnect). React instead of a single Alpine.js page (changed after WP 08): the board is stateful, with answers that grow token by token, a playback cursor and two modes, which typed components keep manageable, and the hive repo already has a proven setup to copy. The cost is a Node toolchain for the build. One container and one origin, so IAP needs no CORS. |
 | D11 | Deploy on Cloud Run (`europe-west4`), 60 minute request timeout, min 0 / max 1 instance, request-based billing. Agent Engine is a later comparison experiment. | Scales to zero, cheapest, simplest Terraform; one container holds API, UI and SSE. |
 | D12 | Access via IAP directly on Cloud Run (no load balancer), allowing the owner's org account or group. The IAP identity goes on the root span (`enduser.id`). | Org Google login, best practice, and traces show who ran each game. |
 | D13 | Everything in memory: game store, event bus and ADK `InMemorySessionService`, each behind a port (`GameStoreProtocol`, `EventBusProtocol`, `BaseSessionService`) so adapters can be swapped later. | Cheap and simple. Scaling to zero loses running games, which is fine for a demo. |
@@ -109,7 +109,7 @@ layers.
 | D17 | The app lives in the owner's existing sandbox project, shared with other work. No Terraform bootstrap: `make tf-setup` enables the base APIs Terraform needs and creates the state bucket with `gcloud`, and `infra/` (one flat Terraform root, GCS backend) holds every app resource, labelled `app=imposter`. Only gcloud install, login, `make tf-setup` and Model Garden click-through acceptance are manual. | The project already exists and is not ours to manage; labels and Terraform state keep the app's resources identifiable in a shared project (GCP has no resource groups). |
 | D18 | Deploy via `make deploy`: Cloud Build builds and pushes the image to Artifact Registry, Terraform deploys the image by digest. No CI/CD. | Reproducible deploys and one-line rollbacks without a pipeline. |
 | D19 | Tooling mirrors the hive repo: Python 3.13, uv, ruff (Google docstrings, line length 90), ty, pytest, the comment and docstring checkers, pre-commit with commitizen, Claude Code hooks. | Proven setup, consistent style. |
-| D20 | Package layout: `engine`, `players`, `models`, `words`, `judge`, `orchestration`, `ports`, `telemetry`, `api`, `web`, plus `agent.py` (for `adk web`) and `cli.py`. | Pure engine testable without LLMs; clear dependency direction. |
+| D20 | Package layout: `engine`, `players`, `models`, `words`, `judge`, `orchestration`, `ports`, `telemetry`, `api`, plus `agent.py` (for `adk web`) and `cli.py`. The frontend is a separate npm project in `frontend/` at the repo root. | Pure engine testable without LLMs, and a clear dependency direction. |
 | D21 | Model catalog in YAML: id, display name, provider, ADK model string, location, logo, structured output support, thinking, temperature, prices. Starting lineup: latest Gemini Pro and Flash, Claude Sonnet and Haiku, 2–3 open models (IDs verified in Model Garden during WP 04). | One place to add or drop models; cost estimates from prices. |
 | D22 | `identity_mode` per game: `seat` (Player 1..N), `names` (Alice, Bob, Charlie, ... in seat order) or `models` (model display names, numbered when repeated). Recorded on the root span. The UI shows models separately depending on audience or god mode. | Lets you compare play when models know who is who. |
 | D23 | No personas in v1, but `PlayerConfig` has an optional `persona` field from day one; the design is in `future-work.md`. | Adding personas later changes no API. |
@@ -130,7 +130,7 @@ imposter/
 ├─ pyproject.toml              # package `imposter`, ruff/ty/pytest config (see tooling.md)
 ├─ uv.lock                     # committed
 ├─ Makefile                    # all developer and deploy commands
-├─ Dockerfile                  # multi-stage: tailwind css build, uv install, uvicorn
+├─ Dockerfile                  # multi-stage: frontend build (Node), uv install, uvicorn
 ├─ CLAUDE.md                   # agent instructions, points to docs/plans
 ├─ .pre-commit-config.yaml     # end-of-file-fixer, commitizen, make check
 ├─ .claude/
@@ -150,9 +150,11 @@ imposter/
 │  ├─ ports/                   # game_store.py, event_bus.py (protocols + in-memory adapters)
 │  ├─ telemetry/               # setup.py (exporters), spans.py (game/phase/turn helpers), cost.py
 │  ├─ api/                     # app.py (ADK's API server for the game app), catalog.py
-│  ├─ web/                     # index.html, app.js, input.css, tailwind.css (built), logos/
 │  ├─ agent.py                 # `root_agent` for `adk web`
 │  └─ cli.py                   # `imposter` entry point (Typer): play, tournament, serve
+├─ frontend/                   # React app (Vite, TypeScript, Tailwind, shadcn/ui), as in hive:
+│                              # src/api/ (generated schema.ts, stream client), src/lib/ (board
+│                              # state), src/components/ui/ (shadcn/ui), public/logos/, dist/ (built)
 ├─ tests/                      # mirrors src/imposter/; tests/tooling/ for the checkers
 ├─ scripts/tooling/            # check_comments.py, check_docstrings.py (from hive)
 └─ infra/                      # one Terraform root: APIs, service account, Artifact Registry,
@@ -166,8 +168,8 @@ imposter/
 | **M0 Foundations** | Repo, tooling, Terraform for the sandbox project, models enabled | `make check test` is green on an empty package; `gcloud` and Terraform work against the sandbox project; a test call to Gemini and Claude on Vertex succeeds |
 | **M1 Headless game** | Pure engine, model catalog, ADK players, words and judge, `GameRunnerAgent`, CLI | `imposter play --word ... --players ...` plays a full game with mixed models in the terminal, including the debrief |
 | **M2 Tracing** | OpenTelemetry to Cloud Trace and Logging with the game/phase/turn hierarchy | A CLI game shows up as one readable trace with content and tokens |
-| **M3 Web UI** | ADK's API server with streaming, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
-| **M4 Deploy** | Dockerfile, Terraform for the app, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
+| **M3 Web UI** | ADK's API server with streaming, the React frontend and the Docker image that serves it, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
+| **M4 Deploy** | Terraform for the app, Cloud Build, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
 | **M5 Evaluate** | Tournament CLI and model statistics | `imposter tournament` runs N games and reports per-model win rates, detection accuracy, guess accuracy and clue leakiness |
 
 ## 7. Work packages and implementation order
@@ -187,10 +189,10 @@ issue should not be started.
 | 15 | The game as an ADK graph workflow | M2 | 06 | #21 |
 | 07 | Tracing to Cloud Trace and Cloud Logging | M2 | 15 | #7 |
 | 08 | Game API on ADK's API server with streamed turns | M3 | 06 | #8 |
-| 09 | Static frontend foundation and setup screen | M3 | 08 | #9 |
+| 09 | React frontend foundation, setup screen and Dockerfile | M3 | 08 | #9 |
 | 10 | Live game board with audience and god mode | M3 | 09 | #10 |
 | 11 | Playback, export and import, debrief panel | M3 | 10 | #11 |
-| 12 | Dockerfile, Terraform app resources and `make deploy` | M4 | 02, 08 | #12 |
+| 12 | Terraform app resources, Cloud Build and `make deploy` | M4 | 02, 09 | #12 |
 | 13 | IAP, identity on traces and cloud smoke test | M4 | 07, 11, 12 | #13 |
 | 14 | Tournament CLI and model statistics | M5 | 07 | #14 |
 
@@ -202,14 +204,14 @@ flowchart LR
   WP06 --> WP15 & WP08
   WP15 --> WP07
   WP08 --> WP09 --> WP10 --> WP11
-  WP02 & WP08 --> WP12
+  WP02 & WP09 --> WP12
   WP07 & WP11 & WP12 --> WP13
   WP07 --> WP14
 ```
 
 Recommended order: 01, 02, 03, 04, 05, 06, 15, 07, 08, 09, 10, 11, 12, 13, 14. WP 03 can run
-in parallel with WP 02; WP 12 can start after 08 and run alongside the UI work; WP 14 can
-start any time after 07.
+in parallel with WP 02. WP 12 can start after 09, which builds the Docker image, and run
+alongside the rest of the UI work. WP 14 can start any time after 07.
 
 ## 8. Session workflow
 

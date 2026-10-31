@@ -35,7 +35,8 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `src/imposter/telemetry/` — OpenTelemetry setup, span helpers, cost estimates
 - `src/imposter/api/` — the API app: ADK's API server for the game app, plus the catalog
   route
-- `src/imposter/web/` — static frontend (Alpine.js + Tailwind)
+- `frontend/` — React app (Vite, TypeScript, Tailwind, shadcn/ui), planned: see
+  `docs/plans/web-ui.md` §Frontend. Its built files will be served by the API app at `/`
 - `src/imposter/cli.py` — `imposter` command line entry point (Typer)
 - `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for `src/imposter/engine/`
 - `scripts/tooling/` — development tooling such as the comment and docstring checkers
