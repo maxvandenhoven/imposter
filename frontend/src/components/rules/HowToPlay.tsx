@@ -15,17 +15,17 @@ import { Card, CardContent } from "@/components/ui/card";
 /** The secret word of every diagram. */
 const WORD = "lighthouse";
 
-/** The four players of the diagrams, with Dan as the imposter in the third seat. */
+/** The four players of the diagrams in seat order, with Charlie as the imposter. */
 const ALICE: DiagramPlayer = { name: "Alice", role: "civilian", logo: "claude" };
-const BOB: DiagramPlayer = { name: "Bob", role: "civilian", logo: "gemini" };
-const CLEO: DiagramPlayer = { name: "Cleo", role: "civilian", logo: "openai" };
-const DAN: DiagramPlayer = { name: "Dan", role: "imposter", logo: "mistral" };
+const BOB: DiagramPlayer = { name: "Bob", role: "civilian", logo: "openai" };
+const CHARLIE: DiagramPlayer = { name: "Charlie", role: "imposter", logo: "gemini" };
+const DAVE: DiagramPlayer = { name: "Dave", role: "civilian", logo: "qwen" };
 
 /** The players of a diagram: the four, with what the diagram shows about some of them. */
 function lineup(
   changes: Partial<Record<string, Partial<DiagramPlayer>>>,
 ): DiagramPlayer[] {
-  return [ALICE, BOB, DAN, CLEO].map((player) => ({
+  return [ALICE, BOB, CHARLIE, DAVE].map((player) => ({
     ...player,
     ...changes[player.name],
   }));
@@ -34,7 +34,7 @@ function lineup(
 /** Everyone but the players named, out of focus. */
 function quietExcept(...names: string[]): Record<string, Partial<DiagramPlayer>> {
   return Object.fromEntries(
-    [ALICE, BOB, DAN, CLEO]
+    [ALICE, BOB, CHARLIE, DAVE]
       .filter((player) => !names.includes(player.name))
       .map((player) => [player.name, { quiet: true }]),
   );
@@ -143,18 +143,18 @@ export function HowToPlay() {
               players={lineup({
                 Alice: { knows: WORD },
                 Bob: { knows: WORD },
-                Cleo: { knows: WORD },
-                Dan: { knows: "???" },
+                Dave: { knows: WORD },
+                Charlie: { knows: "???" },
               })}
-              caption="Alice, Bob and Cleo are civilians and know the word. Dan is the imposter and does not."
+              caption="Alice, Bob and Dave are civilians and know the word. Charlie is the imposter and does not."
             />
             <RuleDiagram
               title="With the imposter hint"
               players={lineup({
-                ...quietExcept("Dan"),
-                Dan: { knows: "coast" },
+                ...quietExcept("Charlie"),
+                Charlie: { knows: "coast" },
               })}
-              caption="With the imposter hint option, Dan gets a related word to start from."
+              caption="With the imposter hint option, Charlie gets a related word to start from."
             />
           </>
         }
@@ -194,19 +194,19 @@ export function HowToPlay() {
             <RuleDiagram
               title="Repeating a clue"
               players={lineup({
-                ...quietExcept("Alice", "Cleo"),
+                ...quietExcept("Alice", "Dave"),
                 Alice: { says: "beam", mark: "good" },
-                Cleo: { says: "beam", mark: "bad" },
+                Dave: { says: "beam", mark: "bad" },
               })}
               caption="Every clue must be new. A repeated clue is replaced by a pass."
             />
             <RuleDiagram
               title="The imposter bluffs"
               players={lineup({
-                ...quietExcept("Dan"),
-                Dan: { says: "tall", mark: "good", knows: "???" },
+                ...quietExcept("Charlie"),
+                Charlie: { says: "tall", mark: "good", knows: "???" },
               })}
-              caption="Dan does not know the word, so the imposter gives a vague clue that fits the clues so far."
+              caption="Charlie does not know the word, so the imposter gives a vague clue that fits the clues so far."
             />
           </>
         }
@@ -230,20 +230,20 @@ export function HowToPlay() {
             <RuleDiagram
               title="An accusation"
               players={lineup({
-                ...quietExcept("Bob", "Dan"),
-                Bob: { says: "Dan's “tall” is too vague." },
-                Dan: { suspected: true },
+                ...quietExcept("Bob", "Charlie"),
+                Bob: { says: "Charlie's “tall” is too vague." },
+                Charlie: { suspected: true },
               })}
               caption="Bob points at the clue that fits the word least."
             />
             <RuleDiagram
               title="A defence"
               players={lineup({
-                ...quietExcept("Bob", "Dan"),
+                ...quietExcept("Bob", "Charlie"),
                 Bob: { suspected: true },
-                Dan: { says: "Bob passed twice!" },
+                Charlie: { says: "Bob passed twice!" },
               })}
-              caption="Dan turns the suspicion on someone else."
+              caption="Charlie turns the suspicion on someone else."
             />
           </>
         }
@@ -265,20 +265,20 @@ export function HowToPlay() {
               players={lineup({
                 Alice: { votedBy: [] },
                 Bob: { votedBy: [] },
-                Cleo: { votedBy: ["Dan"] },
-                Dan: { votedBy: ["Alice", "Bob", "Cleo"], caught: true },
+                Dave: { votedBy: ["Charlie"] },
+                Charlie: { votedBy: ["Alice", "Bob", "Dave"], caught: true },
               })}
-              caption="Dan has the most votes and is caught."
+              caption="Charlie has the most votes and is caught."
             />
             <RuleDiagram
               title="A tie"
               players={lineup({
-                Alice: { votedBy: ["Cleo", "Dan"] },
+                Alice: { votedBy: ["Dave", "Charlie"] },
                 Bob: { votedBy: [] },
-                Cleo: { votedBy: [] },
-                Dan: { votedBy: ["Alice", "Bob"] },
+                Dave: { votedBy: [] },
+                Charlie: { votedBy: ["Alice", "Bob"] },
               })}
-              caption="Alice and Dan have two votes each. A tie catches nobody."
+              caption="Alice and Charlie have two votes each. A tie catches nobody."
             />
           </>
         }
@@ -298,16 +298,16 @@ export function HowToPlay() {
             <RuleDiagram
               title="A right guess"
               players={lineup({
-                ...quietExcept("Dan"),
-                Dan: { says: WORD, mark: "good", caught: true },
+                ...quietExcept("Charlie"),
+                Charlie: { says: WORD, mark: "good", caught: true },
               })}
               caption="The caught imposter guesses the word and steals the win."
             />
             <RuleDiagram
               title="A wrong guess"
               players={lineup({
-                ...quietExcept("Dan"),
-                Dan: { says: "tower", mark: "bad", caught: true },
+                ...quietExcept("Charlie"),
+                Charlie: { says: "tower", mark: "bad", caught: true },
               })}
               caption="The guess misses, so the civilians win."
             />

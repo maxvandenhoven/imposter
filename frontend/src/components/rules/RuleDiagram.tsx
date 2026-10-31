@@ -36,7 +36,7 @@ function AnswerMark({ mark }: { mark: "good" | "bad" }) {
     <span
       data-mark={mark}
       aria-label={mark === "good" ? "Allowed" : "Breaks a rule"}
-      className="absolute -top-5 -right-5 flex size-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-card data-[mark=bad]:bg-destructive data-[mark=good]:bg-civilian"
+      className="absolute -top-3.5 -right-3.5 flex size-6 items-center justify-center rounded-full text-white shadow-md ring-2 ring-card data-[mark=bad]:bg-destructive data-[mark=good]:bg-civilian"
     >
       <Icon className="size-3.5" strokeWidth={3} />
     </span>
@@ -50,16 +50,10 @@ function AbovePlayer({ player }: { player: DiagramPlayer }) {
       <SpeechBubble
         tail="bottom"
         tone={player.mark ?? null}
+        corner={player.mark === undefined ? undefined : <AnswerMark mark={player.mark} />}
         className="w-max max-w-52 text-center text-sm text-balance"
       >
         {player.says}
-        {player.mark !== undefined && (
-          <>
-            {/* Room for the mark, which sits on the corner of the bubble. */}
-            <span aria-hidden className="inline-block w-2" />
-            <AnswerMark mark={player.mark} />
-          </>
-        )}
       </SpeechBubble>
     );
   }
@@ -159,7 +153,7 @@ export function RuleDiagram({
                     name={voter}
                     revealed
                     caught={player.caught ?? false}
-                    className="px-1.5 text-[0.65rem]"
+                    size="sm"
                   />
                 ))}
               </div>

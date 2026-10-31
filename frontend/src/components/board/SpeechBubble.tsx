@@ -64,7 +64,8 @@ function BubbleTailMark({ tail }: { tail: BubbleTail }) {
  * speaker above it, left to the speaker beside it or down to the speaker below it. The
  * tail is drawn in the bubble's own colours, so it joins the outline without a seam.
  * `tone` colours the outline of an answer that follows (`good`) or breaks (`bad`) the
- * rules.
+ * rules, and `corner` is a mark on the top right corner, outside the text so the text
+ * stays centred.
  */
 export function SpeechBubble({
   children,
@@ -72,6 +73,7 @@ export function SpeechBubble({
   muted = false,
   tail = null,
   tone = null,
+  corner,
   className,
 }: {
   children: ReactNode;
@@ -79,6 +81,7 @@ export function SpeechBubble({
   muted?: boolean;
   tail?: BubbleTail | null;
   tone?: "good" | "bad" | null;
+  corner?: ReactNode;
   className?: string;
 }) {
   return (
@@ -101,6 +104,7 @@ export function SpeechBubble({
           <span className="ml-0.5 inline-block w-1.5 animate-pulse text-speaking">▍</span>
         )}
       </span>
+      {corner}
     </div>
   );
 }

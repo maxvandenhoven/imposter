@@ -36,9 +36,9 @@ function FlyingBallot({
       }}
       transition={{ duration: BALLOT_FLIGHT_SECONDS, delay, ease: "easeInOut" }}
     >
-      <span className="flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-primary-foreground shadow-lg shadow-primary/30">
-        <Vote className="size-3.5" />
-        {name}
+      <span className="flex w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-1 rounded-full bg-primary px-2 py-1 text-xs font-semibold whitespace-nowrap text-primary-foreground shadow-lg shadow-primary/30">
+        <Vote className="size-3.5 shrink-0" />
+        <span className="truncate">{name}</span>
       </span>
     </motion.div>
   );
