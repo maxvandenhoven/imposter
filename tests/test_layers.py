@@ -33,6 +33,20 @@ LAYERS: dict[str, frozenset[str]] = {
             "ports",
         }
     ),
+    "agent": frozenset(
+        {
+            "config",
+            "utils",
+            "engine",
+            "models",
+            "players",
+            "telemetry",
+            "judge",
+            "words",
+            "ports",
+            "orchestration",
+        }
+    ),
     "api": frozenset(
         {
             "config",
@@ -45,6 +59,7 @@ LAYERS: dict[str, frozenset[str]] = {
             "words",
             "ports",
             "orchestration",
+            "agent",
         }
     ),
 }

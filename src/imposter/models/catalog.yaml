@@ -72,7 +72,7 @@
   adk_model: vertex_ai/openai/gpt-oss-120b-maas
   via: litellm
   location: global
-  logo: logos/gpt-oss.svg
+  logo: logos/openai.svg
   supports_structured_output: false
   thinking: "off"
   temperature: 1.0

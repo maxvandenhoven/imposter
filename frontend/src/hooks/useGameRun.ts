@@ -42,6 +42,9 @@ export function useGameRun() {
       request,
       signal: current.signal,
       handlers: {
+        onSession: (gameId) => {
+          send({ type: "session", gameId });
+        },
         onGameEvent: (event) => {
           send({ type: "game_event", event });
         },

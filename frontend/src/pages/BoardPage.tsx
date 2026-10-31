@@ -1,23 +1,18 @@
-import { RotateCcw, Square } from "lucide-react";
+import { useState } from "react";
 
-import { EventList } from "@/components/board/EventList";
-import { SeatList } from "@/components/board/SeatList";
+import { useCatalog } from "@/api/catalog";
+import { useGameTrace } from "@/api/trace";
+import type { CatalogModel } from "@/api/types";
+import { BoardHeader } from "@/components/board/BoardHeader";
+import { GameTable } from "@/components/board/GameTable";
+import { OutcomeBanner } from "@/components/board/OutcomeBanner";
+import { Transcript } from "@/components/board/Transcript";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLeaveWarning } from "@/hooks/useLeaveWarning";
-import { type BoardState, type BoardStatus, seatNames, thinkingSeats } from "@/lib/board";
+import type { BoardState } from "@/lib/board";
+import { type BoardMode, buildBoardView, type ModelPrices } from "@/lib/boardView";
 
-const STATUS_LABELS: Record<BoardStatus, string> = {
-  running: "Live",
-  finished: "Finished",
-  aborted: "Aborted",
-  failed: "Failed",
-  stopped: "Stopped",
-};
-
-/** The board of a game: its seats, its events as they arrive and its errors. */
+/** The board of a game: the seats around the table, the transcript and the header. */
 export function BoardPage({
   board,
   onStop,
@@ -27,50 +22,55 @@ export function BoardPage({
   onStop: () => void;
   onNewGame: () => void;
 }) {
+  const [mode, setMode] = useState<BoardMode>("audience");
   const running = board.status === "running";
-  const names = seatNames(board.events);
-  const thinking = running ? thinkingSeats(board.events) : [];
+  const catalog = useCatalog();
+  const trace = useGameTrace(board.gameId, running);
+  const models = new Map<string, CatalogModel>(
+    catalog.data?.models.map((model) => [model.id, model]) ?? [],
+  );
+  const prices: ModelPrices = Object.fromEntries(
+    [...models].map(([id, model]) => [id, model.price_per_mtok]),
+  );
+  const view = buildBoardView({
+    events: board.events,
+    answers: board.answers,
+    mode,
+    running,
+    prices,
+  });
   // Leaving the page closes the stream, which aborts the game.
   useLeaveWarning(running);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Badge variant={running ? "default" : "secondary"}>
-          {STATUS_LABELS[board.status]}
-        </Badge>
-        <span className="text-sm text-muted-foreground">
-          {board.events.length} events
-        </span>
-        <div className="ml-auto flex gap-2">
-          {running ? (
-            <Button variant="destructive" onClick={onStop}>
-              <Square data-icon="inline-start" />
-              Stop game
-            </Button>
-          ) : (
-            <Button onClick={onNewGame}>
-              <RotateCcw data-icon="inline-start" />
-              New game
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="flex flex-col gap-5">
+      <BoardHeader
+        view={view}
+        status={board.status}
+        mode={mode}
+        traceUrl={trace.data ?? null}
+        onModeChange={setMode}
+        onStop={onStop}
+        onNewGame={onNewGame}
+      />
       {board.errors.map((message, index) => (
         <Alert key={index} variant="destructive">
           <AlertTitle>The game failed</AlertTitle>
           <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
         </Alert>
       ))}
-      <SeatList names={names} thinking={thinking} answers={board.answers} />
-      <Card>
-        <CardHeader>
-          <CardTitle>Events</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EventList events={board.events} names={names} />
-        </CardContent>
-      </Card>
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="flex flex-col gap-5">
+          {view.outcome !== null && <OutcomeBanner outcome={view.outcome} />}
+          <GameTable view={view} models={models} />
+        </div>
+        <Transcript
+          entries={view.transcript}
+          seats={view.seats}
+          models={models}
+          className="h-[36rem] gap-0 pb-0 xl:sticky xl:top-5 xl:h-[calc(100vh-8.5rem)]"
+        />
+      </div>
     </div>
   );
 }

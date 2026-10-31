@@ -138,3 +138,153 @@ export function adkPartial({
     content: { role: "model", parts: [{ text, thought }] },
   };
 }
+
+/** A `phase_started` event. */
+export function phaseStarted(
+  seq: number,
+  phase: GameEvent["phase"],
+  round: number | null = null,
+): GameEvent {
+  return { ...BASE, seq, phase, round, type: "phase_started" };
+}
+
+/** A `statement_made` event of a seat. */
+export function statementMade(seq: number, seat: number, statement: string): GameEvent {
+  return {
+    ...BASE,
+    seq,
+    phase: "discussion",
+    type: "statement_made",
+    seat,
+    statement,
+    truncated: false,
+    private_reasoning: "Secret thoughts.",
+    reasoning_truncated: false,
+  };
+}
+
+/** The `votes_revealed` event of votes, as `[voter, target]` pairs. */
+export function votesRevealed(
+  seq: number,
+  votes: [number, number | null][],
+  caught: number[],
+): GameEvent {
+  const counts = [0, 0, 0];
+
+  for (const [, target] of votes) {
+    if (target !== null) {
+      counts[target] = (counts[target] ?? 0) + 1;
+    }
+  }
+
+  return {
+    ...BASE,
+    seq,
+    phase: "resolution",
+    round: null,
+    type: "votes_revealed",
+    votes: votes.map(([voter, target]) => ({ voter, target })),
+    counts,
+    caught,
+  };
+}
+
+/** A `guess_made` event of an imposter. */
+export function guessMade(
+  seq: number,
+  seat: number,
+  guess: string,
+  correct: boolean,
+): GameEvent {
+  return {
+    ...BASE,
+    seq,
+    phase: "guess",
+    round: null,
+    type: "guess_made",
+    seat,
+    guess,
+    correct,
+    judged_by: "exact",
+    private_reasoning: "Secret thoughts.",
+    reasoning_truncated: false,
+  };
+}
+
+/** The `outcome` event of a game in which Bob, the imposter, was caught. */
+export function outcome(
+  seq: number,
+  result: "civilians_win" | "imposter_wins" | "imposter_steals" = "civilians_win",
+): GameEvent {
+  return {
+    ...BASE,
+    seq,
+    phase: "outcome",
+    round: null,
+    type: "outcome",
+    outcome: result,
+    word: "lighthouse",
+    imposters: [1],
+    caught: [1],
+    word_said_by: null,
+  };
+}
+
+/** A `usage` event of a seat. */
+export function usage(
+  seq: number,
+  seat: number,
+  modelId: string,
+  total: number,
+): GameEvent {
+  return {
+    ...BASE,
+    seq,
+    visibility: "system",
+    type: "usage",
+    seat,
+    model_id: modelId,
+    input_tokens: 1_000_000,
+    output_tokens: 100_000,
+    thinking_tokens: 0,
+    total_tokens: total,
+  };
+}
+
+/** A `player_error` event of a seat. */
+export function playerError(seq: number, seat: number, message: string): GameEvent {
+  return { ...BASE, seq, visibility: "system", type: "player_error", seat, message };
+}
+
+/** A whole game: two clues, a statement, the vote, a wrong guess and the outcome. */
+export function wholeGame(): GameEvent[] {
+  return [
+    gameStarted(0),
+    phaseStarted(1, "clue", 1),
+    turnStarted(2, 0),
+    clueGiven(3, 0, "beacon"),
+    turnStarted(4, 1),
+    playerError(5, 1, "The model did not answer."),
+    clueGiven(6, 1, "coast"),
+    usage(7, 1, "claude-haiku", 1_100_000),
+    phaseStarted(8, "discussion", 1),
+    turnStarted(9, 2),
+    statementMade(10, 2, "Bob seems unsure."),
+    phaseStarted(11, "vote"),
+    voteCast(12, 0, 1),
+    voteCast(13, 1, 2),
+    voteCast(14, 2, 1),
+    votesRevealed(
+      15,
+      [
+        [0, 1],
+        [1, 2],
+        [2, 1],
+      ],
+      [1],
+    ),
+    phaseStarted(16, "guess"),
+    guessMade(17, 1, "harbour", false),
+    outcome(18),
+  ];
+}
