@@ -134,9 +134,13 @@ Kept simple: the essentials up front, the rest under "Advanced".
   override.
 - The limits are checked in the browser before Start, because invalid options only fail
   once the run starts.
-- Layout: the word and the options (identity, toggles, Advanced) are stacked on the
-  left, the players on the right, and Import and Start sit under the players, so the
-  whole form fits on one screen.
+- Layout: one column of about 64rem with a numbered row per section (1. Secret word,
+  2. Players, 3. Rules) in one panel, Import and Start below it. The sections grow with
+  their content (more seats, other word modes), which made side by side cards end at
+  different heights, so each row has its icon, title and introduction in a fixed left
+  column and the controls on the right. "How to play" uses the same rows
+  (`NumberedSection`), so the titles, controls and diagrams of the whole page start on
+  the same vertical lines.
 - "How to play" below the form explains each phase with small scenes built from the
   board's own pieces (`components/rules/`): four players in a row with speech bubbles
   pointing at the speaker, word cards, ballots and the "Caught" stamp, with a check for

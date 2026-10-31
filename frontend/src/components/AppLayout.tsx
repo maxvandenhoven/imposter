@@ -19,7 +19,7 @@ export function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="night border-b bg-background text-foreground">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-8">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
           <img src="/favicon.svg" alt="" className="size-8" />
           <div>
             <h1 className="font-heading text-xl font-semibold tracking-tight">
@@ -31,7 +31,7 @@ export function AppLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 sm:px-8">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 sm:px-8">
         {children}
       </main>
     </div>

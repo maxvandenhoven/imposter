@@ -1,8 +1,9 @@
-import { Play, Upload } from "lucide-react";
+import { Eye, Play, SlidersHorizontal, Upload, Users } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 
 import { useCatalog } from "@/api/catalog";
 import type { CatalogResponse, GameEvent, GameRequest } from "@/api/types";
+import { NumberedSection, SectionPanel } from "@/components/NumberedSection";
 import { HowToPlay } from "@/components/rules/HowToPlay";
 import { AdvancedOptions } from "@/components/setup/AdvancedOptions";
 import { IdentityModeField } from "@/components/setup/IdentityModeField";
@@ -11,13 +12,6 @@ import { SeatList } from "@/components/setup/SeatList";
 import { WordOptions } from "@/components/setup/WordOptions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { parseGameExport } from "@/lib/gameExport";
 import {
   defaultSetupForm,
@@ -47,7 +41,7 @@ export function SetupForm({
     // The limits are checked by `setupProblems`, not by the browser's own validation.
     <form
       noValidate
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-5"
       onSubmit={(event) => {
         event.preventDefault();
 
@@ -56,102 +50,95 @@ export function SetupForm({
         }
       }}
     >
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        <div className="flex flex-col gap-5">
-          <Card className="gap-4">
-            <CardHeader>
-              <CardTitle>Secret word</CardTitle>
-              <CardDescription>
-                Civilians learn it, the imposter does not.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WordOptions
-                form={form}
-                categories={catalog.categories}
-                onChange={update}
-              />
-            </CardContent>
-          </Card>
-          <Card className="gap-4">
-            <CardHeader>
-              <CardTitle>Options</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <IdentityModeField
-                value={form.identityMode}
-                onChange={(identityMode) => {
-                  update({ identityMode });
-                }}
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <OptionSwitch
-                  id="public-category"
-                  label="Public category"
-                  description="Everyone, the imposter too, learns the category of the word."
-                  checked={form.publicCategory}
-                  onChange={(publicCategory) => {
-                    update({ publicCategory });
-                  }}
-                />
-                <OptionSwitch
-                  id="imposter-hint"
-                  label="Imposter hint"
-                  description="The imposter gets a related word as a hint."
-                  checked={form.imposterHint}
-                  onChange={(imposterHint) => {
-                    update({ imposterHint });
-                  }}
-                />
-              </div>
-              <AdvancedOptions form={form} onChange={update} />
-            </CardContent>
-          </Card>
-        </div>
-        <div className="flex flex-col gap-5">
-          <Card className="gap-4">
-            <CardHeader>
-              <CardTitle>Players</CardTitle>
-              <CardDescription>
-                Seats are shuffled before the game starts. The players with the mask are
-                the imposters.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SeatList
-                seats={form.seats}
-                models={catalog.models}
-                onChange={(seats) => {
-                  update({ seats });
-                }}
-              />
-            </CardContent>
-          </Card>
-          {problems.length > 0 && (
-            <Alert variant="destructive">
-              <AlertTitle>The game cannot start yet</AlertTitle>
-              <AlertDescription>
-                <ul className="list-inside list-disc">
-                  {problems.map((problem) => (
-                    <li key={problem}>{problem}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            {actions}
-            <Button
-              type="submit"
-              size="lg"
-              className="ml-auto"
-              disabled={problems.length > 0}
-            >
-              <Play data-icon="inline-start" />
-              Start game
-            </Button>
+      <SectionPanel>
+        <NumberedSection
+          id="setup-word"
+          icon={Eye}
+          step={1}
+          title="Secret word"
+          intro={<p>Civilians learn it, the imposter does not.</p>}
+        >
+          <WordOptions form={form} categories={catalog.categories} onChange={update} />
+        </NumberedSection>
+        <NumberedSection
+          id="setup-players"
+          icon={Users}
+          step={2}
+          title="Players"
+          intro={
+            <p>
+              Seats are shuffled before the game starts. The players with the mask are the
+              imposters.
+            </p>
+          }
+        >
+          <SeatList
+            seats={form.seats}
+            models={catalog.models}
+            onChange={(seats) => {
+              update({ seats });
+            }}
+          />
+        </NumberedSection>
+        <NumberedSection
+          id="setup-rules"
+          icon={SlidersHorizontal}
+          step={3}
+          title="Rules"
+          intro={<p>How players are named and what everyone is told.</p>}
+        >
+          <IdentityModeField
+            value={form.identityMode}
+            onChange={(identityMode) => {
+              update({ identityMode });
+            }}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <OptionSwitch
+              id="public-category"
+              label="Public category"
+              description="Everyone, the imposter too, learns the category of the word."
+              checked={form.publicCategory}
+              onChange={(publicCategory) => {
+                update({ publicCategory });
+              }}
+            />
+            <OptionSwitch
+              id="imposter-hint"
+              label="Imposter hint"
+              description="The imposter gets a related word as a hint."
+              checked={form.imposterHint}
+              onChange={(imposterHint) => {
+                update({ imposterHint });
+              }}
+            />
           </div>
-        </div>
+          <AdvancedOptions form={form} onChange={update} />
+        </NumberedSection>
+      </SectionPanel>
+      {problems.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTitle>The game cannot start yet</AlertTitle>
+          <AlertDescription>
+            <ul className="list-inside list-disc">
+              {problems.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        {actions}
+        <Button
+          type="submit"
+          size="lg"
+          className="ml-auto"
+          disabled={problems.length > 0}
+        >
+          <Play data-icon="inline-start" />
+          Start game
+        </Button>
       </div>
     </form>
   );
@@ -196,6 +183,7 @@ function ImportGame({ onImport }: { onImport: (game: ImportedGame) => void }) {
       />
       <Button
         variant="outline"
+        size="lg"
         onClick={() => {
           input.current?.click();
         }}

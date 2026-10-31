@@ -94,7 +94,7 @@ export function SeatList({
               }}
             >
               <SelectTrigger
-                className="w-full sm:w-72"
+                className="w-full min-w-0 flex-1"
                 aria-label={`Model of seat ${index + 1}`}
               >
                 <SelectValue />

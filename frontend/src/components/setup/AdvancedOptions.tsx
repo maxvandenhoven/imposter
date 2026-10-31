@@ -3,7 +3,6 @@ import { useState } from "react";
 
 import { NumberField } from "@/components/setup/NumberField";
 import { OptionSwitch } from "@/components/setup/OptionSwitch";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,13 +23,20 @@ export function AdvancedOptions({
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-4">
       <CollapsibleTrigger asChild>
-        <Button variant="ghost" className="self-start">
+        {/* A plain button, so its text lines up with the fields above it. */}
+        <button
+          type="button"
+          className="flex items-center gap-1.5 self-start rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <ChevronDown
-            data-icon="inline-start"
-            className={open ? "rotate-180 transition-transform" : "transition-transform"}
+            className={
+              open
+                ? "size-4 rotate-180 transition-transform"
+                : "size-4 transition-transform"
+            }
           />
           Advanced
-        </Button>
+        </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-6">
         <div className="grid gap-4 sm:grid-cols-3">

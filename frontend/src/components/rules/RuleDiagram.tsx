@@ -63,7 +63,7 @@ function AbovePlayer({ player }: { player: DiagramPlayer }) {
     const Icon = imposter ? VenetianMask : Eye;
 
     return (
-      <span className="flex max-w-full flex-col items-center rounded-md bg-table px-1.5 py-1 text-[0.7rem] leading-tight font-semibold text-table-foreground shadow-sm">
+      <span className="flex max-w-full flex-col items-center rounded-md bg-table px-1 py-1 text-[0.65rem] leading-tight font-semibold text-table-foreground shadow-sm">
         <Icon className={cn("size-3", imposter ? "text-imposter" : "text-speaking")} />
         {player.knows}
       </span>
@@ -96,7 +96,7 @@ export function RuleDiagram({
   return (
     <figure className="flex flex-col gap-2" aria-label={title}>
       <span className="text-sm font-medium">{title}</span>
-      <div className="board-surface grid grid-cols-4 gap-1 rounded-xl px-2 pt-4 pb-3 ring-1 ring-border">
+      <div className="board-surface grid grid-cols-4 gap-1.5 rounded-xl px-2 pt-4 pb-3 ring-1 ring-border">
         {players.map((player) => (
           <div
             key={player.name}

@@ -37,7 +37,7 @@ function CategorySelect({
           onChange(item === ANY_CATEGORY_ITEM ? ANY_CATEGORY : item);
         }}
       >
-        <SelectTrigger id="category" className="w-full sm:w-72">
+        <SelectTrigger id="category" className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -93,7 +93,7 @@ export function WordOptions({
           <FieldLabel htmlFor="secret-word">Secret word</FieldLabel>
           <Input
             id="secret-word"
-            className="sm:w-72"
+            className="w-full"
             autoComplete="off"
             placeholder="lighthouse"
             value={form.word}
