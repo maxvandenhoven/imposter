@@ -10,7 +10,7 @@ the order in which work happens. Topic files go deeper on each area:
 | [`agents-and-orchestration.md`](agents-and-orchestration.md) | ADK setup, how engine, players and orchestration fit, the turn loop, the game workflow, `PlayerProtocol`, `PlayerView`, prompts, structured outputs, scratchpad, concurrency, failures, ports |
 | [`models-and-judge.md`](models-and-judge.md) | Model catalog, Vertex AI access (Gemini, Claude, open MaaS models), identity modes, words and categories, the `Judge` |
 | [`observability.md`](observability.md) | OpenTelemetry, Cloud Trace span hierarchy, content capture to Cloud Logging, token usage, IAP identity |
-| [`web-ui.md`](web-ui.md) | FastAPI + SSE API, static frontend (Alpine.js + Tailwind), setup screen, game board, audience and god mode, playback, export and import |
+| [`web-ui.md`](web-ui.md) | ADK's API server with the event stream a client reads, static frontend (Alpine.js + Tailwind), setup screen, game board, audience and god mode, playback, export and import |
 | [`infrastructure.md`](infrastructure.md) | GCP basics, organising resources in the shared sandbox project, Terraform layout, Cloud Run, IAP, budget, Dockerfile, `make deploy` |
 | [`tooling.md`](tooling.md) | Code style, ruff/ty/pytest, custom checkers, Makefile, pre-commit, Claude Code hooks (mirrors the hive repo) |
 | [`playtests.md`](playtests.md) | Real games worth remembering: transcripts, findings and the rule changes they led to |
@@ -59,14 +59,16 @@ public multi-user access.
 ## 3. Architecture overview
 
 ```
- browser (static page: Alpine.js + Tailwind, served by FastAPI)
-    │  POST /api/games (config)      GET /api/games/{id}/events (SSE)
+ browser (static page, served by the same container)
+    │  GET /catalog    POST /apps/imposter/users/{user}/sessions (request in state)
+    │  POST /run_sse (streaming: engine events, turn starts, token deltas)
     ▼
  ┌──────────────── Cloud Run service `imposter` (europe-west4, behind IAP) ─────────────────┐
- │ api (FastAPI) ── identity (IAP header) ── EventBus (in memory) ◀── events ──┐            │
- │    │                                                                        │            │
- │    └──▶ orchestration: game workflow (ADK graph Workflow, a node per phase) ┘            │
+ │ api: ADK's API server (get_fast_api_app) + /catalog ── sessions (in memory)              │
+ │    │                                                                                     │
+ │    └──▶ orchestration: game workflow (ADK graph Workflow, a node per phase)              │
  │              │   GameRunner: ask players (I/O) → apply to the pure Game engine            │
+ │              │   each turn a PlayerTurnNode, the player's agent a child node of it        │
  │              ├──▶ players: AdkPlayer (LlmAgent, include_contents='none') × N              │
  │              ├──▶ judge: Gemini Flash-Lite (structured yes/no)                           │
  │              └──▶ words: categories + Gemini word generator                               │
@@ -94,14 +96,14 @@ layers.
 | D4 | Most votes is caught; a tie catches nobody. Imposter not caught wins; caught imposter who guesses the word steals the win; otherwise civilians win. Before that, whoever says the secret word loses for their side. | Deterministic, simple, matches the spirit of the app. |
 | D5 | All models via Vertex AI in the project: Gemini natively, Claude via Model Garden, open models via Vertex MaaS, non-Gemini models through ADK `LiteLlm` (`vertex_ai/...`). No OpenAI. | Keep everything GCP-native: one bill, IAM, quotas and logs in one project. |
 | D6 | Orchestration is deterministic code: an ADK graph `Workflow` with a node per phase (D32) runs a `GameRunner`, which asks players for their action (I/O) and applies it to a pure `Game` object that owns the rules and the event log. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
-| D7 | Players implement a `PlayerProtocol` (`take_turn(view, retry_reason) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. | No shared conversation history that could leak the word. The protocol leaves room for A2A remote players (future work). |
+| D7 | Players implement a `PlayerProtocol` (`take_turn(view, retry_reason, ctx) -> response`). The first implementation is `AdkPlayer`, an `LlmAgent` with `include_contents='none'` whose instruction is rendered from a per-player `PlayerView`. In the game workflow it runs as a child node of the turn (`ctx` is the turn node's context), so its tokens stream to the client and its spans sit below the turn. | No shared conversation history that could leak the word. Running inside the game run is what lets ADK stream the answers (WP 08). The protocol leaves room for A2A remote players (future work). |
 | D8 | Each player has a private scratchpad with its own earlier actions and reasoning, derived by the engine from that seat's events and shown only to that player in its `PlayerView`. | Consistent strategy over rounds and material for the debrief. |
 | D9 | Structured output per phase with a `private_reasoning` field. Native structured output where supported, otherwise JSON in the prompt plus pydantic validation and one retry with the error, then a pass/abstain fallback. | Machine-checkable turns across all model families. |
-| D10 | Web UI is a FastAPI backend streaming game events over SSE to a single static page (Alpine.js + Tailwind, standalone Tailwind CLI, no Node). `adk web` stays available for development. | Watchable game board with animations, one container, no frontend build pipeline. |
+| D10 | The backend is ADK's API server (`get_fast_api_app`) serving the game app, plus a `/catalog` route: a game is an ADK session with the `GameRequest` in state, played and streamed with `/run_sse`. Engine events carry their JSON in `custom_metadata`, and with `streaming: true` the players' answers stream token by token as partial events. The frontend is a single static page (Alpine.js + Tailwind, standalone Tailwind CLI, no Node) served from the same container. `adk web` stays available for development. | No API of our own to maintain: ADK already streams runs over SSE and cancels a run when its client leaves (changed in WP 08, which first planned FastAPI routes with own SSE, replay and reconnect). One container and one origin, so IAP needs no CORS. |
 | D11 | Deploy on Cloud Run (`europe-west4`), 60 minute request timeout, min 0 / max 1 instance, request-based billing. Agent Engine is a later comparison experiment. | Scales to zero, cheapest, simplest Terraform; one container holds API, UI and SSE. |
 | D12 | Access via IAP directly on Cloud Run (no load balancer), allowing the owner's org account or group. The IAP identity goes on the root span (`enduser.id`). | Org Google login, best practice, and traces show who ran each game. |
 | D13 | Everything in memory: game store, event bus and ADK `InMemorySessionService`, each behind a port (`GameStoreProtocol`, `EventBusProtocol`, `BaseSessionService`) so adapters can be swapped later. | Cheap and simple. Scaling to zero loses running games, which is fine for a demo. |
-| D14 | A game runs while its SSE connection is open (request-based billing gives CPU only during requests). The event bus buffers all events of a game, so a reconnect replays them. One game at a time per instance. | Correct CPU allocation without instance-based billing. |
+| D14 | A game runs inside its `/run_sse` request (request-based billing gives CPU only during requests), and is aborted when the client disconnects. There is no reconnect to a running game: the stream is the game. The ADK session stores every non-partial event, so a finished game can be loaded again. One game at a time per instance. | Correct CPU allocation without instance-based billing, and nothing to build beyond what ADK does. |
 | D15 | Tracing with OpenTelemetry to Cloud Trace: `game` → `phase` → `turn` → ADK and GenAI spans. Prompt and completion content captured as Cloud Logging events, linked by trace ID. Token usage on every model call, set by ADK. | Cloud Trace keeps traces 30 days, a free game archive; filterable by model, role, phase, identity mode. |
 | D16 | Local development exports to Cloud Trace with ADC; a flag switches to the console exporter. | Same traces locally and deployed. |
 | D17 | The app lives in the owner's existing sandbox project, shared with other work. No Terraform bootstrap: `make tf-setup` enables the base APIs Terraform needs and creates the state bucket with `gcloud`, and `infra/` (one flat Terraform root, GCS backend) holds every app resource, labelled `app=imposter`. Only gcloud install, login, `make tf-setup` and Model Garden click-through acceptance are manual. | The project already exists and is not ours to manage; labels and Terraform state keep the app's resources identifiable in a shared project (GCP has no resource groups). |
@@ -119,7 +121,7 @@ layers.
 | D29 | Cost guardrails: max 8 players, `max_output_tokens` per phase, per-game token budget (default 200k, aborts cleanly), running cost estimate in the UI, Terraform billing budget with alerts. | No surprise bills. |
 | D30 | Testing: pure engine unit tests with scripted fake players; Hypothesis leak tests (imposter never sees the word, nobody sees others' private reasoning, votes hidden before the reveal); SSE tests with fakes; one `slow` smoke game against cheap real models; a tournament CLI for model statistics. ADK's eval framework is future work. | The leak invariant is the most important property and is cheap to guarantee. |
 | D31 | Region: app resources in `europe-west4`; models on the Vertex `global` endpoint, with a per-model `location` override in the catalog. | EU app, best model availability and quota. |
-| D32 | Orchestration is an ADK 2.x graph `Workflow` (`orchestration/runner_workflow.py`) whose nodes are the game phases and whose edges are generated from the engine's transition table (`PHASE_TRANSITIONS`), routed by the next phase. Rounds are loop edges, so the graph is static. Each node plays one phase and round through the `GameRunner` and routes by the event log. Live objects (game, players, bus) stay outside ADK state, looked up by session id. This replaces the first version, a custom `BaseAgent` (`GameRunnerAgent`) with an imperative loop, which was deleted once the workflow played the same seeded games event for event. | The graph keeps D6: the engine still decides every transition. In return `adk web` draws the phase graph and highlights the active phase, and ADK's `invoke_workflow` and `invoke_node` spans give the game and phase levels of the trace for free (`observability.md`). Configurable round counts fit as loop edges, and per-seat fan-out stays in `GameRunner`, so the worry that made the first version imperative did not hold. |
+| D32 | Orchestration is an ADK 2.x graph `Workflow` (`orchestration/runner_workflow.py`) whose nodes are the game phases and whose edges are generated from the engine's transition table (`PHASE_TRANSITIONS`), routed by the next phase. Rounds are loop edges, so the graph is static. Each node plays one phase and round through the `GameRunner` and routes by the event log. Live objects (game, players, bus) stay outside ADK state, looked up by session id. This replaces the first version, a custom `BaseAgent` (`GameRunnerAgent`) with an imperative loop, which was deleted once the workflow played the same seeded games event for event. | The graph keeps D6: the engine still decides every transition. In return `adk web` draws the phase graph and highlights the active phase, and ADK's `invoke_workflow` and `invoke_node` spans give the game and phase levels of the trace for free (`observability.md`). Configurable round counts fit as loop edges, and per-seat fan-out stays in `GameRunner`, so the worry that made the first version imperative did not hold. Each turn runs in a `PlayerTurnNode`, a dynamic child node of the phase node (`ctx.run_node`), so the trace has a turn level of ADK's and the players' agents run inside the game invocation (WP 08). |
 
 ## 5. Target repo structure
 
@@ -147,7 +149,7 @@ imposter/
 │  ├─ orchestration/           # runner.py (GameRunner), runner_workflow.py (game workflow), adk_runner.py
 │  ├─ ports/                   # game_store.py, event_bus.py (protocols + in-memory adapters)
 │  ├─ telemetry/               # setup.py (exporters), spans.py (game/phase/turn helpers), cost.py
-│  ├─ api/                     # app.py, settings.py, identity.py, routes/ (games, catalog, sse)
+│  ├─ api/                     # app.py (ADK's API server for the game app), catalog.py
 │  ├─ web/                     # index.html, app.js, input.css, tailwind.css (built), logos/
 │  ├─ agent.py                 # `root_agent` for `adk web`
 │  └─ cli.py                   # `imposter` entry point (Typer): play, tournament, serve
@@ -164,7 +166,7 @@ imposter/
 | **M0 Foundations** | Repo, tooling, Terraform for the sandbox project, models enabled | `make check test` is green on an empty package; `gcloud` and Terraform work against the sandbox project; a test call to Gemini and Claude on Vertex succeeds |
 | **M1 Headless game** | Pure engine, model catalog, ADK players, words and judge, `GameRunnerAgent`, CLI | `imposter play --word ... --players ...` plays a full game with mixed models in the terminal, including the debrief |
 | **M2 Tracing** | OpenTelemetry to Cloud Trace and Logging with the game/phase/turn hierarchy | A CLI game shows up as one readable trace with content and tokens |
-| **M3 Web UI** | FastAPI + SSE, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
+| **M3 Web UI** | ADK's API server with streaming, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
 | **M4 Deploy** | Dockerfile, Terraform for the app, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
 | **M5 Evaluate** | Tournament CLI and model statistics | `imposter tournament` runs N games and reports per-model win rates, detection accuracy, guess accuracy and clue leakiness |
 
@@ -184,7 +186,7 @@ issue should not be started.
 | 06 | GameRunnerAgent and `imposter play` CLI | M1 | 04, 05 | #6 |
 | 15 | The game as an ADK graph workflow | M2 | 06 | #21 |
 | 07 | Tracing to Cloud Trace and Cloud Logging | M2 | 15 | #7 |
-| 08 | FastAPI app, SSE stream and in-memory ports | M3 | 06 | #8 |
+| 08 | Game API on ADK's API server with streamed turns | M3 | 06 | #8 |
 | 09 | Static frontend foundation and setup screen | M3 | 08 | #9 |
 | 10 | Live game board with audience and god mode | M3 | 09 | #10 |
 | 11 | Playback, export and import, debrief panel | M3 | 10 | #11 |

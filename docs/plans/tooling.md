@@ -53,7 +53,7 @@ make check          # format + lint + type
 make test           # pytest, excluding `slow`, with coverage
 make test-slow      # pytest -m slow (real Vertex AI calls)
 make css            # standalone Tailwind CLI build (downloads the pinned binary to .bin/)
-make dev            # css + uvicorn with reload
+make dev            # imposter serve --reload: the game API with uvicorn (css too, once WP 09 adds it)
 make adk-web        # adk web --otel_to_cloud src
 make play ARGS=...  # imposter play
 make build          # Cloud Build image
