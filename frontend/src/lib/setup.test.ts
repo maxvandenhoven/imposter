@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   ANY_CATEGORY,
   defaultSetupForm,
+  dragShift,
+  dragTarget,
   gameRequest,
   maxImposters,
   moveSeat,
@@ -185,5 +187,23 @@ describe("moveSeat", () => {
 
     expect(moveSeat({ seats: lineup, from: 0, to: 3 })).toBe(lineup);
     expect(moveSeat({ seats: lineup, from: 5, to: 0 })).toBe(lineup);
+  });
+});
+
+describe("dragging a seat", () => {
+  it("drops into the slot the drag reached, within the seats", () => {
+    expect(dragTarget({ from: 0, offset: 70, step: 40, count: 4 })).toBe(2);
+    expect(dragTarget({ from: 1, offset: -15, step: 40, count: 4 })).toBe(1);
+    expect(dragTarget({ from: 3, offset: 400, step: 40, count: 4 })).toBe(3);
+    expect(dragTarget({ from: 1, offset: -400, step: 40, count: 4 })).toBe(0);
+  });
+
+  it("moves the passed seats one row aside and leaves the others", () => {
+    const shifts = (from: number, target: number) =>
+      [0, 1, 2, 3].map((index) => dragShift({ index, from, target, step: 40 }));
+
+    expect(shifts(0, 2)).toEqual([0, -40, -40, 0]);
+    expect(shifts(3, 1)).toEqual([0, 40, 40, 0]);
+    expect(shifts(2, 2)).toEqual([0, 0, 0, 0]);
   });
 });

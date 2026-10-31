@@ -310,3 +310,50 @@ export function randomLineup(
 
   return lineup;
 }
+
+/**
+ * The slot a dragged seat would drop into: its own slot moved by the drag `offset` in
+ * whole rows of `step` pixels, kept within the `count` seats.
+ */
+export function dragTarget({
+  from,
+  offset,
+  step,
+  count,
+}: {
+  from: number;
+  offset: number;
+  step: number;
+  count: number;
+}): number {
+  const moved = step > 0 ? Math.round(offset / step) : 0;
+
+  return Math.min(Math.max(from + moved, 0), count - 1);
+}
+
+/**
+ * How far, in pixels, the seat at `index` steps aside while the seat at `from` is
+ * dragged to `target`: one row of `step` pixels up or down for the seats it passes, and
+ * none for the others. The dragged seat itself follows the pointer instead.
+ */
+export function dragShift({
+  index,
+  from,
+  target,
+  step,
+}: {
+  index: number;
+  from: number;
+  target: number;
+  step: number;
+}): number {
+  if (index > from && index <= target) {
+    return -step;
+  }
+
+  if (index < from && index >= target) {
+    return step;
+  }
+
+  return 0;
+}

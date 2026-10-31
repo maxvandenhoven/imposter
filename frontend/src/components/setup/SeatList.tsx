@@ -1,5 +1,6 @@
+import { cn } from "cn";
 import { GripVertical, Plus, Shuffle, VenetianMask, X } from "lucide-react";
-import { Reorder, useDragControls } from "motion/react";
+import { type PointerEvent as ReactPointerEvent, useRef, useState } from "react";
 
 import type { CatalogModel } from "@/api/types";
 import { ModelLogo } from "@/components/ModelLogo";
@@ -17,6 +18,8 @@ import {
   imposterCount,
   MAX_PLAYERS,
   MIN_PLAYERS,
+  dragShift,
+  dragTarget,
   moveSeat,
   newSeat,
   randomImposters,
@@ -25,11 +28,24 @@ import {
   type SetupSeat,
 } from "@/lib/setup";
 
+/** A drag of a seat by its handle: where it started and how far the pointer moved. */
+interface SeatDrag {
+  from: number;
+  /** The pointer's vertical position when the drag started. */
+  startY: number;
+  /** How far the pointer moved since, in pixels. */
+  offset: number;
+  /** The distance from one row to the next, in pixels. */
+  step: number;
+}
+
 /**
  * One seat: a drag handle, its model, the imposter mask and a remove button.
  *
- * The row is dragged by its handle only, so the select and the buttons keep working.
- * The handle also moves the seat with the up and down arrow keys.
+ * The row is dragged by its handle only, so the select and the buttons keep working,
+ * and the handle also moves it with the up and down arrow keys. While a seat is dragged
+ * the dragged row follows the pointer and the rows it passes slide aside by `shift`.
+ * Otherwise the rows have no animation, so they move at once with the rest of the page.
  */
 function SeatRow({
   seat,
@@ -37,6 +53,9 @@ function SeatRow({
   count,
   models,
   known,
+  dragged,
+  shift,
+  onHandleDown,
   onChange,
   onMove,
   onRemove,
@@ -46,29 +65,34 @@ function SeatRow({
   count: number;
   models: CatalogModel[];
   known: boolean;
+  /** The offset of this row while it is the one being dragged, else `null`. */
+  dragged: number | null;
+  /** How far this row steps aside while another row is dragged, else `null`. */
+  shift: number | null;
+  onHandleDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   onChange: (change: Partial<SetupSeat>) => void;
   onMove: (to: number) => void;
   onRemove: () => void;
 }) {
-  const controls = useDragControls();
   const number = index + 1;
+  const offset = dragged ?? shift;
 
   return (
-    <Reorder.Item
-      value={seat}
-      dragListener={false}
-      dragControls={controls}
-      className="relative flex items-center gap-2 rounded-lg bg-card"
-      whileDrag={{ scale: 1.02, boxShadow: "0 8px 24px rgb(0 0 0 / 0.12)", zIndex: 10 }}
+    <li
+      data-dragged={dragged !== null}
+      data-seat-row
+      className={cn(
+        "relative flex items-center gap-2 rounded-lg bg-card data-[dragged=true]:z-10 data-[dragged=true]:shadow-lg data-[dragged=true]:ring-1 data-[dragged=true]:ring-border",
+        shift !== null && "transition-transform duration-150 ease-out",
+      )}
+      style={offset === null ? undefined : { transform: `translateY(${offset}px)` }}
     >
       <button
         type="button"
         aria-label={`Move seat ${number}`}
         title="Drag to reorder, or use the arrow keys"
         className="flex h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-        onPointerDown={(event) => {
-          controls.start(event);
-        }}
+        onPointerDown={onHandleDown}
         onKeyDown={(event) => {
           if (event.key === "ArrowUp" && index > 0) {
             event.preventDefault();
@@ -133,7 +157,7 @@ function SeatRow({
         <X />
       </Button>
       {!known && <span className="text-sm text-destructive">Unknown model</span>}
-    </Reorder.Item>
+    </li>
   );
 }
 
@@ -155,6 +179,60 @@ export function SeatList({
   onChange: (seats: SetupSeat[]) => void;
 }) {
   const known = new Set(models.map((model) => model.id));
+  const [drag, setDrag] = useState<SeatDrag | null>(null);
+  const list = useRef<HTMLOListElement>(null);
+  const target =
+    drag === null
+      ? null
+      : dragTarget({
+          from: drag.from,
+          offset: drag.offset,
+          step: drag.step,
+          count: seats.length,
+        });
+
+  /** Start dragging a seat by its handle, following the pointer until it is let go. */
+  const startDrag = (index: number, event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const rows = list.current?.querySelectorAll("[data-seat-row]") ?? [];
+    const first = rows[0]?.getBoundingClientRect();
+    const second = rows[1]?.getBoundingClientRect();
+    const step = first && second ? second.top - first.top : (first?.height ?? 0);
+    const startY = event.clientY;
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    setDrag({ from: index, startY, offset: 0, step });
+
+    const move = (moveEvent: PointerEvent) => {
+      setDrag((current) =>
+        current === null ? null : { ...current, offset: moveEvent.clientY - startY },
+      );
+    };
+
+    const end = (endEvent: PointerEvent) => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      const to = dragTarget({
+        from: index,
+        offset: endEvent.type === "pointerup" ? endEvent.clientY - startY : 0,
+        step,
+        count: seats.length,
+      });
+      setDrag(null);
+
+      if (to !== index) {
+        onChange(moveSeat({ seats, from: index, to }));
+      }
+    };
+
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  };
 
   const setSeat = (index: number, change: Partial<SetupSeat>) => {
     onChange(
@@ -198,13 +276,7 @@ export function SeatList({
             : `${imposterCount(seats)} imposters`}
         </span>
       </div>
-      <Reorder.Group
-        as="ol"
-        axis="y"
-        values={seats}
-        onReorder={onChange}
-        className="flex flex-col gap-2"
-      >
+      <ol ref={list} className="flex flex-col gap-2">
         {seats.map((seat, index) => (
           <SeatRow
             key={seat.id}
@@ -213,6 +285,15 @@ export function SeatList({
             count={seats.length}
             models={models}
             known={known.has(seat.modelId)}
+            dragged={drag?.from === index ? drag.offset : null}
+            shift={
+              drag === null || target === null || drag.from === index
+                ? null
+                : dragShift({ index, from: drag.from, target, step: drag.step })
+            }
+            onHandleDown={(event) => {
+              startDrag(index, event);
+            }}
             onChange={(change) => {
               setSeat(index, change);
             }}
@@ -224,7 +305,7 @@ export function SeatList({
             }}
           />
         ))}
-      </Reorder.Group>
+      </ol>
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
