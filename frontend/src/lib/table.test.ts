@@ -10,12 +10,13 @@ import {
   phaseEnd,
   phaseSteps,
   phaseTitle,
+  playedPhases,
 } from "@/lib/table";
 import { clueGiven, gameFinished, phaseStarted, wholeGame } from "@/test/fixtures";
 
 describe("phaseSteps", () => {
   it("marks the steps before the current phase as done", () => {
-    expect(phaseSteps("resolution").map((step) => step.state)).toEqual([
+    expect(phaseSteps({ phase: "resolution" }).map((step) => step.state)).toEqual([
       "done",
       "done",
       "current",
@@ -26,7 +27,43 @@ describe("phaseSteps", () => {
   });
 
   it("marks every step done when the game finished", () => {
-    expect(phaseSteps("done", true).every((step) => step.state === "done")).toBe(true);
+    expect(
+      phaseSteps({ phase: "done", finished: true }).every(
+        (step) => step.state === "done",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("phaseSteps with the played phases", () => {
+  it("marks the steps a game went past without playing them as skipped", () => {
+    const played = playedPhases([
+      phaseStarted(0, "clue", 1),
+      phaseStarted(1, "discussion", 1),
+      phaseStarted(2, "outcome"),
+    ]);
+
+    expect(phaseSteps({ phase: "outcome", played }).map((step) => step.state)).toEqual([
+      "done",
+      "done",
+      "skipped",
+      "skipped",
+      "current",
+      "next",
+    ]);
+  });
+
+  it("does not skip the steps still to come", () => {
+    const played = playedPhases([phaseStarted(0, "clue", 1)]);
+
+    expect(phaseSteps({ phase: "clue", played }).map((step) => step.state)).toEqual([
+      "current",
+      "next",
+      "next",
+      "next",
+      "next",
+      "next",
+    ]);
   });
 });
 

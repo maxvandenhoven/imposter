@@ -194,7 +194,10 @@ Kept simple: the essentials up front, the rest under "Advanced".
   keeps to one row. God mode is the "Show hidden info" switch (on by default) in the
   view settings popover, since it is a setting that is rarely changed during a game.
   Every phase step that has ended in the game is a button that jumps the cursor to the
-  end of that phase (`phaseEnd` in `lib/table.ts`), so the phase can be discussed.
+  end of that phase (`phaseEnd` in `lib/table.ts`), so the phase can be discussed. A
+  step the game went past without playing it, such as the vote and the guess of a game
+  that ended when the word was said, shows a skip icon and a struck through label in
+  amber instead of the blue check of a done step.
 - `lib/boardView.ts` builds all of this as one view model from the events up to a
   cursor, the partial answers and the mode, and its tests check that audience mode shows
   nothing private at any cursor before the reveal.

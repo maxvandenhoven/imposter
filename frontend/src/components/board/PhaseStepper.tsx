@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { Check } from "lucide-react";
+import { Check, SkipForward } from "lucide-react";
 import { motion } from "motion/react";
 
 import type { GamePhase } from "@/api/types";
@@ -10,8 +10,9 @@ import type { PhaseStep } from "@/lib/table";
 /**
  * The phases of the game as a row of steps joined by a line that fills as the game goes.
  *
- * Done steps show a check, the current step is a filled pill with its label, and the
- * steps still to come are quiet icons with their labels. A step whose phase has ended in
+ * Done steps show a check, steps the game went past without playing them a skip icon in
+ * their own colour, the current step is a filled pill with its label, and the steps
+ * still to come are quiet icons with their labels. A step whose phase has ended in
  * the game is a button that jumps to the end of that phase, through `onSeek` with the
  * number of events to show, so the phase can be discussed.
  */
@@ -27,7 +28,12 @@ export function PhaseStepper({
   return (
     <ol className="flex items-center" aria-label="Phases">
       {steps.map((step, index) => {
-        const Icon = step.state === "done" ? Check : (STEP_ICONS[step.phase] ?? Check);
+        const Icon =
+          step.state === "done"
+            ? Check
+            : step.state === "skipped"
+              ? SkipForward
+              : (STEP_ICONS[step.phase] ?? Check);
         const end = ends[step.phase] ?? null;
         const content = (
           <>
@@ -44,15 +50,25 @@ export function PhaseStepper({
               className={cn(
                 "relative flex size-5 items-center justify-center rounded-full",
                 step.state === "done" && "bg-primary/12",
+                step.state === "skipped" &&
+                  "border border-dashed border-skipped bg-skipped/12",
               )}
             >
               <Icon className="size-3.5" />
             </span>
-            <span className="relative">{step.label}</span>
+            <span
+              className={cn(
+                "relative",
+                step.state === "skipped" && "line-through decoration-skipped/60",
+              )}
+            >
+              {step.label}
+            </span>
+            {step.state === "skipped" && <span className="sr-only">(skipped)</span>}
           </>
         );
         const className =
-          "relative flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground data-[state=current]:text-primary-foreground data-[state=done]:text-primary";
+          "relative flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground data-[state=current]:text-primary-foreground data-[state=done]:text-primary data-[state=skipped]:text-skipped";
 
         return (
           <li key={step.phase} className="flex items-center">
@@ -66,7 +82,16 @@ export function PhaseStepper({
                 />
               </span>
             )}
-            {end === null ? (
+            {end === null && step.state === "skipped" ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span data-state={step.state} tabIndex={0} className={className}>
+                    {content}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>The game ended before this phase.</TooltipContent>
+              </Tooltip>
+            ) : end === null ? (
               <span
                 data-state={step.state}
                 aria-current={step.state === "current" ? "step" : undefined}

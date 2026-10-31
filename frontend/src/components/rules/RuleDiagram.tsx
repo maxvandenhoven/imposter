@@ -49,11 +49,8 @@ function AbovePlayer({ player }: { player: DiagramPlayer }) {
     return (
       <SpeechBubble
         tail="bottom"
-        className={cn(
-          "w-max max-w-44 text-center text-sm",
-          player.mark === "good" && "border-civilian/60",
-          player.mark === "bad" && "border-destructive/60",
-        )}
+        tone={player.mark ?? null}
+        className="w-max max-w-52 text-center text-sm text-balance"
       >
         {player.says}
         {player.mark !== undefined && (
@@ -113,8 +110,12 @@ export function RuleDiagram({
             className="flex min-w-0 flex-col items-center gap-1.5 transition-opacity data-[quiet=true]:opacity-45"
           >
             {above && (
-              <div className="flex h-16 items-end justify-center">
-                <AbovePlayer player={player} />
+              // The bubble is centred on the player, also when it is wider than the
+              // player's column, so its tail points at the middle of the avatar.
+              <div className="relative h-16 w-full">
+                <div className="absolute bottom-2 left-1/2 flex w-max -translate-x-1/2 justify-center">
+                  <AbovePlayer player={player} />
+                </div>
               </div>
             )}
             <div className="relative">

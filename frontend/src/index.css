@@ -35,6 +35,7 @@
   --color-speaking: var(--speaking);
   --color-imposter: var(--imposter);
   --color-civilian: var(--civilian);
+  --color-skipped: var(--skipped);
   --color-table: var(--table);
   --color-table-foreground: var(--table-foreground);
   --color-table-muted: var(--table-muted);
@@ -81,6 +82,8 @@
   --speaking: #f2a516;
   --imposter: #e0384f;
   --civilian: #0f9b88;
+  /* A phase the game went past without playing it. */
+  --skipped: #b7791f;
 
   /* The table in the middle of the board, and the private thought bubbles. */
   --table: #2e2566;

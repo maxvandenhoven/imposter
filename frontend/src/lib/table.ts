@@ -5,7 +5,8 @@ import type { BoardView } from "@/lib/boardView";
 export interface PhaseStep {
   phase: GamePhase;
   label: string;
-  state: "done" | "current" | "next";
+  /** `skipped` for a step the game went past without playing it. */
+  state: "done" | "skipped" | "current" | "next";
 }
 
 /** The phases the indicator shows, each with the phases it stands for. */
@@ -22,24 +23,42 @@ export const PHASE_STEPS: { phase: GamePhase; label: string; covers: GamePhase[]
  * The steps of the phase indicator at a phase.
  *
  * A game that ended early, when the word was said, jumps from its phase to the reveal.
- * When `finished` is set every step is done.
+ * When `finished` is set every step is past. A step that is past is done when one of
+ * its phases is in `played`, the phases that started, and skipped when none is, for
+ * example the vote and the guess of a game that ended in the discussion. Without
+ * `played` every step that is past is done.
  */
-export function phaseSteps(phase: GamePhase | null, finished = false): PhaseStep[] {
+export function phaseSteps({
+  phase,
+  finished = false,
+  played,
+}: {
+  phase: GamePhase | null;
+  finished?: boolean;
+  played?: GamePhase[];
+}): PhaseStep[] {
   const current = PHASE_STEPS.findIndex(
     (step) => phase !== null && step.covers.includes(phase),
   );
 
-  return PHASE_STEPS.map(({ phase: stepPhase, label }, index) => {
+  return PHASE_STEPS.map(({ phase: stepPhase, label, covers }, index) => {
     let state: PhaseStep["state"] = "next";
 
     if (finished || (current >= 0 && index < current)) {
-      state = "done";
+      const skipped =
+        played !== undefined && !covers.some((covered) => played.includes(covered));
+      state = skipped ? "skipped" : "done";
     } else if (index === current) {
       state = "current";
     }
 
     return { phase: stepPhase, label, state };
   });
+}
+
+/** The phases that started in a game, in the order they started. */
+export function playedPhases(events: GameEvent[]): GamePhase[] {
+  return events.flatMap((event) => (event.type === "phase_started" ? [event.phase] : []));
 }
 
 /**

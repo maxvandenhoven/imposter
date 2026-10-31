@@ -17,7 +17,7 @@ import type { BoardState, BoardStatus } from "@/lib/board";
 import { type BoardMode, buildBoardView, type ModelPrices } from "@/lib/boardView";
 import { buildDebrief } from "@/lib/debrief";
 import type { GamePlayback } from "@/lib/playback";
-import { PHASE_STEPS, phaseEnd, phaseSteps } from "@/lib/table";
+import { PHASE_STEPS, phaseEnd, phaseSteps, playedPhases } from "@/lib/table";
 
 const ENDED_LABELS: Record<Exclude<BoardStatus, "running">, BoardStatusLabel> = {
   finished: "Finished",
@@ -85,7 +85,11 @@ export function BoardPage({
     <div className="flex flex-col gap-5 pb-24">
       <BoardHeader
         view={view}
-        steps={phaseSteps(view.phase, view.finished)}
+        steps={phaseSteps({
+          phase: view.phase,
+          finished: view.finished,
+          played: playedPhases(played.events),
+        })}
         phaseEnds={phaseEnds}
         status={status}
         running={streaming}
