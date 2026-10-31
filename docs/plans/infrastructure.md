@@ -138,11 +138,18 @@ the better filter when implementing.
   application default credentials mounted, so a real game plays in the container. It
   runs as the host user (`--user $(id -u):$(id -g)`), so the credentials file, which only
   its owner may read, can be read in the container.
-- `make build`: `gcloud builds submit --tag <region>-docker.pkg.dev/<project>/imposter/app:<git sha>`
-  (builds in GCP, no local Docker needed).
-- `make deploy`: build, resolve the image digest, then
-  `terraform -chdir=infra apply -var image=<repo>@sha256:...`.
-- Rollback: re-apply with an earlier digest.
+- `make build`: first applies the registry and build account targets (the first deploy
+  needs them before anything can be built), then `gcloud builds submit` with
+  `cloudbuild.yaml`, as the `imposter-build` service account, staging the source in the
+  `<project>-imposter-build` bucket (builds in GCP, no local Docker needed). The image tag
+  is the git short sha, with `-dirty` for uncommitted changes.
+- `make deploy`: build, resolve the image digest, then `make deploy-image
+  IMAGE=<repo>/app@sha256:...`, which runs `terraform apply -var image=...`. The Cloud Run
+  service only exists once `image` is set.
+- Rollback: `make deploy-image` with an earlier digest. `make proxy` opens the private
+  service locally until IAP (WP 13).
+- Budgets need `billing_account_id`. A second budget on the Vertex AI service covers the
+  model spend that the label filter cannot see (it includes other work in the project).
 - `make tf-setup` once, then `make tf-plan` / `make tf-apply` for infra-only
   changes (both run `make tf-init` first).
 - `.env.example` documents the local variables; `make dev` uses ADC and the same project.

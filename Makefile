@@ -167,6 +167,55 @@ tf-apply: tf-init
 	@terraform -chdir=$(TF_DIR) apply
 
 
+# The Artifact Registry repository, the build account and the source bucket that
+# `make build` needs, which the first deploy creates before anything can be built.
+TF_BUILD_TARGETS := -target=google_artifact_registry_repository.imposter \
+	-target=google_storage_bucket_iam_member.build_source \
+	-target=google_artifact_registry_repository_iam_member.build_push \
+	-target=google_project_iam_member.build_logs
+IMAGE_REPO = $(TF_REGION)-docker.pkg.dev/$(GOOGLE_CLOUD_PROJECT)/imposter
+IMAGE_TAG ?= $(shell git rev-parse --short HEAD)$(shell git diff --quiet HEAD || echo -dirty)
+BUILD_SA = imposter-build@$(GOOGLE_CLOUD_PROJECT).iam.gserviceaccount.com
+
+
+# Creates the registry and build account when they are missing.
+.PHONY: tf-build-resources
+tf-build-resources: tf-init
+	@terraform -chdir=$(TF_DIR) apply -input=false -auto-approve $(TF_BUILD_TARGETS)
+
+
+# Builds the image from the Dockerfile in Cloud Build and pushes it to Artifact Registry.
+.PHONY: build
+build: tf-build-resources
+	@gcloud builds submit . --project=$(GOOGLE_CLOUD_PROJECT) --region=$(TF_REGION) \
+		--config=cloudbuild.yaml --substitutions=_IMAGE=$(IMAGE_REPO)/app:$(IMAGE_TAG) \
+		--service-account=projects/$(GOOGLE_CLOUD_PROJECT)/serviceAccounts/$(BUILD_SA) \
+		--gcs-source-staging-dir=gs://$(GOOGLE_CLOUD_PROJECT)-imposter-build/source
+
+
+# Builds, resolves the digest of the new image and deploys exactly that digest. Roll back
+# with `make deploy-image IMAGE=<repo>/app@sha256:...` (see `docs/infrastructure.md`).
+.PHONY: deploy
+deploy: build
+	@digest=$$(gcloud artifacts docker images describe $(IMAGE_REPO)/app:$(IMAGE_TAG) \
+		--project=$(GOOGLE_CLOUD_PROJECT) --format='value(image_summary.digest)') && \
+		test -n "$$digest" && \
+		$(MAKE) --no-print-directory deploy-image IMAGE=$(IMAGE_REPO)/app@$$digest
+
+
+.PHONY: deploy-image
+deploy-image: tf-init
+	@test -n "$(IMAGE)" || { echo "Set IMAGE=<repo>/app@sha256:..."; exit 1; }
+	@terraform -chdir=$(TF_DIR) apply -var image=$(IMAGE)
+
+
+# Opens the private service on http://localhost:8081 with your credentials.
+.PHONY: proxy
+proxy:
+	@gcloud run services proxy imposter --project=$(GOOGLE_CLOUD_PROJECT) \
+		--region=$(TF_REGION) --port=8081
+
+
 .PHONY: install-hooks
 install-hooks:
 	@uv run pre-commit install
