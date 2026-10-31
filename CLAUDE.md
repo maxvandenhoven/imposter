@@ -29,10 +29,12 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `src/imposter/words/` — word categories, picker and generator
 - `src/imposter/judge/` — `JudgeProtocol` port, LLM judge and cheap code checks
 - `src/imposter/orchestration/` — `GameRunner` (asks players, applies turns), the game
-  workflow (an ADK graph `Workflow` with a node per phase) and the ADK `Runner` wiring
+  workflow (an ADK graph `Workflow` with a node per phase and a child node per turn) and
+  the ADK `Runner` wiring
 - `src/imposter/ports/` — game store and event bus protocols with in-memory adapters
 - `src/imposter/telemetry/` — OpenTelemetry setup, span helpers, cost estimates
-- `src/imposter/api/` — FastAPI app, settings, identity, routes (games, catalog, SSE)
+- `src/imposter/api/` — the API app: ADK's API server for the game app, plus the catalog
+  route
 - `src/imposter/web/` — static frontend (Alpine.js + Tailwind)
 - `src/imposter/cli.py` — `imposter` command line entry point (Typer)
 - `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for `src/imposter/engine/`
@@ -56,6 +58,7 @@ make check          # format + lint + type + Terraform fmt/validate (no tests)
 make test           # pytest with coverage, excluding `slow` tests
 make test-slow      # pytest -m slow (real Vertex AI calls)
 make play           # imposter play with real models (options in ARGS="...")
+make dev            # imposter serve --reload: the game API on port 8000
 make adk-web        # adk web --otel_to_cloud src: the ADK developer UI, one game per session
 make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
 make tf-plan        # terraform plan for infra (tf-apply to apply)

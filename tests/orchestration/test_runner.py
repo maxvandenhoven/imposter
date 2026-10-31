@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from google.adk.agents.context import Context
 
 from imposter.config import (
     GameConfig,
@@ -429,13 +430,17 @@ class SlowPlayer:
         self.delay = delay
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         """Wait, then give the next scripted answer.
 
         Args:
             view: Everything the seat may know.
             retry_reason: Why the previous attempt was rejected, if any.
+            ctx: The context of the turn node, unused.
 
         Returns:
             The next scripted response.

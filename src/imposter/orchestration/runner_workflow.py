@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -10,7 +11,7 @@ from pydantic import Field, SkipValidation
 from imposter.config import GamePhase
 from imposter.engine.events import BaseGameEvent
 from imposter.engine.game import Game
-from imposter.orchestration.runner import GameRunner
+from imposter.orchestration.runner import GameRunner, TurnResult
 from imposter.orchestration.setup import GameRequest, GameSetup
 from imposter.ports.event_bus import EventBusProtocol
 from imposter.ports.game_store import GameStoreProtocol
@@ -27,12 +28,16 @@ because its task was cancelled or a player raised an unexpected error."""
 WORKFLOW_NAME = "game_runner"
 """The ADK name of the game workflow, also the author of its events."""
 
+GAME_EVENT_METADATA_KEY = "game_event"
+"""The key of the engine event, as JSON, in the custom metadata of its ADK event."""
+
 
 class GameSession:
     """A game that is played in an ADK session, with its runner and what was published.
 
-    The engine events are published in segments: all events of one phase and round at
-    a time, by the workflow node of that phase.
+    The engine events are published by segment, all events of one phase and round, by
+    the workflow node of that phase. Within a segment they are published step by step,
+    as soon as they happen.
 
     Attributes:
         game: The game, changed in place as it is played.
@@ -69,27 +74,69 @@ class GameSession:
 
         return event.phase, event.round
 
-    async def play_segment(self) -> list[BaseGameEvent]:
-        """Play the phase and round of the segment and publish its events.
+    async def play_segment(self, ctx: Context) -> AsyncGenerator[BaseGameEvent]:
+        """Play the phase and round of the segment, publishing its events as they happen.
 
-        Phases in which nobody acts, such as the resolution, are played by the engine
-        as soon as the phase before them ends, so they only publish.
+        Each step publishes the turns it starts before the players are asked, so
+        subscribers see whose turn it is while the models answer. Each turn runs in a
+        `PlayerTurnNode` of its own, a child node of the phase node, and the answers are
+        applied in seat order. Phases in which nobody acts, such as the resolution, are
+        played by the engine as soon as the phase before them ends, so they only
+        publish.
 
-        Returns:
-            The events of the segment, in order.
+        Args:
+            ctx: The context of the phase node, which runs the turn nodes.
+
+        Yields:
+            The events of the segment, in order, as they are published.
         """
         segment = self.segment
 
         while not self.game.is_over and (self.game.phase, self.game.round) == segment:
-            await self.runner.play_step(self.game)
+            seats = self.runner.start_step(self.game)
 
-        events = [
-            event
-            for event in self.game.events[self.published :]
-            if (event.phase, event.round) == segment
-        ]
+            for event in self.publish_segment(segment):
+                yield event
 
-        return self.publish(len(events))
+            outputs = await asyncio.gather(
+                *(
+                    ctx.run_node(
+                        PlayerTurnNode(
+                            name=f"player_{seat}_turn", seat=seat, session=self
+                        )
+                    )
+                    for seat in seats
+                )
+            )
+
+            for output in outputs:
+                self.runner.apply(
+                    game=self.game, result=TurnResult.model_validate(output)
+                )
+
+        for event in self.publish_segment(segment):
+            yield event
+
+    def publish_segment(
+        self, segment: tuple[GamePhase, int | None]
+    ) -> list[BaseGameEvent]:
+        """Publish the next events that belong to a segment.
+
+        Args:
+            segment: The phase and round of the segment.
+
+        Returns:
+            The published events, in order.
+        """
+        count = 0
+
+        for event in self.game.events[self.published :]:
+            if (event.phase, event.round) != segment:
+                break
+
+            count += 1
+
+        return self.publish(count)
 
     def publish(self, count: int | None = None) -> list[BaseGameEvent]:
         """Publish the next events to the bus.
@@ -228,20 +275,23 @@ class GamePhaseNode(Node):
     """The workflow node of one game phase: plays a round of the phase through the engine.
 
     The node never decides a transition (README D6): it plays the phase and round of
-    the next unpublished event through the `GameRunner`, publishes the events of that
-    segment, yields each as a content event for `adk web`, and routes to the phase of
-    the next event. The setup node creates the game, and the terminal nodes publish the
-    last events and close the bus. When the node stops early, for example because its
-    task was cancelled, the game is aborted and the bus closed all the same.
+    the next unpublished event through the `GameRunner`, each turn in a
+    `PlayerTurnNode`, yields each event of that segment as soon as it is published, and
+    routes to the phase of the next event. The setup node creates the game, and the
+    terminal nodes publish the last events and close the bus. When the node stops
+    early, for example because its task was cancelled, the game is aborted and the bus
+    closed all the same.
 
     Attributes:
         phase: The phase this node plays.
         sessions: The games being played, by session id.
+        rerun_on_resume: Set, because ADK requires it of nodes that run child nodes.
     """
 
     phase: GamePhase
     # Live objects, left out when `adk web` serializes the graph.
     sessions: SkipValidation[GameSessions] = Field(exclude=True)
+    rerun_on_resume: bool = True
 
     async def run_node_impl(
         self, *, ctx: Context, node_input: Any
@@ -253,8 +303,8 @@ class GamePhaseNode(Node):
             node_input: The output of the node before, unused.
 
         Yields:
-            A content event per engine event, then an event that routes to the phase of
-            the next segment, unless the game is over.
+            An event per engine event, see `game_event`, then an event that routes to
+            the phase of the next segment, unless the game is over.
 
         Raises:
             RuntimeError: When the game is not in the phase of this node.
@@ -282,20 +332,80 @@ class GamePhaseNode(Node):
                 raise RuntimeError(message)
 
             if self.phase in TERMINAL_PHASES:
-                events = self.sessions.finish(game_id)
+                for event in self.sessions.finish(game_id):
+                    yield game_event(event)
             else:
-                events = await session.play_segment()
+                async for event in session.play_segment(ctx):
+                    yield game_event(event)
         except BaseException:
             self.sessions.finish(game_id)
             raise
-
-        for event in events:
-            yield text_event(event.model_dump_json())
 
         if self.phase not in TERMINAL_PHASES:
             next_phase, _ = session.segment
             # The same as `Event(route=...)`, which ty reads as a discarded argument.
             yield Event(actions=EventActions(route=next_phase.value))
+
+
+class PlayerTurnNode(Node):
+    """The workflow node of one player turn: asks the seat's player for its action.
+
+    The phase node runs a turn node per turn as a child node (`ctx.run_node`), and the
+    player runs its agent as a child node of the turn. So the turn node's `invoke_node`
+    span is the turn level of the trace, with the agent and judge spans of the turn
+    below it, and the agent's events, including the partial events of a streaming run,
+    are part of the game run. The node's output is the answer, which the phase node
+    applies to the game.
+
+    Attributes:
+        seat: The seat whose turn it is.
+        session: The session of the game being played.
+        rerun_on_resume: Set, because ADK requires it of nodes that run child nodes.
+    """
+
+    seat: int
+    # A live object, left out when the node is serialized.
+    session: SkipValidation[GameSession] = Field(exclude=True)
+    rerun_on_resume: bool = True
+
+    async def run_node_impl(
+        self, *, ctx: Context, node_input: Any
+    ) -> AsyncGenerator[Event]:
+        """Ask the player of the seat for its action, without changing the game.
+
+        Args:
+            ctx: The workflow context of this node run.
+            node_input: The input of the node, unused.
+
+        Yields:
+            The event with the answer of the turn as output.
+        """
+        result = await self.session.runner.ask(
+            game=self.session.game, seat=self.seat, ctx=ctx
+        )
+
+        yield Event(output=result)
+
+
+def game_event(event: BaseGameEvent) -> Event:
+    """Build the ADK event of an engine event.
+
+    Clients read the engine event from the custom metadata, under
+    `GAME_EVENT_METADATA_KEY`. The content holds the same event as text, which is what
+    `adk web` shows.
+
+    Args:
+        event: The engine event.
+
+    Returns:
+        The ADK event.
+    """
+    return Event(
+        content=types.Content(
+            role="model", parts=[types.Part(text=event.model_dump_json())]
+        ),
+        custom_metadata={GAME_EVENT_METADATA_KEY: event.model_dump(mode="json")},
+    )
 
 
 def text_event(text: str) -> Event:

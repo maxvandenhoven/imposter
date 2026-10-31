@@ -1,4 +1,4 @@
-"""The game workflow as the ADK `app` that `adk web src` loads, one game per session.
+"""The game workflow as the ADK `app` of `adk web src` and the API, one game per session.
 
 The app carries the plugin that puts the game attributes on the root span of a game.
 `adk web --otel_to_cloud` exports the traces, and the telemetry defaults make ADK log
@@ -20,17 +20,16 @@ set_telemetry_defaults()
 
 setup = GameSetup.load()
 store = InMemoryGameStore()
-
-root_agent = game_workflow(
-    sessions=GameSessions(
-        setup=setup,
-        bus=InMemoryEventBus(),
-        store=store,
-        default_request=GameRequest(
-            config=GameConfig(players=setup.player_configs(DEFAULT_MODEL_IDS))
-        ),
-    )
+sessions = GameSessions(
+    setup=setup,
+    bus=InMemoryEventBus(),
+    store=store,
+    default_request=GameRequest(
+        config=GameConfig(players=setup.player_configs(DEFAULT_MODEL_IDS))
+    ),
 )
+
+root_agent = game_workflow(sessions=sessions)
 
 app = App(
     name=APP_NAME, root_agent=root_agent, plugins=[GameTracePlugin(find_game=store.get)]

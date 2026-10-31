@@ -63,6 +63,12 @@ play:
 	@uv run $(if $(wildcard .env),--env-file .env) imposter play $(ARGS)
 
 
+# The game API on port 8000, restarted on code changes. Options go in ARGS.
+.PHONY: dev
+dev:
+	@uv run $(if $(wildcard .env),--env-file .env) imposter serve --reload $(ARGS)
+
+
 .PHONY: adk-web
 adk-web:
 	@uv run $(if $(wildcard .env),--env-file .env) adk web --otel_to_cloud src

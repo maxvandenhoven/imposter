@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from google.adk.agents.context import Context
 from opentelemetry import trace
 from opentelemetry.trace import Span, Status, StatusCode
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,7 +21,7 @@ from imposter.players.base import (
     TurnUsage,
     VoteResponse,
 )
-from imposter.telemetry.spans import add_response_event, turn_span
+from imposter.telemetry.spans import add_response_event, mark_turn
 from imposter.utils.text import truncate_words
 
 MAX_ATTEMPTS = 2
@@ -60,7 +61,8 @@ class GameRunner:
     phases (votes and debrief) every pending seat is asked at once, against the same
     game, and the answers are applied in seat order, so the event log does not depend on
     which model answered first. The nodes of the game workflow play a game through
-    these methods. Each turn is a `turn` span.
+    these methods, each turn in a turn node of its own. `play` plays a whole game
+    without the workflow, for players that need no node context, such as the fakes.
 
     Attributes:
         players: The player at each seat, in seat order.
@@ -87,11 +89,7 @@ class GameRunner:
         Args:
             game: The game, not over. It is changed in place.
         """
-        seats = game.pending_seats[:1] if game.is_sequential else game.pending_seats
-
-        for seat in seats:
-            game.start_turn(seat)
-
+        seats = self.start_step(game)
         results = await asyncio.gather(
             *(self.ask(game=game, seat=seat) for seat in seats)
         )
@@ -99,28 +97,53 @@ class GameRunner:
         for result in results:
             self.apply(game=game, result=result)
 
-    async def ask(self, *, game: Game, seat: int) -> TurnResult:
-        """Ask the player of a seat for its action, in the `turn` span of the seat.
+    def start_step(self, game: Game) -> list[int]:
+        """Start the next turn, or all turns of a parallel phase.
+
+        Args:
+            game: The game, not over. It is changed in place.
+
+        Returns:
+            The seats whose turn started, in seat order.
+        """
+        seats = game.pending_seats[:1] if game.is_sequential else game.pending_seats
+
+        for seat in seats:
+            game.start_turn(seat)
+
+        return seats
+
+    async def ask(
+        self, *, game: Game, seat: int, ctx: Context | None = None
+    ) -> TurnResult:
+        """Ask the player of a seat for its action, traced on the current span.
+
+        In the game workflow each turn runs in a turn node of its own, so the current
+        span is ADK's `invoke_node` span of that node.
 
         Args:
             game: The game, with the seat's turn started. It is not changed.
             seat: The seat to ask.
+            ctx: The context of the turn node, `None` outside the game workflow.
 
         Returns:
             The answer of the player, with its usage and errors.
         """
-        with turn_span(game=game, seat=seat) as span:
-            result = await self.answer(game=game, seat=seat)
-            self.trace_turn(span=span, game=game, result=result)
+        span = mark_turn(game=game, seat=seat)
+        result = await self.answer(game=game, seat=seat, ctx=ctx)
+        self.trace_turn(span=span, game=game, result=result)
 
         return result
 
-    async def answer(self, *, game: Game, seat: int) -> TurnResult:
+    async def answer(
+        self, *, game: Game, seat: int, ctx: Context | None = None
+    ) -> TurnResult:
         """Get the action of a seat's player, with one retry when it is invalid.
 
         Args:
             game: The game, with the seat's turn started. It is not changed.
             seat: The seat to ask.
+            ctx: The context of the turn node, `None` outside the game workflow.
 
         Returns:
             The answer of the player, with its usage and errors.
@@ -137,7 +160,9 @@ class GameRunner:
 
             try:
                 response = await self.players[seat].take_turn(
-                    view=view, retry_reason=rejection.reason if rejection else None
+                    view=view,
+                    retry_reason=rejection.reason if rejection else None,
+                    ctx=ctx,
                 )
             except Exception as error:
                 trace.get_current_span().record_exception(error)

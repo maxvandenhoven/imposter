@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from google.adk.agents.context import Context
 from pydantic import BaseModel, ConfigDict, Field
 
 from imposter.config import GamePhase
@@ -121,17 +122,23 @@ class PlayerProtocol(Protocol):
     """A participant in a game, backed by a model, a script or chance.
 
     A player gets only the view of its own seat, so it cannot see more than the rules
-    allow. Which phase to act in and the limits are part of the view.
+    allow. Which phase to act in and the limits are part of the view. In the game
+    workflow a turn runs in the turn node of its seat, whose context a player may use to
+    run ADK agents as child nodes of the turn.
     """
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         """Act in the phase of the view.
 
         Args:
             view: Everything the seat may know.
             retry_reason: Why the previous attempt in this turn was rejected, if any.
+            ctx: The context of the turn node, `None` outside the game workflow.
 
         Returns:
             The structured output of the turn.

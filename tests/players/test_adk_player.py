@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
+from conftest import run_turns
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import errors, types
 from pydantic import Field
@@ -48,14 +49,27 @@ class FakeLlm(BaseLlm):
             yield reply
             return
 
+        usage = types.GenerateContentResponseUsageMetadata(
+            prompt_token_count=100, candidates_token_count=10, thoughts_token_count=5
+        )
+
+        # Like Gemini, the last chunk carries the usage, and so does the full response.
+        if stream:
+            half = len(reply) // 2
+
+            for chunk, chunk_usage in ((reply[:half], None), (reply[half:], usage)):
+                yield LlmResponse(
+                    content=types.Content(role="model", parts=[types.Part(text=chunk)]),
+                    usage_metadata=chunk_usage,
+                    partial=True,
+                )
+
         yield LlmResponse(
             content=types.Content(
                 role="model",
                 parts=[types.Part(text="hmm", thought=True), types.Part(text=reply)],
             ),
-            usage_metadata=types.GenerateContentResponseUsageMetadata(
-                prompt_token_count=100, candidates_token_count=10, thoughts_token_count=5
-            ),
+            usage_metadata=usage,
         )
 
 
@@ -107,13 +121,22 @@ def request_text(request: LlmRequest) -> str:
     )
 
 
+async def take_turn(
+    player: AdkPlayer, view: PlayerView, retry_reason: str | None = None
+) -> PlayerResponse:
+    """Have a player take one turn in a workflow run."""
+    [response], _ = await run_turns(player, [(view, retry_reason)])
+
+    return response
+
+
 async def test_structured_output_turn_returns_parsed_output_and_usage() -> None:
     game = new_game()
     player, model, view = new_player(
         game=game, replies=['{"clue": "neck", "private_reasoning": "long"}']
     )
 
-    response = await player.take_turn(view)
+    response = await take_turn(player, view)
 
     assert response == PlayerResponse(
         output=ClueResponse(clue="neck", private_reasoning="long"),
@@ -130,6 +153,36 @@ async def test_structured_output_turn_returns_parsed_output_and_usage() -> None:
     assert "JSON schema" not in request_text(request)
 
 
+async def test_streaming_turn_yields_partial_events_and_counts_usage_once() -> None:
+    game = new_game()
+    reply = '{"clue": "neck", "private_reasoning": "long"}'
+    player, _, view = new_player(game=game, replies=[reply])
+
+    [response], events = await run_turns(player, [(view, None)], streaming=True)
+
+    agent_name = f"player_{view.seat}_clue"
+    partials = [event for event in events if event.partial]
+    chunks = [
+        part.text
+        for event in partials
+        if event.content and event.content.parts
+        for part in event.content.parts
+    ]
+    assert response.output == ClueResponse(clue="neck", private_reasoning="long")
+    assert response.usage is not None and response.usage.input_tokens == 100
+    assert {event.author for event in partials} == {agent_name}
+    assert "".join(chunk or "" for chunk in chunks) == reply
+
+
+async def test_turn_without_streaming_yields_no_partial_events() -> None:
+    game = new_game()
+    player, _, view = new_player(game=game, replies=['{"clue": "neck"}'])
+
+    _, events = await run_turns(player, [(view, None)])
+
+    assert not any(event.partial for event in events)
+
+
 async def test_instruction_is_rendered_from_the_view_of_the_seat() -> None:
     game = new_game()
     reply = '{"clue": "neck"}'
@@ -140,8 +193,8 @@ async def test_instruction_is_rendered_from_the_view_of_the_seat() -> None:
         game=game, replies=[reply], role=PlayerRole.IMPOSTER
     )
 
-    await civilian.take_turn(civilian_view)
-    await imposter.take_turn(imposter_view)
+    await take_turn(civilian, civilian_view)
+    await take_turn(imposter, imposter_view)
 
     civilian_prompt = request_text(civilian_model.requests[0])
     imposter_prompt = request_text(imposter_model.requests[0])
@@ -156,8 +209,9 @@ async def test_turns_send_no_conversation_history() -> None:
         game=game, replies=['{"clue": "neck"}', '{"clue": "spots"}']
     )
 
-    await player.take_turn(view)
-    response = await player.take_turn(view, retry_reason="the clue was already given")
+    [_, response], _ = await run_turns(
+        player, [(view, None), (view, "the clue was already given")]
+    )
 
     first, second = model.requests
     assert response.output == ClueResponse(clue="spots")
@@ -171,7 +225,7 @@ async def test_json_in_prompt_turn_sends_no_schema_and_parses_fenced_json() -> N
     reply = '```json\n{"clue": "neck", "private_reasoning": "tall"}\n```'
     player, model, view = new_player(game=game, replies=[reply], structured=False)
 
-    response = await player.take_turn(view)
+    response = await take_turn(player, view)
 
     assert response.output == ClueResponse(clue="neck", private_reasoning="tall")
     request = model.requests[0]
@@ -186,7 +240,7 @@ async def test_answer_that_misses_the_schema_is_asked_again_with_the_error() -> 
         game=game, replies=['{"hint": "neck"}', '{"clue": "neck"}'], structured=False
     )
 
-    response = await player.take_turn(view)
+    response = await take_turn(player, view)
 
     assert response.output == ClueResponse(clue="neck")
     assert response.error is None
@@ -201,7 +255,7 @@ async def test_second_answer_that_misses_the_schema_gives_up_with_an_error() -> 
         game=game, replies=['{"hint": "neck"}', "still no json"], structured=False
     )
 
-    response = await player.take_turn(view)
+    response = await take_turn(player, view)
 
     assert response.output is None
     assert response.error is not None
@@ -216,7 +270,7 @@ async def test_model_errors_give_up_without_asking_again() -> None:
     )
     player, model, view = new_player(game=game, replies=[error])
 
-    response = await player.take_turn(view)
+    response = await take_turn(player, view)
 
     assert response.output is None
     assert response.error is not None
@@ -229,7 +283,7 @@ async def test_error_responses_give_up_with_an_error() -> None:
     blocked = LlmResponse(error_code="SAFETY", error_message="Blocked")
     player, _, view = new_player(game=game, replies=[blocked])
 
-    response = await player.take_turn(view)
+    response = await take_turn(player, view)
 
     assert response.output is None
     assert response.error == "no valid answer: SAFETY: Blocked"
@@ -237,14 +291,12 @@ async def test_error_responses_give_up_with_an_error() -> None:
 
 async def test_each_phase_has_an_agent_with_its_response_type() -> None:
     player, _, _ = new_player(game=new_game(), replies=[])
-    agents = {phase: runner.agent for phase, runner in player.runners.items()}
+    agents = player.agents
 
     assert agents.keys() == PHASE_RESPONSE_TYPES.keys()
-    assert getattr(agents[GamePhase.VOTE], "output_schema", None) is VoteResponse
-    assert (
-        getattr(agents[GamePhase.DISCUSSION], "output_schema", None) is DiscussionResponse
-    )
-    assert getattr(agents[GamePhase.CLUE], "include_contents", None) == "none"
+    assert agents[GamePhase.VOTE].output_schema is VoteResponse
+    assert agents[GamePhase.DISCUSSION].output_schema is DiscussionResponse
+    assert agents[GamePhase.CLUE].include_contents == "none"
 
 
 async def test_view_of_another_seat_is_rejected() -> None:
@@ -254,3 +306,11 @@ async def test_view_of_another_seat_is_rejected() -> None:
 
     with pytest.raises(ValueError, match="cannot act on the view of seat"):
         await player.take_turn(other)
+
+
+async def test_turn_outside_a_workflow_node_is_rejected() -> None:
+    game = new_game()
+    player, _, view = new_player(game=game, replies=[])
+
+    with pytest.raises(ValueError, match="only in a workflow node"):
+        await player.take_turn(view)

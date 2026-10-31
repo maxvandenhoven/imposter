@@ -1,7 +1,8 @@
 import hashlib
 from typing import Any
 
-from conftest import FakeGameSetup, random_players
+from conftest import FakeGameSetup, ReplayLlm, random_players
+from google.adk.agents.context import Context
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import StatusCode
@@ -10,9 +11,11 @@ from imposter.config import GameConfig, GamePhase, PlayerConfig
 from imposter.engine.events import TurnStartedEvent
 from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
+from imposter.models.catalog import ModelCatalog
 from imposter.orchestration.adk_runner import run_game
 from imposter.orchestration.runner_workflow import WORKFLOW_NAME
 from imposter.orchestration.setup import GameRequest
+from imposter.players.adk_player import AdkPlayer
 from imposter.players.base import PlayerResponse
 from imposter.ports.event_bus import InMemoryEventBus
 from imposter.ports.game_store import InMemoryGameStore
@@ -25,7 +28,10 @@ class FailingPlayer:
     """A player whose model call always raises."""
 
     async def take_turn(
-        self, view: PlayerView, retry_reason: str | None = None
+        self,
+        view: PlayerView,
+        retry_reason: str | None = None,
+        ctx: Context | None = None,
     ) -> PlayerResponse:
         message = "The model is down."
         raise RuntimeError(message)
@@ -101,7 +107,10 @@ async def test_game_trace_has_game_phase_and_turn_levels(
         if attributes(node)["imposter.phase.name"] == GamePhase.CLUE
     ] == [1, 2]
 
-    assert all(turn.name.startswith("turn ") for turn in turns)
+    assert all(
+        turn.name == f"invoke_node player_{attributes(turn)['imposter.player.seat']}_turn"
+        for turn in turns
+    )
     assert len(turns) == len(game.events_of_type(TurnStartedEvent))
     assert first_turn["imposter.phase.name"] == GamePhase.CLUE
     assert first_turn["imposter.player.name"] == game.seats[0].name
@@ -149,3 +158,30 @@ async def test_aborted_game_sets_error_status_on_the_root_span(
 
     assert root.status.status_code is StatusCode.ERROR
     assert attributes(root)["imposter.game.outcome"] == ""
+
+
+async def test_player_agent_spans_are_below_the_turn_span(
+    span_exporter: InMemorySpanExporter,
+) -> None:
+    answer = (
+        '{"clue": "tall", "statement": "Hm.", "vote_for": "nobody", "guess": "tree", '
+        '"reflection": "Fine.", "private_reasoning": "Why not."}'
+    )
+    model = ReplayLlm(replies=[answer] * 50)
+    entry = ModelCatalog.load().entry("gemini-flash")
+    setup = FakeGameSetup(
+        players_for=lambda game: [
+            AdkPlayer(entry=entry, seat=0, model=model),
+            *random_players(game)[1:],
+        ]
+    )
+    _, spans, _ = await play_traced(span_exporter, setup)
+    turns = [span for span in spans if span.name == "invoke_node player_0_turn"]
+    agents = [child for turn in turns for child in children(spans, turn)]
+    calls = [call for agent in agents for call in children(spans, agent)]
+
+    assert turns
+    assert all(agent.name.startswith("invoke_agent player_0_") for agent in agents)
+    assert len(agents) >= len(turns)
+    assert calls
+    assert all(call.name.startswith("generate_content") for call in calls)
