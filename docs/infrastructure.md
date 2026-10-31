@@ -28,7 +28,10 @@ Three flows use the infrastructure: playing a game, deploying a new version, and
 the app or Terraform locally. Parts marked *(planned)* are designed but do not exist yet.
 Until IAP arrives, the Cloud Run service is private: nobody holds `allUsers` invoker
 access, and you reach it with `make proxy`, which runs `gcloud run services proxy` with
-your own credentials.
+your own credentials. ADK only accepts browser requests from the service's own origin,
+and the proxy serves the page on `http://localhost:8081`, so the service lists that origin
+in `IMPOSTER_ALLOW_ORIGINS`, which the variable `allowed_origins` sets. Without it, the
+page loads but its scripts and styles are refused, and the browser shows a blank page.
 
 ### Playing a game (deployed)
 

@@ -50,6 +50,12 @@ resource "google_cloud_run_v2_service" "imposter" {
         name  = "IMPOSTER_TELEMETRY"
         value = "cloud"
       }
+      # ADK refuses browser requests from other origins, and `make proxy` serves the
+      # service on localhost.
+      env {
+        name  = "IMPOSTER_ALLOW_ORIGINS"
+        value = join(",", var.allowed_origins)
+      }
       env {
         name  = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
         value = "EVENT_ONLY"

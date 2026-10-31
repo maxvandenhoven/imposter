@@ -52,3 +52,9 @@ variable "budget_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "allowed_origins" {
+  description = "Browser origins besides the service's own that the API accepts, by default the one `make proxy` serves on."
+  type        = list(string)
+  default     = ["http://localhost:8081"]
+}

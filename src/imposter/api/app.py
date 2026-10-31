@@ -35,6 +35,9 @@ PACKAGE_DIR = Path(__file__).parents[1]
 FRONTEND_DIR_ENV = "IMPOSTER_FRONTEND_DIR"
 """The environment variable with the directory of the built frontend."""
 
+ALLOW_ORIGINS_ENV = "IMPOSTER_ALLOW_ORIGINS"
+"""The environment variable with extra allowed origins, separated by commas."""
+
 DEFAULT_FRONTEND_DIR = Path("frontend/dist")
 """Where `make frontend` builds the frontend, relative to the repository root."""
 
@@ -45,14 +48,21 @@ def create_app() -> FastAPI:
     """Build the API app, with telemetry set up from the environment.
 
     The built frontend is served at `/` from the directory in `IMPOSTER_FRONTEND_DIR`,
-    or from `frontend/dist` in the working directory, when that directory exists.
+    or from `frontend/dist` in the working directory, when that directory exists. ADK
+    only accepts browser requests whose `Origin` is the server's own, so a proxy that
+    serves the app under another origin (`gcloud run services proxy` on localhost) needs
+    that origin in `IMPOSTER_ALLOW_ORIGINS`.
 
     Returns:
         The app, for uvicorn (`uvicorn --factory imposter.api.app:create_app`).
     """
     project = setup_telemetry(exporter_from_environment())
+    origins = [o.strip() for o in os.environ.get(ALLOW_ORIGINS_ENV, "").split(",")]
     app = get_fast_api_app(
-        agents_dir=str(PACKAGE_DIR), web=False, use_local_storage=False
+        agents_dir=str(PACKAGE_DIR),
+        web=False,
+        use_local_storage=False,
+        allow_origins=[o for o in origins if o] or None,
     )
     app.include_router(
         catalog_router(catalog=ModelCatalog.load(), picker=WordPicker.load())
