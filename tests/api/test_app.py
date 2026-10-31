@@ -127,3 +127,21 @@ def test_api_is_served_alone_without_a_frontend_build(
     with TestClient(create_app()) as client:
         assert client.get("/").status_code == 404
         assert client.get("/catalog").status_code == 200
+
+
+@pytest.mark.usefixtures("span_exporter")
+def test_origin_of_a_proxy_is_refused_unless_it_is_allowed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "index.html").write_text("<p>Imposter</p>")
+    monkeypatch.setenv("IMPOSTER_TELEMETRY", "none")
+    monkeypatch.setenv("IMPOSTER_FRONTEND_DIR", str(tmp_path))
+    proxy = {"Origin": "http://localhost:8081"}
+
+    with TestClient(create_app(), base_url="https://imposter.run.app") as client:
+        assert client.get("/catalog", headers=proxy).status_code == 403
+
+    monkeypatch.setenv("IMPOSTER_ALLOW_ORIGINS", "http://localhost:8081, ")
+
+    with TestClient(create_app(), base_url="https://imposter.run.app") as client:
+        assert client.get("/catalog", headers=proxy).status_code == 200

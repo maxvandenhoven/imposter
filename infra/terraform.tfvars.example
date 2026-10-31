@@ -2,3 +2,10 @@
 # comes from `GOOGLE_CLOUD_PROJECT` in `.env`, which `make` passes as `TF_VAR_project_id`.
 # region = "europe-west4"
 # labels = { app = "imposter" }
+# Principals that may call the private service, besides project owners.
+# invokers = ["user:you@example.com"]
+# Budgets are created when the billing account is set (`gcloud billing projects describe`).
+# billing_account_id   = "000000-000000-000000"
+# budget_amount        = 20
+# vertex_budget_amount = 50
+# budget_emails        = ["you@example.com"]

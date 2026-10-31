@@ -1,0 +1,8 @@
+# Builds the Dockerfile and pushes the image. `make build` passes `_IMAGE`.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}", "."]
+images:
+  - ${_IMAGE}
+options:
+  logging: CLOUD_LOGGING_ONLY

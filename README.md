@@ -64,6 +64,16 @@ uv stage installs the package, and a slim Python image serves both with uvicorn 
 [localhost:8080](http://localhost:8080) with `.env` and the gcloud application default
 credentials mounted, so a real game plays in the container.
 
+## Deploying
+
+After the one-time setup in [`docs/setup.md`](docs/setup.md), `make up` creates the
+infrastructure with Terraform, builds the image in Cloud Build and deploys it to Cloud Run
+in `europe-west4`. The service is private, so `make proxy` opens it on
+[localhost:8081](http://localhost:8081) with your own credentials. `make deploy` ships a
+new version, `make down` removes everything Terraform manages and `make nuke` also removes
+the state bucket. [`docs/infrastructure.md`](docs/infrastructure.md) lists the resources,
+their costs and how to roll back.
+
 ## Game API
 
 The backend is ADK's own API server for the game app, plus a `/catalog` route that lists

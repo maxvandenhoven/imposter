@@ -157,14 +157,90 @@ tf-init: tf-require-project
 	@terraform -chdir=$(TF_DIR) init -input=false -reconfigure -backend-config="bucket=$(TF_STATE_BUCKET)"
 
 
+# The image of the running service, so that plan and apply keep it. Without it Terraform
+# would see an empty `image` and remove the service. Empty when nothing is deployed.
+CURRENT_IMAGE = $(shell gcloud run services describe imposter --project=$(GOOGLE_CLOUD_PROJECT) \
+	--region=$(TF_REGION) --format='value(spec.template.spec.containers[0].image)' 2>/dev/null)
+
+
 .PHONY: tf-plan
 tf-plan: tf-init
-	@terraform -chdir=$(TF_DIR) plan
+	@terraform -chdir=$(TF_DIR) plan $(if $(CURRENT_IMAGE),-var image=$(CURRENT_IMAGE))
 
 
 .PHONY: tf-apply
 tf-apply: tf-init
-	@terraform -chdir=$(TF_DIR) apply
+	@terraform -chdir=$(TF_DIR) apply $(if $(CURRENT_IMAGE),-var image=$(CURRENT_IMAGE))
+
+
+# The Artifact Registry repository, the build account and the source bucket that
+# `make build` needs, which the first deploy creates before anything can be built.
+TF_BUILD_TARGETS := -target=google_artifact_registry_repository.imposter \
+	-target=google_storage_bucket_iam_member.build_source \
+	-target=google_artifact_registry_repository_iam_member.build_push \
+	-target=google_project_iam_member.build_logs
+IMAGE_REPO = $(TF_REGION)-docker.pkg.dev/$(GOOGLE_CLOUD_PROJECT)/imposter
+IMAGE_TAG ?= $(shell git rev-parse --short HEAD)$(shell git diff --quiet HEAD || echo -dirty)
+BUILD_SA = imposter-build@$(GOOGLE_CLOUD_PROJECT).iam.gserviceaccount.com
+
+
+# Creates the registry and build account when they are missing.
+.PHONY: tf-build-resources
+tf-build-resources: tf-init
+	@terraform -chdir=$(TF_DIR) apply -input=false -auto-approve $(TF_BUILD_TARGETS)
+
+
+# Builds the image from the Dockerfile in Cloud Build and pushes it to Artifact Registry.
+.PHONY: build
+build: tf-build-resources
+	@gcloud builds submit . --project=$(GOOGLE_CLOUD_PROJECT) --region=$(TF_REGION) \
+		--config=cloudbuild.yaml --substitutions=_IMAGE=$(IMAGE_REPO)/app:$(IMAGE_TAG) \
+		--service-account=projects/$(GOOGLE_CLOUD_PROJECT)/serviceAccounts/$(BUILD_SA) \
+		--gcs-source-staging-dir=gs://$(GOOGLE_CLOUD_PROJECT)-imposter-build/source
+
+
+# Builds, resolves the digest of the new image and deploys exactly that digest. Roll back
+# with `make deploy-image IMAGE=<repo>/app@sha256:...` (see `docs/infrastructure.md`).
+.PHONY: deploy
+deploy: build
+	@digest=$$(gcloud artifacts docker images describe $(IMAGE_REPO)/app:$(IMAGE_TAG) \
+		--project=$(GOOGLE_CLOUD_PROJECT) --format='value(image_summary.digest)') && \
+		test -n "$$digest" && \
+		$(MAKE) --no-print-directory deploy-image IMAGE=$(IMAGE_REPO)/app@$$digest
+
+
+.PHONY: deploy-image
+deploy-image: tf-init
+	@test -n "$(IMAGE)" || { echo "Set IMAGE=<repo>/app@sha256:..."; exit 1; }
+	@terraform -chdir=$(TF_DIR) apply -var image=$(IMAGE)
+
+
+# Opens the private service on http://localhost:8081 with your credentials.
+.PHONY: proxy
+proxy:
+	@gcloud run services proxy imposter --project=$(GOOGLE_CLOUD_PROJECT) \
+		--region=$(TF_REGION) --port=8081
+
+
+# Everything from scratch: the state bucket, the base APIs, the registry and build account,
+# the image and the service. Prints the service URL. Run `make proxy` to open it.
+.PHONY: up
+up: tf-setup deploy
+	@echo "Deployed: $$(terraform -chdir=$(TF_DIR) output -raw service_url)"
+	@echo "The service is private: run make proxy and open http://localhost:8081"
+
+
+# Removes every resource Terraform manages, after a confirmation. The state bucket, the
+# enabled APIs and the Model Garden terms stay, so `make up` works again right away.
+.PHONY: down
+down: tf-init
+	@terraform -chdir=$(TF_DIR) destroy $(if $(CURRENT_IMAGE),-var image=$(CURRENT_IMAGE))
+
+
+# Like `down`, and then also deletes the state bucket with every earlier state.
+.PHONY: nuke
+nuke: down
+	@gcloud storage rm --recursive gs://$(TF_STATE_BUCKET) --project=$(GOOGLE_CLOUD_PROJECT)
 
 
 .PHONY: install-hooks
