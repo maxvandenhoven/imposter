@@ -230,6 +230,31 @@ export function outcome(
   };
 }
 
+/** A `reflection` event of a seat. */
+export function reflection(seq: number, seat: number, text: string): GameEvent {
+  return {
+    ...BASE,
+    seq,
+    phase: "debrief",
+    round: null,
+    type: "reflection",
+    seat,
+    reflection: text,
+  };
+}
+
+/** The `game_finished` event of a game in which the civilians won. */
+export function gameFinished(seq: number): GameEvent {
+  return {
+    ...BASE,
+    seq,
+    phase: "done",
+    round: null,
+    type: "game_finished",
+    outcome: "civilians_win",
+  };
+}
+
 /** A `usage` event of a seat. */
 export function usage(
   seq: number,

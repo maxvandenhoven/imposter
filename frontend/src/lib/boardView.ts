@@ -220,7 +220,8 @@ const OUTCOME_TEXT: Record<GameOutcome, { winner: GameWinner; title: string }> =
   imposter_said_word: { winner: "civilians", title: "The imposter said the word" },
 };
 
-const TOKENS_PER_PRICE_UNIT = 1_000_000;
+/** The number of tokens that the catalog prices are given for. */
+export const TOKENS_PER_PRICE_UNIT = 1_000_000;
 
 function escapeRegExp(text: string): string {
   return text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);

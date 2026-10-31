@@ -210,20 +210,30 @@ animation frame clock.
   transcript and the player columns only render again when what they show changes, and
   the cards are only measured while the vote arrows show, which keeps a debrief with
   every player writing at once smooth.
-- Stepping back is not supported yet. The tab must stay open until the game finishes,
-  since it holds the SSE connection.
+- The cursor moves over the engine events. The buttons next to play step one event back
+  or forward and jump to the previous or next phase, and the arrow keys do the same
+  (left and right, with shift for phases). Stepping pauses the playback and rebuilds the
+  board up to the cursor, with no answer being written, since partial answers are only
+  shown while playing. Play continues from the cursor at the chosen speed, and the badge
+  "N events ahead · Go live" shows how far the cursor is behind the stream. The tab must
+  stay open until the game finishes, since it holds the SSE connection.
 
 ### Export and import
 
-- **Export**: downloads `{config, events, exported_at, version}` as JSON.
-- **Import**: loads such a file into the same board in playback mode, without a backend
-  game. Useful as a demo fallback when live APIs fail.
+- **Export**: the Export button of the board header downloads `{config, events,
+  exported_at, version}` as JSON. The file holds every private field of the game, since
+  the audience and god modes are only a way of looking at it.
+- **Import**: the setup view has an "Import a game" button that reads such a file
+  (`lib/gameExport.ts` checks the version and that the events are complete and in `seq`
+  order) and loads it into the same board in playback mode, without a backend game, shown
+  as a replay from the start. Useful as a demo fallback when live APIs fail.
 
 ### Debrief panel
 
-After `game_finished`: per player, a card with role, model, clues, statements, vote, the
-in-the-moment private reasoning at each turn and the after-the-fact reflection side by
-side, plus tokens and cost.
+After `game_finished` has played, the board shows below the table, per player, a card with
+role, model, clues, statements, vote and guess, the in-the-moment private reasoning at
+each turn and the after-the-fact reflection side by side, plus tokens and cost
+(`lib/debrief.ts` builds it from the events).
 
 ## Testing
 

@@ -1,19 +1,28 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { playGame } from "@/api/gameStream";
-import type { GameRequest } from "@/api/types";
+import type { GameEvent, GameRequest } from "@/api/types";
 import {
   type BoardAction,
   boardReducer,
   type BoardState,
   INITIAL_BOARD,
 } from "@/lib/board";
+import { boardOfEvents, timelineOfEvents } from "@/lib/gameExport";
 import { GamePlayback, GameTimeline } from "@/lib/playback";
 
-type GameRunAction = BoardAction | { type: "restart" };
+type GameRunAction =
+  BoardAction | { type: "restart" } | { type: "load"; board: BoardState };
 
 function gameRunReducer(state: BoardState, action: GameRunAction): BoardState {
-  return action.type === "restart" ? INITIAL_BOARD : boardReducer(state, action);
+  switch (action.type) {
+    case "restart":
+      return INITIAL_BOARD;
+    case "load":
+      return action.board;
+    default:
+      return boardReducer(state, action);
+  }
 }
 
 /**
@@ -21,7 +30,8 @@ function gameRunReducer(state: BoardState, action: GameRunAction): BoardState {
  *
  * `start` creates a game and streams it into the live board and into the timeline that
  * the playback plays at the audience's pace. `stop` closes the stream, which aborts the
- * game on the server. The stream is also closed when the component unmounts.
+ * game on the server. The stream is also closed when the component unmounts. `load`
+ * puts events that were read from a file on the board, to replay without a stream.
  */
 export function useGameRun() {
   const [board, dispatch] = useReducer(gameRunReducer, INITIAL_BOARD);
@@ -72,6 +82,13 @@ export function useGameRun() {
     });
   }, []);
 
+  const load = useCallback((events: GameEvent[]) => {
+    controller.current?.abort();
+    controller.current = null;
+    setPlayback(new GamePlayback(timelineOfEvents(events)));
+    dispatch({ type: "load", board: boardOfEvents(events) });
+  }, []);
+
   const stop = useCallback(() => {
     controller.current?.abort();
   }, []);
@@ -83,5 +100,5 @@ export function useGameRun() {
     [],
   );
 
-  return { board, playback, start, stop };
+  return { board, playback, start, load, stop };
 }

@@ -207,4 +207,110 @@ describe("GamePlayback", () => {
 
     expect(playback.board().events).toHaveLength(1);
   });
+
+  describe("the cursor", () => {
+    const game = (): GamePlayback => {
+      const playback = playbackOf([
+        gameStarted(0),
+        phaseStarted(1, "clue", 1),
+        turnStarted(2, 0),
+        answer("be"),
+        clueGiven(3, 0, "beacon"),
+        phaseStarted(4, "clue", 2),
+        turnStarted(5, 1),
+        clueGiven(6, 1, "harbour"),
+      ]);
+      playback.pause();
+
+      return playback;
+    };
+
+    const seqs = (playback: GamePlayback): number[] =>
+      playback.board().events.map((event) => event.seq);
+
+    it("steps forward and back one event at a time", () => {
+      const playback = game();
+
+      playback.stepForward();
+      playback.stepForward();
+
+      expect(seqs(playback)).toEqual([0, 1]);
+      expect(playback.eventsAhead).toBe(5);
+
+      playback.stepBack();
+
+      expect(seqs(playback)).toEqual([0]);
+      expect(playback.playing).toBe(false);
+    });
+
+    it("does not step before the start or past the end", () => {
+      const playback = game();
+
+      playback.stepBack();
+      expect(seqs(playback)).toEqual([]);
+
+      for (let step = 0; step < 20; step += 1) {
+        playback.stepForward();
+      }
+
+      expect(playback.board().events).toHaveLength(7);
+      expect(playback.atLive).toBe(true);
+      expect(playback.eventsAhead).toBe(0);
+    });
+
+    it("shows no answer being written after a jump", () => {
+      const playback = game();
+
+      playback.seek(3);
+
+      expect(playback.board().answers).toEqual({});
+    });
+
+    it("jumps to the start of the next and the previous phase", () => {
+      const playback = game();
+
+      playback.nextPhase();
+      expect(seqs(playback)).toEqual([0, 1]);
+
+      playback.nextPhase();
+      expect(seqs(playback)).toEqual([0, 1, 2, 3, 4]);
+
+      playback.previousPhase();
+      expect(seqs(playback)).toEqual([0, 1]);
+
+      playback.previousPhase();
+      expect(seqs(playback)).toEqual([]);
+    });
+
+    it("goes to the start of the current phase before the one earlier", () => {
+      const playback = game();
+      playback.seek(4);
+
+      playback.previousPhase();
+
+      expect(seqs(playback)).toEqual([0, 1]);
+    });
+
+    it("plays on from a jump at the chosen speed", () => {
+      const playback = game();
+      playback.seek(2);
+
+      playback.play();
+      playback.advance(60_000);
+
+      expect(playback.board().events).toHaveLength(7);
+    });
+
+    it("rebuilds the same board as playing to the same point", () => {
+      const played = game();
+      played.play();
+      played.advance(8_000);
+      const shown = played.eventsShown;
+      const jumped = game();
+
+      jumped.seek(shown);
+
+      expect(jumped.board().events).toEqual(played.board().events);
+    });
+  });
 });

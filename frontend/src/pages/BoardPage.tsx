@@ -4,6 +4,7 @@ import { useCatalog } from "@/api/catalog";
 import { useGameTrace } from "@/api/trace";
 import type { CatalogModel } from "@/api/types";
 import { BoardHeader, type BoardStatusLabel } from "@/components/board/BoardHeader";
+import { DebriefPanel } from "@/components/board/DebriefPanel";
 import { GameTable } from "@/components/board/GameTable";
 import { OutcomeBanner } from "@/components/board/OutcomeBanner";
 import { PlaybackBar } from "@/components/board/PlaybackBar";
@@ -11,8 +12,10 @@ import { Transcript } from "@/components/board/Transcript";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLeaveWarning } from "@/hooks/useLeaveWarning";
 import { usePlaybackClock } from "@/hooks/usePlaybackClock";
+import { usePlaybackKeys } from "@/hooks/usePlaybackKeys";
 import type { BoardState, BoardStatus } from "@/lib/board";
 import { type BoardMode, buildBoardView, type ModelPrices } from "@/lib/boardView";
+import { buildDebrief } from "@/lib/debrief";
 import type { GamePlayback } from "@/lib/playback";
 
 const ENDED_LABELS: Record<Exclude<BoardStatus, "running">, BoardStatusLabel> = {
@@ -23,8 +26,8 @@ const ENDED_LABELS: Record<Exclude<BoardStatus, "running">, BoardStatusLabel> = 
 };
 
 /**
- * The board of a game: the table with the seats, the transcript, the header and the
- * playback controls.
+ * The board of a game: the table with the seats, the transcript, the header, the debrief
+ * once the game is over and the playback controls.
  *
  * The live board holds the stream's status and errors, and the playback decides how
  * much of the game is shown, at a pace the audience can follow.
@@ -32,16 +35,19 @@ const ENDED_LABELS: Record<Exclude<BoardStatus, "running">, BoardStatusLabel> = 
 export function BoardPage({
   board,
   playback,
+  onExport,
   onStop,
   onNewGame,
 }: {
   board: BoardState;
   playback: GamePlayback;
+  onExport: () => void;
   onStop: () => void;
   onNewGame: () => void;
 }) {
   const [mode, setMode] = useState<BoardMode>("god");
   const changePlayback = usePlaybackClock(playback);
+  usePlaybackKeys(playback, changePlayback);
   const streaming = board.status === "running";
   const catalog = useCatalog();
   const trace = useGameTrace(board.gameId, streaming);
@@ -61,8 +67,10 @@ export function BoardPage({
   });
   let status: BoardStatusLabel = playback.atLive ? "Live" : "Catching up";
 
-  if (!streaming && playback.atLive) {
-    status = ENDED_LABELS[board.status as Exclude<BoardStatus, "running">];
+  if (!streaming) {
+    status = playback.atLive
+      ? ENDED_LABELS[board.status as Exclude<BoardStatus, "running">]
+      : "Replay";
   }
 
   // Leaving the page closes the stream, which aborts the game.
@@ -77,6 +85,7 @@ export function BoardPage({
         mode={mode}
         traceUrl={trace.data ?? null}
         onModeChange={setMode}
+        onExport={onExport}
         onStop={onStop}
         onNewGame={onNewGame}
       />
@@ -98,6 +107,12 @@ export function BoardPage({
           className="h-[36rem] gap-0 pb-0 xl:sticky xl:top-5 xl:h-[calc(100vh-10rem)]"
         />
       </div>
+      {view.finished && (
+        <DebriefPanel
+          seats={buildDebrief({ events: played.events, prices })}
+          models={models}
+        />
+      )}
       <PlaybackBar playback={playback} onChange={changePlayback} />
     </div>
   );
