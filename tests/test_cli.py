@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 from conftest import FakeGameSetup
 from typer.testing import CliRunner
@@ -84,3 +87,18 @@ def test_play_links_the_trace_when_it_goes_to_google_cloud(
     assert "https://console.cloud.google.com/traces/explorer?project=sandbox&tid=" in (
         result.output
     )
+
+
+@pytest.mark.usefixtures("span_exporter")
+def test_openapi_writes_the_schema_with_the_game_schemas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IMPOSTER_TELEMETRY", "none")
+    output = tmp_path / "openapi.json"
+
+    result = CliRunner().invoke(app, ["openapi", "--output", str(output)])
+
+    assert result.exit_code == 0, result.output
+    schema = json.loads(output.read_text())
+    assert "/run_sse" in schema["paths"]
+    assert "GameEvent" in schema["components"]["schemas"]

@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -94,3 +95,35 @@ def test_game_streams_its_engine_events_over_run_sse(
     assert [event["seq"] for event in game_events] == list(range(len(game_events)))
     assert types.index("turn_started") < types.index("clue_given")
     assert turns == {f"player_{seat}_turn@1" for seat in range(len(players))}
+
+
+@pytest.mark.usefixtures("span_exporter")
+def test_frontend_is_served_at_the_root_after_the_api_routes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "index.html").write_text("<p>Imposter</p>")
+    (tmp_path / "logos").mkdir()
+    (tmp_path / "logos" / "gemini.svg").write_text("<svg></svg>")
+    monkeypatch.setenv("IMPOSTER_TELEMETRY", "none")
+    monkeypatch.setenv("IMPOSTER_FRONTEND_DIR", str(tmp_path))
+
+    with TestClient(create_app()) as client:
+        assert client.get("/").text == "<p>Imposter</p>"
+        assert client.get("/logos/gemini.svg").text == "<svg></svg>"
+        assert client.get("/catalog").json()["models"]
+        assert client.get("/list-apps").json() == ["imposter"]
+        assert client.get("/health").status_code == 200
+        assert client.get("/apps/imposter/unknown").status_code == 404
+        assert client.get("/missing.js").status_code == 404
+
+
+@pytest.mark.usefixtures("span_exporter")
+def test_api_is_served_alone_without_a_frontend_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IMPOSTER_TELEMETRY", "none")
+    monkeypatch.setenv("IMPOSTER_FRONTEND_DIR", str(tmp_path / "missing"))
+
+    with TestClient(create_app()) as client:
+        assert client.get("/").status_code == 404
+        assert client.get("/catalog").status_code == 200
