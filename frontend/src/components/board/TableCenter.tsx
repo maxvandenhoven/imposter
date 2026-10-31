@@ -158,6 +158,7 @@ function Stage({ view, models }: { view: BoardView; models: Map<string, CatalogM
         <motion.div
           key={stage.bubbleKey}
           layoutId={stage.bubbleKey}
+          layoutDependency={stage.bubbleKey}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-3xl min-w-0 text-foreground"

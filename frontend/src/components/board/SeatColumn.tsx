@@ -142,6 +142,8 @@ export const SeatColumn = forwardRef<
           <motion.div
             key={key}
             layoutId={key}
+            // Only the move from the table animates, not every shift of the column.
+            layoutDependency={key}
             initial={{ opacity: 0, y: -16, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
