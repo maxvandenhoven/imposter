@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", sans-serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-speaking: var(--speaking);
+  --color-imposter: var(--imposter);
+  --color-civilian: var(--civilian);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Game night: a dark midnight table with warm amber light and a crimson imposter. */
+  color-scheme: dark;
+  --background: #0d0f1a;
+  --foreground: #ecebf5;
+  --card: #161929;
+  --card-foreground: #ecebf5;
+  --popover: #1c2033;
+  --popover-foreground: #ecebf5;
+  --primary: #f4b740;
+  --primary-foreground: #1a1406;
+  --secondary: #23283f;
+  --secondary-foreground: #ecebf5;
+  --muted: #1f2338;
+  --muted-foreground: #9a9bb8;
+  --accent: #2a2f4a;
+  --accent-foreground: #ecebf5;
+  --destructive: #f0506e;
+  --border: #2b3050;
+  --input: #3a4066;
+  --ring: #f4b740;
+  --chart-1: #f4b740;
+  --chart-2: #5ab0f5;
+  --chart-3: #48c9a0;
+  --chart-4: #a98bfa;
+  --chart-5: #f0506e;
+  --radius: 0.75rem;
+
+  /* Game colours, one meaning each. */
+  --speaking: #f4b740;
+  --imposter: #f0506e;
+  --civilian: #48c9a0;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+    background-image: radial-gradient(
+      ellipse at top,
+      color-mix(in srgb, var(--primary) 8%, transparent),
+      transparent 60%
+    );
+  }
+  html {
+    @apply font-sans;
+  }
+}

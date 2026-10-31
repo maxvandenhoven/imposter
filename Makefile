@@ -12,24 +12,46 @@ export TF_VAR_project_id := $(GOOGLE_CLOUD_PROJECT)
 .PHONY: sync
 sync:
 	@uv sync --all-groups
+	@cd frontend && npm ci --silent
 
 
-.PHONY: format
-format:
+# Installs the frontend dependencies on first use and whenever the lockfile changes.
+frontend/node_modules: frontend/package-lock.json
+	@cd frontend && npm ci --silent
+	@touch frontend/node_modules
+
+
+.PHONY: format format-python format-frontend
+format: format-python format-frontend
+
+format-python:
 	@uv run ruff format
 	@uv run ruff check --fix --select I --output-format concise
 
+format-frontend: frontend/node_modules
+	@cd frontend && npm run --silent format
 
-.PHONY: lint
-lint:
+
+.PHONY: lint lint-python lint-frontend
+lint: lint-python lint-frontend
+
+lint-python:
 	@uv run ruff check --fix --output-format concise
 	@uv run python scripts/tooling/check_comments.py src tests scripts
 	@uv run python scripts/tooling/check_docstrings.py src
 
+lint-frontend: frontend/node_modules
+	@cd frontend && npm run --silent lint:fix
 
-.PHONY: type
-type:
+
+.PHONY: type type-python type-frontend
+type: type-python type-frontend
+
+type-python:
 	@uv run ty check
+
+type-frontend: frontend/node_modules
+	@cd frontend && npm run --silent typecheck
 
 
 .PHONY: tf-check
@@ -47,9 +69,14 @@ tf-check:
 check: format lint type tf-check
 
 
-.PHONY: test
-test:
+.PHONY: test test-python test-frontend
+test: test-python test-frontend
+
+test-python:
 	@uv run pytest -m "not slow" --cov --cov-report term-missing
+
+test-frontend: frontend/node_modules
+	@cd frontend && npm run --silent test
 
 
 .PHONY: test-slow
@@ -63,10 +90,42 @@ play:
 	@uv run $(if $(wildcard .env),--env-file .env) imposter play $(ARGS)
 
 
-# The game API on port 8000, restarted on code changes. Options go in ARGS.
+# Serves the game API on port 8000, restarted on code changes, and the frontend with hot
+# reload on port 5173, which forwards the API paths to it. The Vite server is stopped
+# when the API server exits. Options of the API server go in ARGS.
 .PHONY: dev
-dev:
-	@uv run $(if $(wildcard .env),--env-file .env) imposter serve --reload $(ARGS)
+dev: frontend/node_modules
+	@(cd frontend && exec node_modules/.bin/vite) & trap "kill $$!" EXIT; \
+		uv run $(if $(wildcard .env),--env-file .env) imposter serve --reload $(ARGS)
+
+
+# Builds the frontend into `frontend/dist`, which the API app serves at `/`.
+.PHONY: frontend
+frontend: frontend/node_modules
+	@cd frontend && npm run --silent build
+
+
+# Exports the OpenAPI schema from the app, without a server, and generates the types.
+.PHONY: api-client
+api-client: frontend/node_modules
+	@uv run imposter openapi --output frontend/openapi.json
+	@cd frontend && npm run --silent api-client
+	@rm frontend/openapi.json
+
+
+# Builds the image and plays it on port 8080, with `.env` and the gcloud application
+# default credentials mounted, as Cloud Run would run it.
+DOCKER_IMAGE ?= imposter
+ADC_FILE ?= $(HOME)/.config/gcloud/application_default_credentials.json
+
+.PHONY: docker
+docker:
+	@docker build -t $(DOCKER_IMAGE) .
+	@docker run --rm -it -p 8080:8080 \
+		$(if $(wildcard .env),--env-file .env) \
+		-v $(ADC_FILE):/tmp/adc.json:ro \
+		-e GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json --user $$(id -u):$$(id -g) \
+		$(DOCKER_IMAGE)
 
 
 .PHONY: adk-web
