@@ -7,13 +7,14 @@ which is spent waiting.
 
 The project already exists and is shared with other work, so Terraform does not create or
 own it. Terraform only adds the app's own resources and labels each of them
-`app=imposter`. For now those resources are APIs. Cloud Run and the services around it
-will follow once the app is deployed. When you have finished this guide, you will have
-the following:
+`app=imposter`. Those resources are the APIs, and after step 10 also the service accounts,
+Artifact Registry and the Cloud Run service. When you have finished this guide, you will
+have the following:
 
 - A versioned GCS bucket `<project id>-imposter-tfstate` in `europe-west4` holds the
   Terraform state.
 - The Terraform in `infra/` has enabled the APIs that the app needs.
+- The app runs on Cloud Run, as a private service that you open with `make proxy`.
 - Claude and a few open models are enabled in Model Garden, and one test call to each
   model has confirmed that it answers.
 
@@ -87,8 +88,8 @@ as `TF_VAR_project_id`.
 Next, check that the project is linked to billing and that you have enough rights in it.
 `gcloud billing projects describe <project id>` should show `billingEnabled: true`. The
 *Owner* role is the simplest choice. Without it, you need at least *Service Usage Admin*
-and *Storage Admin*. Deploying the app later also needs the admin roles for Cloud Run,
-Artifact Registry, IAM service accounts and IAP. The following command lists the roles
+and *Storage Admin*. Deploying the app also needs the admin roles for Cloud Run,
+Artifact Registry, Cloud Build, IAM service accounts and billing budgets. The following command lists the roles
 you have:
 
 ```
@@ -127,11 +128,11 @@ make tf-apply
 
 Both targets first run `make tf-init`, which points Terraform at the state bucket and
 stores the state under the prefix `imposter`. To use a different bucket, set
-`TF_STATE_BUCKET=<bucket>`. For now, Terraform only enables the APIs listed in
-`infra/apis.tf`, including `aiplatform` for Vertex AI. In a shared project some of them
+`TF_STATE_BUCKET=<bucket>`. At this point, Terraform enables the APIs listed in
+`infra/apis.tf`, including `aiplatform` for Vertex AI, and it creates the service
+accounts and the registry. The Cloud Run service follows in step 10. In a shared project some of them
 are probably enabled already, which is fine. Terraform never disables them, not even on
-`terraform destroy`, because other work in the project may depend on them. Deploying the
-app later adds a service account, Artifact Registry, Cloud Run, IAP and a budget.
+`terraform destroy`, because other work in the project may depend on them. IAP is planned.
 
 Optional settings such as the region and the labels go in `infra/terraform.tfvars`. See
 `infra/terraform.tfvars.example` for the available settings.
@@ -214,11 +215,25 @@ click **Edit quota** to request an increase. Small increases are often approved 
 minutes, while larger ones can take days. The app retries calls with backoff when it gets
 a 429 error, so modest quotas are fine for a demo.
 
+## 10. Deploy the app
+
+```
+make deploy
+```
+
+This builds the image in Cloud Build, resolves its digest and lets Terraform create the
+Cloud Run service with exactly that image. `make up` does steps 4 and 10 in one go. The
+service is private, so run `make proxy` and open <http://localhost:8081>. Without a
+credential, the service URL answers 403, which is expected. To get budget alerts, set
+`billing_account_id` in `infra/terraform.tfvars` and run `make tf-apply`. To remove
+everything again, run `make down`, or `make nuke` to also delete the state bucket.
+
 ## Done
 
-You have finished the setup when all three of these checks succeed:
+You have finished the setup when all four of these checks succeed:
 
 - `gcloud config get project` prints the sandbox project.
 - `make tf-plan` shows no changes.
 - `uv run --env-file .env python scripts/check_models.py` prints `OK` for at least one
   Gemini model and one Claude model.
+- `make proxy` shows the app at <http://localhost:8081>.
