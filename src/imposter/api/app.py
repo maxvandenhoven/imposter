@@ -24,6 +24,7 @@ from google.adk.cli.fast_api import get_fast_api_app
 
 from imposter.agent import trace_plugin
 from imposter.api.catalog import catalog_router
+from imposter.api.identity import IapIdentityMiddleware
 from imposter.api.trace import trace_router
 from imposter.models.catalog import ModelCatalog
 from imposter.telemetry.setup import exporter_from_environment, setup_telemetry
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
         use_local_storage=False,
         allow_origins=[o for o in origins if o] or None,
     )
+    app.add_middleware(IapIdentityMiddleware)
     app.include_router(
         catalog_router(catalog=ModelCatalog.load(), picker=WordPicker.load())
     )

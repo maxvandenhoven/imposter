@@ -14,7 +14,7 @@ have the following:
 - A versioned GCS bucket `<project id>-imposter-tfstate` in `europe-west4` holds the
   Terraform state.
 - The Terraform in `infra/` has enabled the APIs that the app needs.
-- The app runs on Cloud Run, as a private service that you open with `make proxy`.
+- The app runs on Cloud Run behind IAP, which only lets in the principals you list.
 - Claude and a few open models are enabled in Model Garden, and one test call to each
   model has confirmed that it answers.
 
@@ -132,7 +132,7 @@ stores the state under the prefix `imposter`. To use a different bucket, set
 `infra/apis.tf`, including `aiplatform` for Vertex AI, and it creates the service
 accounts and the registry. The Cloud Run service follows in step 10. In a shared project some of them
 are probably enabled already, which is fine. Terraform never disables them, not even on
-`terraform destroy`, because other work in the project may depend on them. IAP is planned.
+`terraform destroy`, because other work in the project may depend on them.
 
 Optional settings such as the region and the labels go in `infra/terraform.tfvars`. See
 `infra/terraform.tfvars.example` for the available settings.
@@ -223,8 +223,11 @@ make deploy
 
 This builds the image in Cloud Build, resolves its digest and lets Terraform create the
 Cloud Run service with exactly that image. `make up` does steps 4 and 10 in one go. The
-service is private, so run `make proxy` and open <http://localhost:8081>. Without a
-credential, the service URL answers 403, which is expected. To get budget alerts, set
+service is behind IAP, so set `iap_members` in `infra/terraform.tfvars` first, for
+example `["user:you@example.com"]`, and run `make tf-apply`. Then open the service URL
+(`terraform -chdir=infra output service_url`) and sign in with that account. Any other
+account is refused, and while the list is empty nobody gets in. `make smoke` prints the
+checklist for trying the deployed app. To get budget alerts, set
 `billing_account_id` in `infra/terraform.tfvars` and run `make tf-apply`. To remove
 everything again, run `make down`, or `make nuke` to also delete the state bucket.
 
@@ -236,4 +239,4 @@ You have finished the setup when all four of these checks succeed:
 - `make tf-plan` shows no changes.
 - `uv run --env-file .env python scripts/check_models.py` prints `OK` for at least one
   Gemini model and one Claude model.
-- `make proxy` shows the app at <http://localhost:8081>.
+- The service URL shows the app after you sign in with an account from `iap_members`.

@@ -23,10 +23,15 @@ variable "image" {
   default     = ""
 }
 
-variable "invokers" {
-  description = "Principals (`user:...` or `group:...`) that may call the private service, for example through `gcloud run services proxy`. Project owners can do so without being listed. IAP replaces this later."
+variable "iap_members" {
+  description = "Principals (`user:...` or `group:...`) that IAP lets in, for example `user:you@example.com` or a Google group of your org. Nobody can open the service while the list is empty."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = alltrue([for m in var.iap_members : can(regex("^(user|group|domain):", m))])
+    error_message = "Each IAP member must start with user:, group: or domain:."
+  }
 }
 
 variable "billing_account_id" {
@@ -54,7 +59,7 @@ variable "budget_emails" {
 }
 
 variable "allowed_origins" {
-  description = "Browser origins besides the service's own that the API accepts, by default the one `make proxy` serves on."
+  description = "Browser origins besides the service's own that the API accepts, by default none."
   type        = list(string)
-  default     = ["http://localhost:8081"]
+  default     = []
 }

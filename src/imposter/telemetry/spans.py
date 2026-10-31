@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from imposter.config import GamePhase
 from imposter.engine.events import GameAbortedEvent
 from imposter.engine.game import Game
+from imposter.telemetry.identity import REQUEST_USER
 
 TRACER = trace.get_tracer("imposter")
 """Opens the spans ADK has no span for: player turns and judge calls."""
@@ -44,15 +45,21 @@ class GameTracePlugin(BasePlugin):
         self.trace_ids: dict[str, int] = {}
 
     async def before_run_callback(self, *, invocation_context: InvocationContext) -> None:
-        """Note the trace id of the run, when tracing is set up.
+        """Note the trace id of the run and the user who started it.
+
+        The user is the IAP identity of the request, set as `enduser.id` on the root span.
 
         Args:
             invocation_context: The ADK context of the run.
         """
-        span_context = trace.get_current_span().get_span_context()
+        span = trace.get_current_span()
+        span_context = span.get_span_context()
 
         if span_context.is_valid:
             self.trace_ids[invocation_context.session.id] = span_context.trace_id
+
+        if user := REQUEST_USER.get():
+            span.set_attribute("enduser.id", user)
 
     async def after_run_callback(self, *, invocation_context: InvocationContext) -> None:
         """Set the game attributes on the root span after the run.

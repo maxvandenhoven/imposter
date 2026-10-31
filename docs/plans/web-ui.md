@@ -94,7 +94,7 @@ host it was sent to (found in WP 09). In the image, a Node stage builds `fronten
 (`infrastructure.md` §Build and deploy).
 
 The stream client (`src/api/gameStream.ts`) creates the session for a fixed user id
-(`local`) until WP 13 uses the IAP identity. It reports a failed run once: the
+(`local`). The IAP identity does not go through it: the server reads it from the request header (WP 13). It reports a failed run once: the
 `errorCode` event of the game runner when there is one, and otherwise ADK's last error
 line. Leaving or stopping the game aborts the fetch, and the server stops the run, but the
 stored session then ends without a `game_aborted` event, because the run is cancelled

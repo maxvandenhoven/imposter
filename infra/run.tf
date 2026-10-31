@@ -6,6 +6,7 @@ resource "google_cloud_run_v2_service" "imposter" {
   name                = "imposter"
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_ALL"
+  iap_enabled         = true
   deletion_protection = false
 
   template {
@@ -50,8 +51,7 @@ resource "google_cloud_run_v2_service" "imposter" {
         name  = "IMPOSTER_TELEMETRY"
         value = "cloud"
       }
-      # ADK refuses browser requests from other origins, and `make proxy` serves the
-      # service on localhost.
+      # ADK refuses browser requests from other origins than its own.
       env {
         name  = "IMPOSTER_ALLOW_ORIGINS"
         value = join(",", var.allowed_origins)

@@ -107,9 +107,10 @@ requires it; verify). No owner or editor roles.
 - Ingress all, **IAP enabled directly on the Cloud Run service** (no load balancer);
   invoker access only through IAP. Allowed principals (`user:...` or `group:...`) get
   `roles/iap.httpsResourceAccessor`. The IAP service agent gets `roles/run.invoker`.
-- Check the current Terraform support for Cloud Run IAP (`iap_enabled` on
-  `google_cloud_run_v2_service`, possibly beta) and the OAuth brand/consent screen
-  requirements for an internal org app when implementing.
+- Terraform: `iap_enabled` on `google_cloud_run_v2_service` is in the GA provider, the IAP
+  service agent comes from `google_project_service_identity` (beta provider), and the
+  accessors from `google_iap_web_cloud_run_service_iam_member`. Cloud Run IAP uses a
+  Google-managed OAuth client, so no brand or consent screen is created (WP 13).
 
 ### Budget
 
@@ -146,8 +147,9 @@ the better filter when implementing.
 - `make deploy`: build, resolve the image digest, then `make deploy-image
   IMAGE=<repo>/app@sha256:...`, which runs `terraform apply -var image=...`. The Cloud Run
   service only exists once `image` is set.
-- Rollback: `make deploy-image` with an earlier digest. `make proxy` opens the private
-  service locally until IAP (WP 13).
+- Rollback: `make deploy-image` with an earlier digest. The service is behind IAP, so
+  `gcloud run services proxy` no longer works: open the service URL in a browser, and
+  `make smoke` prints the checklist for trying it (WP 13).
 - `make up` is `tf-setup` plus `deploy`. `make down` destroys what Terraform manages (the
   build bucket has `force_destroy`), and `make nuke` also deletes the state bucket.
   `tf-plan`, `tf-apply` and `down` pass the image of the running service, so that an

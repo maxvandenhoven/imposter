@@ -5,7 +5,7 @@ import type { AdkEvent, GameEvent, GameRequest } from "@/api/types";
 /** The ADK app that plays the game. */
 export const APP_NAME = "imposter";
 
-/** The user every game is created for, until the identity of the IAP login is used. */
+/** The ADK user of every game session. The server reads the IAP identity from the request. */
 export const USER_ID = "local";
 
 /** The session state key of the `GameRequest`. */

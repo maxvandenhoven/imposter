@@ -68,6 +68,7 @@ make play           # imposter play with real models (options in ARGS="...")
 make dev            # the game API on port 8000 and the Vite dev server on port 5173
 make frontend       # build frontend/dist, which the API app serves at /
 make api-client     # regenerate frontend/src/api/schema.ts from the OpenAPI schema
+make smoke          # checklist for trying the deployed app behind IAP
 make docker         # build the image and play it on port 8080 with .env and ADC
 make adk-web        # adk web --otel_to_cloud src: the ADK developer UI, one game per session
 make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
