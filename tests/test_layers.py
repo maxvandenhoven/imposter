@@ -33,6 +33,20 @@ LAYERS: dict[str, frozenset[str]] = {
             "ports",
         }
     ),
+    "api": frozenset(
+        {
+            "config",
+            "utils",
+            "engine",
+            "models",
+            "players",
+            "telemetry",
+            "judge",
+            "words",
+            "ports",
+            "orchestration",
+        }
+    ),
 }
 """The parts of the package each part may import from, besides itself."""
 

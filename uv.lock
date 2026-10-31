@@ -1296,6 +1296,7 @@ name = "imposter"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "google-adk", extra = ["gcp", "otel-gcp"] },
     { name = "google-genai" },
     { name = "jinja2" },
@@ -1305,6 +1306,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
     { name = "typer" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -1322,6 +1324,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.162.0" },
     { name = "google-adk", extras = ["gcp", "otel-gcp"], specifier = ">=2.13.0" },
     { name = "google-genai", specifier = ">=2.34.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
@@ -1331,6 +1334,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "typer", specifier = ">=0.27.3" },
+    { name = "uvicorn", specifier = ">=0.54.0" },
 ]
 
 [package.metadata.requires-dev]

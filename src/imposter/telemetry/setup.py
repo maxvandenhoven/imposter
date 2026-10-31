@@ -32,6 +32,25 @@ class TelemetryExporter(StrEnum):
     NONE = "none"
 
 
+TELEMETRY_ENV = "IMPOSTER_TELEMETRY"
+"""The environment variable that chooses the exporter, a `TelemetryExporter` value."""
+
+
+def exporter_from_environment() -> TelemetryExporter:
+    """Choose the exporter from the environment.
+
+    Returns:
+        The exporter in `IMPOSTER_TELEMETRY`, otherwise `cloud` when
+        `GOOGLE_CLOUD_PROJECT` is set and `none` when it is not.
+    """
+    if name := os.environ.get(TELEMETRY_ENV):
+        return TelemetryExporter(name)
+
+    cloud = bool(os.environ.get("GOOGLE_CLOUD_PROJECT"))
+
+    return TelemetryExporter.CLOUD if cloud else TelemetryExporter.NONE
+
+
 def set_telemetry_defaults() -> None:
     """Set the telemetry environment variables that are not set yet."""
     for name, value in TELEMETRY_DEFAULTS.items():

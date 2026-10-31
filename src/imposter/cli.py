@@ -6,6 +6,7 @@ import uuid
 from typing import Annotated
 
 import typer
+import uvicorn
 from pydantic import ValidationError
 from rich.console import Console
 from rich.markup import escape
@@ -36,7 +37,13 @@ from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest, GameSet
 from imposter.ports.event_bus import InMemoryEventBus
 from imposter.ports.game_store import InMemoryGameStore
 from imposter.telemetry.cost import estimated_cost
-from imposter.telemetry.setup import TelemetryExporter, setup_telemetry, trace_url
+from imposter.telemetry.setup import (
+    TELEMETRY_ENV,
+    TelemetryExporter,
+    exporter_from_environment,
+    setup_telemetry,
+    trace_url,
+)
 from imposter.telemetry.spans import GameTracePlugin
 from imposter.words.options import WordMode, WordOptions
 
@@ -332,7 +339,7 @@ def play(
     telemetry: Annotated[
         TelemetryExporter | None,
         typer.Option(
-            envvar="IMPOSTER_TELEMETRY",
+            envvar=TELEMETRY_ENV,
             help="Where traces go: cloud by default when GOOGLE_CLOUD_PROJECT is set, "
             "otherwise none.",
         ),
@@ -382,10 +389,39 @@ def play(
     except (KeyError, ValidationError) as error:
         raise typer.BadParameter(str(error)) from error
 
-    if telemetry is None:
-        cloud = bool(os.environ.get("GOOGLE_CLOUD_PROJECT"))
-        telemetry = TelemetryExporter.CLOUD if cloud else TelemetryExporter.NONE
-
-    project = setup_telemetry(telemetry)
+    project = setup_telemetry(telemetry or exporter_from_environment())
     printer = GameEventPrinter(console=Console(), catalog=setup.catalog, god=god)
     asyncio.run(play_game(request=request, setup=setup, printer=printer, project=project))
+
+
+@app.command(help="Serve the game API: ADK's API server plus the catalog route.")
+def serve(
+    host: Annotated[str, typer.Option(help="The address to listen on.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="The port to listen on.")] = 8000,
+    reload: Annotated[
+        bool, typer.Option(help="Restart the server when the code changes.")
+    ] = False,
+    telemetry: Annotated[
+        TelemetryExporter | None,
+        typer.Option(
+            envvar=TELEMETRY_ENV,
+            help="Where traces go: cloud by default when GOOGLE_CLOUD_PROJECT is set, "
+            "otherwise none.",
+        ),
+    ] = None,
+) -> None:
+    """Serve the game API with uvicorn.
+
+    Args:
+        host: The address to listen on.
+        port: The port to listen on.
+        reload: Whether to restart the server when the code changes.
+        telemetry: Where traces go, chosen from the environment when not given.
+    """
+    # The app factory reads the exporter from the environment, also after a reload.
+    if telemetry is not None:
+        os.environ[TELEMETRY_ENV] = telemetry.value
+
+    uvicorn.run(
+        "imposter.api.app:create_app", factory=True, host=host, port=port, reload=reload
+    )
