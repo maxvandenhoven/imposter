@@ -7,7 +7,6 @@ import {
   Pause,
   Play,
   Radio,
-  SkipForward,
 } from "lucide-react";
 
 import type { ReactNode } from "react";
@@ -53,8 +52,9 @@ function CursorButton({
 const SPEEDS = [1, 2, 4];
 
 /**
- * The playback controls, floating under the board: play and pause, the next response,
- * stopping after each round, the speed, and how far playback is behind the live game.
+ * The playback controls, floating under the board: play and pause, stepping through the
+ * events and phases, stopping after each round, the speed, and how far playback is
+ * behind the live game.
  */
 export function PlaybackBar({
   playback,
@@ -131,24 +131,6 @@ export function PlaybackBar({
             }}
           />
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-              onClick={() => {
-                onChange((current) => {
-                  current.step();
-                });
-              }}
-            >
-              <SkipForward data-icon="inline-start" />
-              Next response
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Play until the next answer is in, then pause.</TooltipContent>
-        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Toggle

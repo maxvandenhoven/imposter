@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 /**
  * A public answer as a speech bubble. With `tail` set, a small tail points up to the
- * speaker above it or left to the speaker beside it.
+ * speaker above it, left to the speaker beside it or down to the speaker below it.
  */
 export function SpeechBubble({
   children,
@@ -15,7 +15,7 @@ export function SpeechBubble({
   children: ReactNode;
   live?: boolean;
   muted?: boolean;
-  tail?: "top" | "left" | null;
+  tail?: "top" | "left" | "bottom" | null;
   className?: string;
 }) {
   return (
@@ -31,7 +31,7 @@ export function SpeechBubble({
       {tail !== null && (
         <span
           aria-hidden
-          className="absolute size-3 rotate-45 border-t border-l bg-inherit group-data-[live=true]/bubble:border-speaking/60 group-data-[tail=left]/bubble:top-3 group-data-[tail=left]/bubble:-left-1.5 group-data-[tail=left]/bubble:-rotate-45 group-data-[tail=top]/bubble:-top-1.5 group-data-[tail=top]/bubble:left-1/2 group-data-[tail=top]/bubble:-translate-x-1/2"
+          className="absolute size-3 rotate-45 border-t border-l bg-inherit group-data-[live=true]/bubble:border-speaking/60 group-data-[tail=bottom]/bubble:-bottom-1.5 group-data-[tail=bottom]/bubble:left-1/2 group-data-[tail=bottom]/bubble:-translate-x-1/2 group-data-[tail=bottom]/bubble:border-t-0 group-data-[tail=bottom]/bubble:border-r group-data-[tail=bottom]/bubble:border-b group-data-[tail=bottom]/bubble:border-l-0 group-data-[tail=left]/bubble:top-3 group-data-[tail=left]/bubble:-left-1.5 group-data-[tail=left]/bubble:-rotate-45 group-data-[tail=top]/bubble:-top-1.5 group-data-[tail=top]/bubble:left-1/2 group-data-[tail=top]/bubble:-translate-x-1/2"
         />
       )}
       <span className="relative">

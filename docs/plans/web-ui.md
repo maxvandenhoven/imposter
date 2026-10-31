@@ -134,6 +134,14 @@ Kept simple: the essentials up front, the rest under "Advanced".
   override.
 - The limits are checked in the browser before Start, because invalid options only fail
   once the run starts.
+- Layout: the word and the options (identity, toggles, Advanced) are stacked on the
+  left, the players on the right, and Import and Start sit under the players, so the
+  whole form fits on one screen.
+- "How to play" below the form explains each phase with small scenes built from the
+  board's own pieces (`components/rules/`): four players in a row with speech bubbles
+  pointing at the speaker, word cards, ballots and the "Caught" stamp, with a check for
+  an answer that follows the rules and a cross for one that breaks them. A list of the
+  ways the game ends closes it.
 - Start creates the session with the request in its state, opens the board and starts the
   run on `/run_sse`. Leaving the page during a game aborts it, so the page warns first.
 
@@ -162,20 +170,31 @@ Kept simple: the essentials up front, the rest under "Advanced".
   statements, including a start of it at the end of the text, because a player who
   says the word only becomes a `secret_word_said` event once the turn ends.
 - Timeline/transcript: clues appear as chips per round sliding in, discussion as speech
-  bubbles, votes as a reveal sequence with curved arrows drawn one after another between
-  the seats and a vote count popping onto each target, the imposter's guess with the
-  judge verdict, and an outcome banner in the winning side's colour. `player_error`
+  bubbles, votes as a reveal sequence of ballots and a vote count popping onto each
+  target, the imposter's guess with the judge verdict, and a dark outcome banner lit in
+  the winning side's colour, so it stands out from the table card below it.
+- Votes as ballots: each vote is a small ballot with the voter's name that flies in an
+  arc from the voter's card to the target's card, one after another at the reveal, and
+  stays there as a chip, so the cards show who voted for whom. Curved arrows between
+  the seats were dropped: two seats voting for each other drew overlapping arrows, and
+  the arrows were anchored to the player columns, which grow as the reasoning is
+  written, so they drifted down the board. The ballots fly between the cards, which
+  keep their place. `player_error`
   warnings sit under the transcript entry of their turn, or stand alone when that turn
   is hidden (a secret vote in audience mode).
 - God mode: the word, roles, and each turn's private reasoning shown live as a
-  "thought bubble" next to the public action, and the secret votes as dashed arrows as
+  "thought bubble" next to the public action, and the secret votes as dashed ballots as
   they come in. The models' own thought parts are shown collapsed. Audience mode hides
   all of these until the reveal, also in the partial text. After the `outcome` event
   everything is shown in both modes.
 - Header: the status and the running token and cost estimate (from the `usage` events
   and the catalog prices) on the left, the phase steps in the middle, and the link to
-  the trace in Cloud Trace (from `/traces/{game_id}`), the god mode switch (on by
-  default) and Stop on the right.
+  the trace in Cloud Trace (from `/traces/{game_id}`), Export, the view settings and
+  Stop or New game on the right, with the trace and Export as icon buttons so the header
+  keeps to one row. God mode is the "Show hidden info" switch (on by default) in the
+  view settings popover, since it is a setting that is rarely changed during a game.
+  Every phase step that has ended in the game is a button that jumps the cursor to the
+  end of that phase (`phaseEnd` in `lib/table.ts`), so the phase can be discussed.
 - `lib/boardView.ts` builds all of this as one view model from the events up to a
   cursor, the partial answers and the mode, and its tests check that audience mode shows
   nothing private at any cursor before the reveal.
@@ -194,22 +213,24 @@ animation frame clock.
   out at the same smooth rate, and the model's own thinking takes no time. An engine
   event shows at once and then pauses so it can be read: 2 s for a new phase or round
   and for a clue, a statement 1.5 s plus 0.12 s a word (up to 6 s), the vote reveal 3 s
-  plus 0.8 s a vote (so the arrows can draw), the guess 4 s and the outcome 6 s.
+  plus 0.8 s a vote (so the ballots can fly), the guess 4 s and the outcome 6 s.
 - When the timeline is ahead of the playback, after a pause or because the pauses add
   up, answers are written faster, smoothly and in proportion to the backlog, up to twice
   as fast once more than 20 s are waiting. The pauses to read are never shortened by
   the catch up, only by the chosen speed, so the vote, the guess and the outcome keep
   their time after a long discussion. The board never shows a backlog at once.
-- The playback bar floats under the board: play and pause, "Next response" (play until
-  the next answer is in, then pause), "Pause after rounds" (stop before every new
+- The playback bar floats under the board: play and pause, the cursor buttons, "Pause
+  after rounds" (stop before every new
   round), the speed (1×, 2×, 4×), and "N responses behind · Go live", which jumps to the
   live game.
 - The stream keeps running while the playback is paused, and the header says "Catching
   up" until the playback reaches the live end.
 - The board renders at most about 30 times a second while answers are written, the
   transcript and the player columns only render again when what they show changes, and
-  the cards are only measured while the vote arrows show, which keeps a debrief with
+  the cards are only measured while the ballots show, which keeps a debrief with
   every player writing at once smooth.
+- "Next response" (play until the next answer is in, then pause) was dropped, since it
+  was easy to confuse with stepping to the next event.
 - The cursor moves over the engine events. The buttons next to play step one event back
   or forward and jump to the previous or next phase, and the arrow keys do the same
   (left and right, with shift for phases). Stepping pauses the playback and rebuilds the

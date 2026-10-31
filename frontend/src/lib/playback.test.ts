@@ -161,23 +161,6 @@ describe("GamePlayback", () => {
     expect(playback.board().events).toHaveLength(5);
   });
 
-  it("steps to the end of the next response and stops there", () => {
-    const playback = playbackOf([
-      turnStarted(0, 0),
-      clueGiven(1, 0, "beacon"),
-      turnStarted(2, 1),
-      clueGiven(3, 1, "harbour"),
-    ]);
-    playback.pause();
-
-    playback.step();
-    playback.advance(60_000);
-
-    expect(playback.pausedFor).toBe("step");
-    expect(playback.board().events).toHaveLength(2);
-    expect(playback.responsesBehind).toBe(1);
-  });
-
   it("jumps to the live game", () => {
     const playback = playbackOf([gameStarted(0), answer("abc"), turnStarted(1, 1)]);
     playback.pause();

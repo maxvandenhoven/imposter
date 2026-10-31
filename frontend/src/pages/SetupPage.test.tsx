@@ -29,6 +29,16 @@ function renderSetup(
 }
 
 describe("SetupPage", () => {
+  it("explains the rules of the game below the form", async () => {
+    renderSetup();
+
+    expect(
+      await screen.findByRole("heading", { name: "How to play" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: "Saying the word" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Breaks a rule").length).toBeGreaterThan(0);
+  });
+
   it("imports an exported game", async () => {
     const onImport = vi.fn();
     renderSetup(vi.fn(), onImport);

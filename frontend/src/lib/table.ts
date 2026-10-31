@@ -1,4 +1,5 @@
-import type { GamePhase } from "@/api/types";
+import type { GameEvent, GamePhase } from "@/api/types";
+import type { BoardView } from "@/lib/boardView";
 
 /** A step of the phase indicator. */
 export interface PhaseStep {
@@ -8,7 +9,7 @@ export interface PhaseStep {
 }
 
 /** The phases the indicator shows, each with the phases it stands for. */
-const STEPS: { phase: GamePhase; label: string; covers: GamePhase[] }[] = [
+export const PHASE_STEPS: { phase: GamePhase; label: string; covers: GamePhase[] }[] = [
   { phase: "clue", label: "Clues", covers: ["setup", "clue"] },
   { phase: "discussion", label: "Discussion", covers: ["discussion"] },
   { phase: "vote", label: "Vote", covers: ["vote", "resolution"] },
@@ -24,11 +25,11 @@ const STEPS: { phase: GamePhase; label: string; covers: GamePhase[] }[] = [
  * When `finished` is set every step is done.
  */
 export function phaseSteps(phase: GamePhase | null, finished = false): PhaseStep[] {
-  const current = STEPS.findIndex(
+  const current = PHASE_STEPS.findIndex(
     (step) => phase !== null && step.covers.includes(phase),
   );
 
-  return STEPS.map(({ phase: stepPhase, label }, index) => {
+  return PHASE_STEPS.map(({ phase: stepPhase, label }, index) => {
     let state: PhaseStep["state"] = "next";
 
     if (finished || (current >= 0 && index < current)) {
@@ -39,6 +40,34 @@ export function phaseSteps(phase: GamePhase | null, finished = false): PhaseStep
 
     return { phase: stepPhase, label, state };
   });
+}
+
+/**
+ * The number of events up to the end of a step of the phase indicator, or `null` while
+ * the step has not ended.
+ *
+ * A step ends when a phase it does not stand for starts after its last phase, or when
+ * the game is over. Seeking to the returned count shows the board just before the next
+ * phase, with everything of the step on it.
+ */
+export function phaseEnd(events: GameEvent[], step: GamePhase): number | null {
+  const covers = PHASE_STEPS.find((candidate) => candidate.phase === step)?.covers ?? [];
+  const starts = events.flatMap((event, position) =>
+    event.type === "phase_started" ? [{ phase: event.phase, position }] : [],
+  );
+  const last = starts.findLastIndex((start) => covers.includes(start.phase));
+
+  if (last === -1) {
+    return null;
+  }
+
+  const next = starts.slice(last + 1).find((start) => !covers.includes(start.phase));
+
+  if (next !== undefined) {
+    return next.position;
+  }
+
+  return events.some((event) => event.type === "game_finished") ? events.length : null;
 }
 
 const PHASE_NAMES: Record<GamePhase, string> = {
@@ -91,76 +120,82 @@ export interface BoardRect {
   height: number;
 }
 
-/** A curved vote arrow: its SVG path and the tip, with the angle it points at. */
-export interface VoteArrow {
-  path: string;
-  tip: { x: number; y: number; angle: number };
+/** The flight of a ballot: the points it passes, start, top of the arc and landing. */
+export interface BallotFlight {
+  x: [number, number, number];
+  y: [number, number, number];
 }
-
-/** The point where a line from the centre of a box towards a direction leaves the box. */
-function edgePoint(rect: BoardRect, dx: number, dy: number): { x: number; y: number } {
-  const cx = rect.x + rect.width / 2;
-  const cy = rect.y + rect.height / 2;
-  const scale = Math.min(
-    dx === 0 ? Infinity : rect.width / 2 / Math.abs(dx),
-    dy === 0 ? Infinity : rect.height / 2 / Math.abs(dy),
-  );
-
-  return { x: cx + dx * scale, y: cy + dy * scale };
-}
-
-/** How much more the second of two votes between the same seats bends. */
-const RETURN_BEND = 1.7;
 
 /**
- * The arrow of a vote from the voter's card to the target's card.
+ * The flight of a ballot from the voter's card to the target's card, as keyframes.
  *
- * It runs from edge to edge, leaves `gap` pixels before the target and bends by `bend`
- * times its length. Without `towards` it bends to its left. With it, it bends towards
- * that point, the table, and a vote from right to left bends further, so two votes
- * between the same seats do not overlap.
+ * It leaves from the middle of the voter's card and lands on the middle of the target's,
+ * arcing above both cards by `lift` pixels plus a share of the distance, so a long throw
+ * flies higher than a short one.
  */
-export function voteArrow({
+export function ballotFlight({
   from,
   to,
-  towards,
-  bend = 0.18,
-  gap = 6,
+  lift = 48,
 }: {
   from: BoardRect;
   to: BoardRect;
-  towards?: { x: number; y: number };
-  bend?: number;
-  gap?: number;
-}): VoteArrow {
-  const dx = to.x + to.width / 2 - (from.x + from.width / 2);
-  const dy = to.y + to.height / 2 - (from.y + from.height / 2);
-  const start = edgePoint(from, dx, dy);
-  const edge = edgePoint(to, -dx, -dy);
-  const length = Math.hypot(edge.x - start.x, edge.y - start.y) || 1;
-  const ux = (edge.x - start.x) / length;
-  const uy = (edge.y - start.y) / length;
-  const end = { x: edge.x - ux * gap, y: edge.y - uy * gap };
-  const middle = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-  let side = 1;
-  let amount = bend;
-
-  if (towards !== undefined) {
-    // The left of the arrow is (uy, -ux): pick the side that faces the point.
-    const facing = uy * (towards.x - middle.x) - ux * (towards.y - middle.y);
-    side = facing >= 0 ? 1 : -1;
-    amount = ux < 0 ? bend * RETURN_BEND : bend;
-  }
-
-  const control = {
-    x: middle.x + side * uy * amount * length,
-    y: middle.y - side * ux * amount * length,
-  };
-  const angle = (Math.atan2(end.y - control.y, end.x - control.x) * 180) / Math.PI;
-  const round = (value: number) => Math.round(value * 10) / 10;
+  lift?: number;
+}): BallotFlight {
+  const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
+  const end = { x: to.x + to.width / 2, y: to.y + to.height / 2 };
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const top = Math.min(from.y, to.y) - lift - distance * 0.12;
+  const round = (value: number) => Math.round(value);
 
   return {
-    path: `M ${round(start.x)} ${round(start.y)} Q ${round(control.x)} ${round(control.y)} ${round(end.x)} ${round(end.y)}`,
-    tip: { x: round(end.x), y: round(end.y), angle: round(angle) },
+    x: [round(start.x), round((start.x + end.x) / 2), round(end.x)],
+    y: [round(start.y), round(top), round(end.y)],
   };
+}
+
+/** How long a ballot flies from the voter to the target, in seconds. */
+export const BALLOT_FLIGHT_SECONDS = 0.9;
+
+/** The pause between two ballots of a reveal, in seconds. */
+export const BALLOT_STAGGER_SECONDS = 0.5;
+
+/** The phases in which the votes are shown as ballots on the seats. */
+const BALLOT_PHASES = new Set<GamePhase>(["vote", "resolution", "guess", "outcome"]);
+
+/** A vote as a ballot that flies from the voter's card and lands on the target's. */
+export interface Ballot {
+  voter: number;
+  target: number;
+  /** The name of the voter, written on the ballot. */
+  name: string;
+  revealed: boolean;
+  /** When the ballot leaves the voter, in seconds after it appears. */
+  delay: number;
+}
+
+/**
+ * The ballots of the votes on the board, from the vote to the outcome.
+ *
+ * Revealed ballots leave one after another, so the reveal reads vote by vote. Secret
+ * votes in god mode come in one by one as they are cast, so each leaves at once.
+ * Abstentions have no ballot.
+ */
+export function boardBallots(view: BoardView): Ballot[] {
+  if (view.votes === null || view.phase === null || !BALLOT_PHASES.has(view.phase)) {
+    return [];
+  }
+
+  const { revealed, votes } = view.votes;
+  const names = new Map(view.seats.map((seat) => [seat.seat, seat.name]));
+
+  return votes
+    .flatMap(({ voter, target }) => (target === null ? [] : [{ voter, target }]))
+    .map(({ voter, target }, order) => ({
+      voter,
+      target,
+      name: names.get(voter) ?? `Seat ${voter}`,
+      revealed,
+      delay: revealed ? order * BALLOT_STAGGER_SECONDS : 0,
+    }));
 }

@@ -178,3 +178,15 @@
     }
   }
 }
+
+@layer utilities {
+  /* The backdrop of a rule diagram: the page's dotted background, on a muted card. */
+  .board-surface {
+    background-color: var(--muted);
+    background-image: radial-gradient(
+      color-mix(in srgb, var(--foreground) 9%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 16px 16px;
+  }
+}
