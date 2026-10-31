@@ -170,7 +170,9 @@ The API reads `X-Goog-Authenticated-User-Email` (format `accounts.google.com:use
 strips the prefix and sets `enduser.id` on the root span. Locally the header is absent and
 an optional `IMPOSTER_DEV_USER` setting is used instead. The header is trusted only because
 IAP is the only ingress path (see `infrastructure.md`); validating the signed
-`X-Goog-IAP-JWT-Assertion` header is a nice extra in WP 13.
+`X-Goog-IAP-JWT-Assertion` header was left out in WP 13. A middleware stores the user in
+a context variable for the length of the request, and the trace plugin sets `enduser.id`
+on the root span when the run starts.
 
 ## Viewing
 

@@ -215,19 +215,27 @@ deploy-image: tf-init
 	@terraform -chdir=$(TF_DIR) apply -var image=$(IMAGE)
 
 
-# Opens the private service on http://localhost:8081 with your credentials.
-.PHONY: proxy
-proxy:
-	@gcloud run services proxy imposter --project=$(GOOGLE_CLOUD_PROJECT) \
-		--region=$(TF_REGION) --port=8081
+# Prints the checklist for trying the deployed app behind IAP, with the links to use.
+.PHONY: smoke
+smoke:
+	@url=$$(terraform -chdir=$(TF_DIR) output -raw service_url) && \
+		test -n "$$url" || { echo "Nothing is deployed, run make deploy."; exit 1; }; \
+	echo "Smoke test of $$url:"; \
+	echo "1. Open the URL in a private window: IAP must ask for a Google login."; \
+	echo "2. Sign in with an account that is not in iap_members: access must be refused."; \
+	echo "3. Sign in with an allowed account, start a game with a mixed lineup and watch it end."; \
+	echo "4. Export the game and import the file again."; \
+	echo "5. Find the trace by the identity of the account:"; \
+	echo "   https://console.cloud.google.com/traces/explorer?project=$(GOOGLE_CLOUD_PROJECT)"; \
+	echo "   (filter on the attribute enduser.id, or on imposter.game.id from the game page)"
 
 
 # Everything from scratch: the state bucket, the base APIs, the registry and build account,
-# the image and the service. Prints the service URL. Run `make proxy` to open it.
+# the image and the service. Prints the service URL. Run `make smoke` to try it.
 .PHONY: up
 up: tf-setup deploy
 	@echo "Deployed: $$(terraform -chdir=$(TF_DIR) output -raw service_url)"
-	@echo "The service is private: run make proxy and open http://localhost:8081"
+	@echo "IAP only lets in the principals in iap_members. Run make smoke to try it."
 
 
 # Removes every resource Terraform manages, after a confirmation. The state bucket, the

@@ -25,19 +25,18 @@ resource in the project.
 ## How it connects
 
 Three flows use the infrastructure: playing a game, deploying a new version, and running
-the app or Terraform locally. Parts marked *(planned)* are designed but do not exist yet.
-Until IAP arrives, the Cloud Run service is private: nobody holds `allUsers` invoker
-access, and you reach it with `make proxy`, which runs `gcloud run services proxy` with
-your own credentials. ADK only accepts browser requests from the service's own origin,
-and the proxy serves the page on `http://localhost:8081`, so the service lists that origin
-in `IMPOSTER_ALLOW_ORIGINS`, which the variable `allowed_origins` sets. Without it, the
-page loads but its scripts and styles are refused, and the browser shows a blank page.
+the app or Terraform locally. The Cloud Run service sits behind IAP, so nobody holds
+`allUsers` invoker access and the service URL only answers to the principals in the
+variable `iap_members`. Because IAP guards the whole URL, `gcloud run services proxy` no
+longer works, and you open the service URL in a browser instead. ADK only accepts
+browser requests from the service's own origin, and that is the origin the page is served
+from, so no extra origin is needed. The variable `allowed_origins` can add some.
 
 ### Playing a game (deployed)
 
 ```mermaid
 flowchart LR
-  user(["Browser, org account"]) -->|HTTPS| iap["IAP (planned)"]
+  user(["Browser, org account"]) -->|HTTPS| iap["IAP"]
   iap -->|"signed identity header"| run["Cloud Run imposter<br/>runs as imposter-run"]
   run -->|"Gemini: google-genai<br/>Claude, open: LiteLLM"| vertex["Vertex AI<br/>location global"]
   run -->|"OTLP spans"| trace["Cloud Trace"]
@@ -123,6 +122,7 @@ at all. They are set up by `make tf-setup` or by hand.
 | The APIs `serviceusage`, `cloudresourcemanager` and `storage` | `make tf-setup`, with `gcloud services enable` | Terraform bills its API calls to the project through `user_project_override`, which only works when the Service Usage API is already enabled in the project. Terraform cannot enable that API for itself. The first two APIs are also listed in `infra/apis.tf`. |
 | The GCS bucket `<project id>-imposter-tfstate` in `europe-west4`, labelled `app=imposter` | `make tf-setup`, with `gcloud` | The bucket holds the Terraform state under the prefix `imposter`, so the state survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create the bucket itself. Versioning keeps every earlier state for recovery, and uniform access and public access prevention keep the bucket private. |
 | Model enablement for Claude and the open models | The owner, in the Model Garden console | Partner and open models need their terms accepted once per project, and there is no API for doing that. |
+| The IAP principals in `iap_members` | The owner, in `infra/terraform.tfvars` | The owner decides who may open the app, as a `user:` or a `group:` of the organization. Cloud Run IAP uses a Google-managed OAuth client, so no consent screen or OAuth client has to be created by hand. IAP needs the project to belong to an organization, which should be checked on the first deploy. |
 | Quota increases | The owner, on the Quotas page | The default per-model quotas can be too low for a game with eight players. |
 
 ## Managed by Terraform (`infra/`)
@@ -144,7 +144,7 @@ depend on them.
 | `cloudbuild.googleapis.com` | Cloud Build builds the image in GCP for `make build`, so no local Docker is needed. | Deployment |
 | `run.googleapis.com` | Cloud Run hosts the service that serves the API, the UI and the SSE stream. | Hosting |
 | `billingbudgets.googleapis.com` | The budget sends email alerts when spending passes its thresholds. | Cost control |
-| `iap.googleapis.com` | Identity-Aware Proxy puts the org Google login in front of Cloud Run. | Access control (planned) |
+| `iap.googleapis.com` | Identity-Aware Proxy puts the org Google login in front of Cloud Run. | Access control |
 | `cloudtrace.googleapis.com` | Cloud Trace stores one trace per game, with spans for the game, its phases and its turns. | Tracing |
 | `telemetry.googleapis.com` | The telemetry API is the OTLP endpoint that receives the OpenTelemetry traces. | Tracing |
 | `logging.googleapis.com` | Cloud Logging stores the prompts and completions as log events that link to their trace. | Tracing |
@@ -155,7 +155,7 @@ depend on them.
 |---|---|
 | `default_labels = { app = "imposter" }` | Every resource that supports labels gets this label, which makes it easy to find in the shared project. The value comes from the variable `labels`. |
 | `billing_project` and `user_project_override = true` | API calls count against the quota and billing of this project, not against the quota project of whoever runs Terraform. |
-| `google` and `google-beta` pinned to `~> 8.9`, with the lock file committed | Pinned versions make plans reproducible. The beta provider is there in case IAP on Cloud Run needs it. |
+| `google` and `google-beta` pinned to `~> 8.9`, with the lock file committed | Pinned versions make plans reproducible. The beta provider is needed to create the IAP service agent. |
 
 ### Identity and access (`infra/iam.tf`)
 
@@ -164,14 +164,15 @@ depend on them.
 | The service account `imposter-run` with `roles/aiplatform.user`, `roles/cloudtrace.agent`, `roles/logging.logWriter` and `roles/telemetry.tracesWriter` | It is the least-privilege identity of the Cloud Run service, and it has no owner or editor roles. It can call Vertex AI and export traces and logs, and nothing else. |
 | The service account `imposter-build` with `roles/logging.logWriter` on the project, `roles/artifactregistry.writer` on the repository and `roles/storage.objectViewer` on the build bucket | Cloud Build runs as this account instead of the broad default one, so a build can only write logs, push images and read the uploaded source. |
 | The bucket `<project id>-imposter-build` in `europe-west4` | `make build` uploads the source here for Cloud Build, and objects expire after seven days. |
-| `roles/run.invoker` for the principals in the variable `invokers` | It lets chosen people call the private service, for example through `make proxy`. Project owners do not need it, and IAP replaces it later. |
+| The IAP service agent (`infra/iap.tf`) with `roles/run.invoker` on the service | IAP calls Cloud Run with its own service agent after it has checked the login, so only that agent may invoke the service. Nobody else can reach Cloud Run directly. |
+| `roles/iap.httpsResourceAccessor` on the service for the principals in the variable `iap_members` | It decides who IAP lets in. Each member is a `user:...` or `group:...` of the owner's organization. While the list is empty, nobody can open the service. |
 
 ### Deployment and hosting
 
 | Resource | Why it exists |
 |---|---|
 | The Artifact Registry repository `imposter` in `europe-west4` (`infra/registry.tf`) | It stores the app images, and every deploy pins one image by its digest. A cleanup policy keeps the ten newest images and deletes older ones after 30 days. |
-| The Cloud Run service `imposter` (`infra/run.tf`) with 0 to 1 instances, 1 vCPU, 1 GiB, request-based billing, concurrency 80 and a 3600 second timeout | It hosts the app and scales to zero when nobody uses it. A game runs inside one long request, which is why the timeout is an hour. The service only exists once the variable `image` is set, which `make deploy` does. It sets the Vertex AI and telemetry variables, including the content capture settings. |
+| The Cloud Run service `imposter` (`infra/run.tf`) with 0 to 1 instances, 1 vCPU, 1 GiB, request-based billing, concurrency 80 and a 3600 second timeout | It hosts the app and scales to zero when nobody uses it. A game runs inside one long request, which is why the timeout is an hour. The service only exists once the variable `image` is set, which `make deploy` does. It sets the Vertex AI and telemetry variables, including the content capture settings. IAP is enabled on it directly with `iap_enabled`, without a load balancer, and the traffic is allowed from everywhere because IAP is the gate. |
 
 ### Budgets (`infra/budget.tf`)
 
@@ -184,11 +185,15 @@ do not cap spending.
 | The budget `imposter app resources`, filtered on the label `app=imposter` | The project is shared, so the label counts only the spend of the app's own resources, such as Cloud Run and Artifact Registry. |
 | The budget `imposter vertex ai (whole project)`, filtered on the Vertex AI service | Model calls carry no resource labels, so the label filter cannot see them, and they are the largest cost. This budget counts all Vertex AI spend in the project, including other work, and it can be turned off with `vertex_budget_amount = 0`. The service ID is set in `infra/budget.tf` and should be checked in the billing console. Claude models from Model Garden may be billed under their own service and are not covered. |
 
-### Planned resources
+### Identity on traces
 
-| Resource | Why it will exist |
-|---|---|
-| IAP on the Cloud Run service, with `roles/iap.httpsResourceAccessor` for the allowed principals | It makes sure that only the owner, or a chosen group, can reach the app. |
+IAP passes the signed-in user in the header `X-Goog-Authenticated-User-Email`, for example
+`accounts.google.com:you@example.com`. A middleware in the API app strips the prefix and
+keeps the email for the length of the request, and the trace plugin sets it as
+`enduser.id` on the root span of the game, so you can filter Trace Explorer on it. The
+header is trusted because IAP is the only way to reach the service. The signed
+`X-Goog-IAP-JWT-Assertion` header is not validated. Locally there is no header, and the
+optional variable `IMPOSTER_DEV_USER` stands in for it.
 
 ## Costs (excluding model tokens)
 
@@ -211,7 +216,7 @@ column of the table therefore shows the cost when no free tier is left.
 | Cloud Build | About 3 build minutes per deploy. | 2,500 build minutes | About $0.003 per minute, so about $0.10 for 10 deploys |
 | Cloud Trace | A few hundred spans per game. | 2.5 million spans per billing account | $0.20 per million spans, so below $0.01 |
 | Cloud Logging | A few MB of prompts and completions per game. | 50 GiB per project, shared with the rest of the project | $0.50 per GiB, so below $0.10 |
-| IAP (planned) and the budget | Nothing, because both are free. | Not needed | $0 |
+| IAP and the budget | Nothing, because both are free. | Not needed | $0 |
 | Network egress | Page loads and the SSE stream, which amount to a few MB. | A small free amount | Below $0.01 |
 
 Added up, this gives three figures:
@@ -233,8 +238,9 @@ and `max_instance_count = 1` with request-based billing on Cloud Run.
 ## Setting up and removing the app
 
 `make up` does the whole setup after the manual prerequisites in [`setup.md`](setup.md):
-it runs `make tf-setup` and then `make deploy`, and prints the service URL. Because the
-service is private, `make proxy` opens it on `http://localhost:8081`.
+it runs `make tf-setup` and then `make deploy`, and prints the service URL. The
+service URL answers to the principals in `iap_members`, and `make smoke` prints a checklist
+for trying it.
 
 `make down` runs `terraform destroy` after asking for confirmation, which removes every
 resource that Terraform manages, including the build bucket and its contents. The APIs

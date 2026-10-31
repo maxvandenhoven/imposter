@@ -70,13 +70,3 @@ resource "google_storage_bucket_iam_member" "build_source" {
   role   = "roles/storage.objectViewer"
   member = google_service_account.build.member
 }
-
-# Callers of the private service, until IAP takes over.
-resource "google_cloud_run_v2_service_iam_member" "invokers" {
-  for_each = var.image == "" ? toset([]) : toset(var.invokers)
-
-  name     = google_cloud_run_v2_service.imposter[0].name
-  location = google_cloud_run_v2_service.imposter[0].location
-  role     = "roles/run.invoker"
-  member   = each.value
-}

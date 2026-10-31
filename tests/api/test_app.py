@@ -32,10 +32,12 @@ def client(span_exporter: InMemorySpanExporter) -> Iterator[TestClient]:
             yield client
 
 
-def stream_game(client: TestClient, request: GameRequest) -> list[dict[str, Any]]:
+def stream_game(
+    client: TestClient, request: GameRequest, headers: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
     """Create a session with the request in state, run it over SSE and collect events."""
     state = {"game:request": request.model_dump(mode="json")}
-    session = client.post(SESSIONS_PATH, json={"state": state}).json()
+    session = client.post(SESSIONS_PATH, json={"state": state}, headers=headers).json()
     body = {
         "app_name": "imposter",
         "user_id": "tester",
@@ -44,7 +46,7 @@ def stream_game(client: TestClient, request: GameRequest) -> list[dict[str, Any]
         "streaming": True,
     }
 
-    with client.stream("POST", "/run_sse", json=body) as response:
+    with client.stream("POST", "/run_sse", json=body, headers=headers) as response:
         return [
             json.loads(line.removeprefix("data: "))
             for line in response.iter_lines()
@@ -145,3 +147,26 @@ def test_origin_of_a_proxy_is_refused_unless_it_is_allowed(
 
     with TestClient(create_app(), base_url="https://imposter.run.app") as client:
         assert client.get("/catalog", headers=proxy).status_code == 200
+
+
+def test_game_trace_records_the_iap_user_as_enduser_id(
+    client: TestClient,
+    span_exporter: InMemorySpanExporter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(agent.sessions, "setup", FakeGameSetup())
+    span_exporter.clear()
+    players = [PlayerConfig(model_id=model_id) for model_id in DEFAULT_MODEL_IDS]
+    request = GameRequest(config=GameConfig(players=players, seed=5))
+    headers = {"X-Goog-Authenticated-User-Email": "accounts.google.com:max@example.com"}
+
+    stream_game(client, request, headers)
+
+    roots = [
+        span
+        for span in span_exporter.get_finished_spans()
+        if span.name.startswith("invoke_workflow")
+    ]
+    assert [dict(root.attributes or {}).get("enduser.id") for root in roots] == [
+        "max@example.com"
+    ]
