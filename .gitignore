@@ -5,7 +5,6 @@ __pycache__/
 .coverage
 .env
 .bin/
-src/imposter/web/tailwind.css
 .terraform/
 *.tfstate
 *.tfstate.*

@@ -63,7 +63,10 @@ class BaseGameEvent(BaseModel):
         visibility: Who may see the event in audience mode.
     """
 
-    model_config = ConfigDict(frozen=True)
+    # Serialized events always carry every field, so their JSON schema requires them.
+    model_config = ConfigDict(
+        frozen=True, json_schema_serialization_defaults_required=True
+    )
 
     private_fields: ClassVar[frozenset[str]] = frozenset()
 

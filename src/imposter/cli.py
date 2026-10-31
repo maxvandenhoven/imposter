@@ -1,8 +1,11 @@
 """Command line interface for the `imposter` package."""
 
 import asyncio
+import json
+import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -13,6 +16,8 @@ from rich.markup import escape
 from rich.table import Table
 
 from imposter import __version__
+from imposter.api.app import create_app
+from imposter.api.openapi import openapi_schema
 from imposter.config import GameConfig, IdentityMode
 from imposter.engine.events import (
     BaseGameEvent,
@@ -48,6 +53,7 @@ from imposter.telemetry.spans import GameTracePlugin
 from imposter.words.options import WordMode, WordOptions
 
 app = typer.Typer(name="imposter", no_args_is_help=True)
+logger = logging.getLogger(__name__)
 
 
 class GameEventPrinter:
@@ -425,3 +431,22 @@ def serve(
     uvicorn.run(
         "imposter.api.app:create_app", factory=True, host=host, port=port, reload=reload
     )
+
+
+@app.command(help="Write the OpenAPI schema of the API as JSON, without serving it.")
+def openapi(
+    output: Annotated[Path, typer.Option(help="The JSON file to write.")],
+) -> None:
+    """Write the OpenAPI schema of the API, with the game schemas, as JSON.
+
+    The frontend generates its API types from the file (`make api-client`).
+
+    Args:
+        output: The JSON file to write.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    # The schema does not depend on telemetry, so no exporter is set up.
+    os.environ[TELEMETRY_ENV] = TelemetryExporter.NONE.value
+    schema = openapi_schema(create_app())
+    output.write_text(json.dumps(schema, indent=2) + "\n")
+    logger.info("Wrote the OpenAPI schema to `%s`.", output)
