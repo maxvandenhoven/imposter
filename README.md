@@ -18,24 +18,33 @@ starts the ADK developer UI, in which every new session plays a game.
 
 `make dev` starts the game API on port 8000 and the web app on
 [localhost:5173](http://localhost:5173), which reloads as its code changes. On the setup
-screen you choose how the secret word is picked (at random from a category, typed, or made
-up by Gemini), the model behind each of 3 to 8 seats, optionally which players are the
-imposters (random otherwise), how players are named and the other rules, and the screen
-checks the options before the game can start. The board then shows the game as it is
-played, with the seats around a table card and a transcript next to it. Each seat shows
-its model's logo, its clues as chips per round and its statements as speech bubbles, and
-the seat whose turn it is glows while its answer appears token by token. The votes are
-revealed as arrows drawn between the seats, followed by the imposter's guess with the
-judge's verdict and a banner with the outcome. The header shows the phase, the tokens and
-estimated cost so far and a link to the game's trace in Cloud Trace.
+screen you choose how the secret word is picked (at random from a category, typed, or
+made up by Gemini), the model behind each of 3 to 8 seats, which players are the
+imposters (one random seat to begin with, or shuffled with "Randomise imposters"), how
+players are named and the other rules, and the screen checks the options before the game
+can start. The board then shows the game with a table card across the top and the
+players in a row below it, in seat order, with the transcript of every clue and
+statement next to it. In clue, discussion and guess turns the answer is written out on
+the table and then moves down into the player's column, with the player's private
+reasoning in a thought bubble below it. The votes are revealed as arrows drawn between
+the players, followed by the imposter's guess with the judge's verdict and a banner with
+the outcome. The header shows the phase, the tokens and estimated cost so far and a link
+to the game's trace in Cloud Trace.
 
-The board has two modes. Audience mode shows only what the players could see, and keeps
-the secret word, the roles, the secret votes, the private reasoning and the models' own
-thinking hidden until the reveal, also in answers that are still being written. God mode
-shows everything: the word on the table, a role badge on every seat and each player's
-private reasoning as a thought bubble while it is written. The game runs as long as the
-page is open, so the page asks before it is left, and leaving or stopping it aborts the
-game. Playback controls, export and import and a debrief panel are planned.
+The board plays the game at a pace the audience can follow rather than as fast as the
+models answer: answers are written out at a steady rate and every clue, statement and
+reveal stays long enough to be read. A playback bar pauses and resumes, plays one
+response at a time, pauses after each round and changes the speed. While playback is
+behind the live game it speeds up smoothly to catch up, and "Go live" jumps to the
+newest state.
+
+The board has two modes, and god mode is the default. Audience mode shows only what the
+players could see, and keeps the secret word, the roles, the secret votes, the private
+reasoning and the models' own thinking hidden until the reveal, also in answers that are
+still being written. God mode shows everything: the word on the table, a role badge on
+every seat and each player's private reasoning as a thought bubble while it is written.
+The game runs as long as the page is open, so the page asks before it is left, and leaving
+or stopping it aborts the game. Export and import and a debrief panel are planned.
 
 ![The setup screen of the web app](docs/images/web-setup-screen.jpg)
 

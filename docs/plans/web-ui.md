@@ -121,13 +121,17 @@ Kept simple: the essentials up front, the rest under "Advanced".
 - Word: tabs for *Random* (category dropdown), *Type* (text + optional category),
   *Surprise me* (generated).
 - Players: list of seats with a model dropdown each, add/remove (3–8), "randomise
-  lineup". Each seat has a mask toggle that makes its player an imposter. Without a
-  choice the imposters are random, and choosing more players than there are imposters
-  is reported before Start.
+  lineup" and "randomise imposters". Each seat has a mask toggle that makes its player
+  an imposter, and the number of masks is the number of imposters, so there is no
+  separate imposter count. The form starts with one mask on a random seat. "Randomise
+  imposters" moves the masks to random seats and keeps their number, and removing the
+  seat of the last imposter moves its mask to a random other seat. The game request
+  always names its imposters, and the engine only picks them at random for requests
+  that do not, such as those of the CLI.
 - Identity mode: segmented control (Seats / Names / Models).
 - Toggles: public category, imposter hint.
-- Advanced: clue rounds, discussion rounds, imposters, word caps, token budget,
-  temperature override.
+- Advanced: clue rounds, discussion rounds, word caps, token budget, temperature
+  override.
 - The limits are checked in the browser before Start, because invalid options only fail
   once the run starts.
 - Start creates the session with the request in its state, opens the board and starts the
@@ -135,18 +139,26 @@ Kept simple: the essentials up front, the rest under "Advanced".
 
 ### Game board
 
-- Seat cards around a central table card with the phase, round and category (and the
-  word in god mode), and a transcript next to it. The table takes the middle cell of a
-  3 by 3 grid and the seats spread clockwise over the cells around it, so 3 to 8 seats
-  fit without overlap. On narrow screens the table comes first and the seats follow.
-- Seats show the name, the model logo and name, the role badge (in god mode or after the
-  reveal), the clue chips per round and what the seat said last in the current round as
-  a speech bubble. The seat whose turn it is glows softly and shows typing dots. The
-  model logos show in both modes: the `usage` events name the model of each seat
-  publicly anyway, and comparing models is the point of watching.
+- The table card spans the top of the board with the phase, round and category on the
+  left, the word in the middle (in god mode, or once revealed) and what the phase is
+  about on the right. The players sit in one row below it, in seat order from left to
+  right, and the transcript is next to the board. One row scales from 3 to 8 players
+  and keeps the turn order visible, which a ring of seats around the table did not do
+  well for odd numbers.
+- Each player has a column: a card with the name, the model logo and name (the catalog
+  display names carry the model version, for example "Claude Haiku 5.5"), the role
+  badge (in god mode or after the reveal) and the clue chips per round, then the
+  player's answer of the current round as a speech bubble and, below it, the private
+  reasoning as a thought bubble. The player whose turn it is glows softly and shows
+  typing dots. The model logos show in both modes: the `usage` events name the model of
+  each seat publicly anyway, and comparing models is the point of watching.
+- In clue, discussion and guess turns, which one player takes alone, the answer is
+  written in a large bubble on the table, and when the turn ends the bubble moves down
+  into the player's column (a shared `motion` layout). Votes and reflections, which
+  every player writes at once, are written in the columns directly.
 - Live answers: the partial JSON of the current answer is parsed as it grows
-  (`lib/partialJson.ts`), so the clue or statement appears on the speaking seat's card
-  while it is written. In audience mode the secret word is masked in live clues and
+  (`lib/partialJson.ts`), so the clue or statement appears on the table while it is
+  written. In audience mode the secret word is masked in live clues and
   statements, including a start of it at the end of the text, because a player who
   says the word only becomes a `secret_word_said` event once the turn ends.
 - Timeline/transcript: clues appear as chips per round sliding in, discussion as speech
@@ -160,23 +172,40 @@ Kept simple: the essentials up front, the rest under "Advanced".
   they come in. The models' own thought parts are shown collapsed. Audience mode hides
   all of these until the reveal, also in the partial text. After the `outcome` event
   everything is shown in both modes.
-- Header: phase steps, running token and cost estimate (from the `usage` events and the
-  catalog prices), link to the trace in Cloud Trace (from `/traces/{game_id}`), mode
-  toggle (audience / god).
+- Header: the status and the running token and cost estimate (from the `usage` events
+  and the catalog prices) on the left, the phase steps in the middle, and the link to
+  the trace in Cloud Trace (from `/traces/{game_id}`), the god mode switch (on by
+  default) and Stop on the right.
 - `lib/boardView.ts` builds all of this as one view model from the events up to a
   cursor, the partial answers and the mode, and its tests check that audience mode shows
   nothing private at any cursor before the reveal.
 
 ### Playback
 
-All events are appended to an in-browser array (the timeline); the board renders the state
-up to a **cursor**:
+A game plays faster than an audience can follow, and models stream unevenly (Gemini
+sends a few large chunks, Claude many small ones). So the board does not show the stream
+as it arrives. Everything the stream sends, the engine events and each growing answer,
+is appended to a timeline in the browser (`GameTimeline` in `lib/playback.ts`), and a
+playback (`GamePlayback`) plays it at a pace the audience can follow, driven by an
+animation frame clock.
 
-- **Live**: the cursor follows the newest event (default).
-- **Step**: ◀ / ▶ buttons and arrow keys move one event; "next phase" jumps.
-- **Autoplay**: steps at an adjustable speed (e.g. one event per 2 s).
-- A badge shows "N events ahead" when behind live; a "Go live" button jumps back.
-- The tab must stay open until the game finishes (it holds the SSE connection).
+- Each item takes a time at normal speed. An answer takes the time its new characters
+  need at 60 characters a second, so every model is written out at the same smooth
+  rate, and the model's own thinking takes no time. An engine event shows at once and
+  then pauses so it can be read: longest for a statement (by its length, up to 5 s),
+  the vote reveal (by the number of votes, so the arrows can draw) and the outcome.
+- When the timeline is ahead of the playback, after a pause or because the pauses add
+  up, playback speeds up smoothly in proportion to the backlog, up to five times, once
+  more than 8 s are waiting. It never shows a backlog at once, so the board keeps the
+  same streaming look.
+- The playback bar floats under the board: play and pause, "Next response" (play until
+  the next answer is in, then pause), "Pause after rounds" (stop before every new
+  round), the speed (1×, 2×, 4×), and "N responses behind · Go live", which jumps to the
+  live game.
+- The stream keeps running while the playback is paused, and the header says "Catching
+  up" until the playback reaches the live end.
+- Stepping back is not supported yet. The tab must stay open until the game finishes,
+  since it holds the SSE connection.
 
 ### Export and import
 
