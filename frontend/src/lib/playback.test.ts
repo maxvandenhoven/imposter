@@ -60,7 +60,7 @@ describe("GameTimeline", () => {
     expect(eventPause(statementMade(0, 0, "Short."))).toBeLessThan(
       eventPause(statementMade(0, 0, "word ".repeat(30))),
     );
-    expect(eventPause(statementMade(0, 0, "word ".repeat(300)))).toBe(5000);
+    expect(eventPause(statementMade(0, 0, "word ".repeat(300)))).toBe(6000);
   });
 });
 
@@ -103,16 +103,41 @@ describe("GamePlayback", () => {
     expect(playback.board().events).toHaveLength(1);
   });
 
-  it("speeds up smoothly with a backlog, up to a limit", () => {
-    const small = playbackOf([answer("x".repeat(10))]);
-    const large = playbackOf([answer("x".repeat(CHARACTERS_PER_SECOND * 1000))]);
-    const medium = playbackOf([
-      answer("x".repeat((CHARACTERS_PER_SECOND * CATCH_UP_BACKLOG * 2) / 1000)),
-    ]);
+  it("writes answers faster with a backlog, smoothly and up to a limit", () => {
+    const characters = (milliseconds: number) =>
+      "x".repeat((CHARACTERS_PER_SECOND * milliseconds) / 1000);
+    const small = playbackOf([answer(characters(1000))]);
+    const medium = playbackOf([answer(characters(CATCH_UP_BACKLOG * 1.5))]);
+    const large = playbackOf([answer(characters(CATCH_UP_BACKLOG * 10))]);
 
-    expect(small.effectiveSpeed).toBe(1);
-    expect(medium.effectiveSpeed).toBeCloseTo(2);
-    expect(large.effectiveSpeed).toBe(MAX_CATCH_UP);
+    expect(small.typingSpeed).toBe(1);
+    expect(medium.typingSpeed).toBeCloseTo(1.5);
+    expect(large.typingSpeed).toBe(MAX_CATCH_UP);
+  });
+
+  it("keeps the pause after an event as long, also with a backlog", () => {
+    const backlog = "x".repeat((CHARACTERS_PER_SECOND * CATCH_UP_BACKLOG * 10) / 1000);
+    const playback = playbackOf([gameStarted(0), answer(backlog)]);
+    const pause = eventPause(gameStarted(0));
+
+    playback.advance(pause - 10);
+
+    expect(playback.index).toBe(0);
+
+    playback.advance(20);
+
+    expect(playback.index).toBe(1);
+  });
+
+  it("counts the backlog down as items play", () => {
+    const playback = playbackOf([gameStarted(0), turnStarted(1, 0)]);
+    const total = eventPause(gameStarted(0)) + eventPause(turnStarted(1, 0));
+
+    expect(playback.backlog).toBe(total);
+
+    playback.advance(eventPause(gameStarted(0)));
+
+    expect(playback.backlog).toBe(eventPause(turnStarted(1, 0)));
   });
 
   it("stops before each new round when asked, but not before the first", () => {
@@ -162,6 +187,15 @@ describe("GamePlayback", () => {
     expect(playback.atLive).toBe(true);
     expect(playback.board().events).toHaveLength(2);
     expect(playback.board().answers[0]?.text).toBe("abc");
+  });
+
+  it("shows the event that is playing only once when it jumps to the live game", () => {
+    const playback = playbackOf([gameStarted(0), clueGiven(1, 0, "beacon")]);
+    playback.advance(eventPause(gameStarted(0)) + 1);
+
+    playback.goLive();
+
+    expect(playback.board().events.map((event) => event.seq)).toEqual([0, 1]);
   });
 
   it("plays new items as soon as they arrive when it is live", () => {

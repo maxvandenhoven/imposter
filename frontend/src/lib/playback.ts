@@ -16,25 +16,25 @@ interface TimedItem {
 }
 
 /** How fast answers are written out at normal speed. */
-export const CHARACTERS_PER_SECOND = 60;
+export const CHARACTERS_PER_SECOND = 30;
 
 /** How much playback speeds up at most to catch up with a backlog. */
-export const MAX_CATCH_UP = 5;
+export const MAX_CATCH_UP = 2;
 
 /** The backlog, in milliseconds at normal speed, that playback keeps without speeding up. */
-export const CATCH_UP_BACKLOG = 8000;
+export const CATCH_UP_BACKLOG = 20_000;
 
 /** The pause after each engine event, in milliseconds at normal speed, to take it in. */
 const EVENT_PAUSES: Partial<Record<GameEventType, number>> = {
   game_started: 500,
-  phase_started: 1200,
+  phase_started: 2000,
   turn_started: 250,
-  clue_given: 1400,
+  clue_given: 2000,
   vote_cast: 300,
-  guess_made: 2500,
-  secret_word_said: 2000,
-  outcome: 3500,
-  reflection: 600,
+  guess_made: 4000,
+  secret_word_said: 3000,
+  outcome: 6000,
+  reflection: 800,
 };
 
 /** The engine events that end a seat's turn with its answer: one response each. */
@@ -53,10 +53,10 @@ export function eventPause(event: GameEvent): number {
     case "statement_made": {
       const words = event.statement.split(/\s+/).filter(Boolean).length;
 
-      return Math.min(1000 + words * 120, 5000);
+      return Math.min(1500 + words * 120, 6000);
     }
     case "votes_revealed":
-      return 1500 + event.votes.length * 600;
+      return 3000 + event.votes.length * 800;
     default:
       return EVENT_PAUSES[event.type] ?? 0;
   }
@@ -84,13 +84,15 @@ function isResponse(item: TimelineItem): boolean {
  */
 export class GameTimeline {
   readonly items: TimedItem[] = [];
+  /** The time all items take at normal speed, in milliseconds. */
+  totalDuration = 0;
   /** The last answer of each seat, to tell how much of a new one is new. */
   private readonly lastAnswers = new Map<number, PartialAnswer>();
 
   /** Add the next item of the stream. */
   push(item: TimelineItem): void {
     if (item.kind === "event") {
-      this.items.push({ item, duration: eventPause(item.event), shownBefore: 0 });
+      this.add({ item, duration: eventPause(item.event), shownBefore: 0 });
       return;
     }
 
@@ -99,11 +101,12 @@ export class GameTimeline {
     const shownBefore = last?.path === answer.path ? last.text.length : 0;
     const added = Math.max(answer.text.length - shownBefore, 0);
     this.lastAnswers.set(answer.seat, answer);
-    this.items.push({
-      item,
-      duration: (added / CHARACTERS_PER_SECOND) * 1000,
-      shownBefore,
-    });
+    this.add({ item, duration: (added / CHARACTERS_PER_SECOND) * 1000, shownBefore });
+  }
+
+  private add(timed: TimedItem): void {
+    this.items.push(timed);
+    this.totalDuration += timed.duration;
   }
 
   /** The number of items. */
@@ -120,9 +123,9 @@ export type PlaybackPause = "round" | "step" | null;
  *
  * The items before `index` have been played. The item at `index` plays once it has
  * `started`, which shows an engine event at once and writes an answer out over its
- * duration. Playback runs at `speed` and speeds up smoothly, up to `MAX_CATCH_UP`
- * times, while more than `CATCH_UP_BACKLOG` of the timeline waits, so it never shows a
- * whole backlog at once. It can stop before each new round and after the next response.
+ * duration. Playback runs at `speed`. While more than `CATCH_UP_BACKLOG` of the
+ * timeline waits, answers are written faster, smoothly and up to `MAX_CATCH_UP` times,
+ * so it never shows a whole backlog at once, while the pauses to read stay as long. It can stop before each new round and after the next response.
  *
  * Attributes:
  *   timeline: The timeline it plays.
@@ -145,6 +148,8 @@ export class GamePlayback {
   pauseAfterRounds = false;
   stepping = false;
   pausedFor: PlaybackPause = null;
+  /** The time the played items take at normal speed, in milliseconds. */
+  private playedDuration = 0;
   /** The board of the items played so far, without the answer being written. */
   private played: BoardState = INITIAL_BOARD;
 
@@ -159,13 +164,9 @@ export class GamePlayback {
 
   /** The time the waiting items take at normal speed, in milliseconds. */
   get backlog(): number {
-    let total = 0;
+    const waiting = this.timeline.totalDuration - this.playedDuration;
 
-    for (let index = this.index; index < this.timeline.length; index += 1) {
-      total += this.timeline.items[index]?.duration ?? 0;
-    }
-
-    return Math.max(total - (this.started ? this.elapsed : 0), 0);
+    return Math.max(waiting - (this.started ? this.elapsed : 0), 0);
   }
 
   /** The responses that arrived and have not played yet. */
@@ -174,8 +175,12 @@ export class GamePlayback {
       .length;
   }
 
-  /** The speed at which playback runs now, with the catch up for the backlog. */
-  get effectiveSpeed(): number {
+  /**
+   * The speed at which answers are written now: the chosen speed with the catch up for
+   * the backlog. Engine events keep their pauses at the chosen speed, so a backlog never
+   * cuts short the time to read a clue, a statement or a reveal.
+   */
+  get typingSpeed(): number {
     const catchUp = Math.min(Math.max(this.backlog / CATCH_UP_BACKLOG, 1), MAX_CATCH_UP);
 
     return this.speed * catchUp;
@@ -203,7 +208,11 @@ export class GamePlayback {
   /** Play everything that arrived at once and follow the live game from there. */
   goLive(): void {
     while (!this.atLive) {
-      this.startCurrent();
+      // The current item may have started already, and must not be shown twice.
+      if (!this.started) {
+        this.startCurrent();
+      }
+
       this.finishCurrent();
     }
 
@@ -222,7 +231,9 @@ export class GamePlayback {
       return false;
     }
 
-    let budget = milliseconds * this.effectiveSpeed;
+    // The budget is real time, spent at the speed of each item.
+    let budget = milliseconds;
+    const typingSpeed = this.typingSpeed;
     let changed = false;
 
     while (!this.atLive) {
@@ -247,14 +258,17 @@ export class GamePlayback {
         this.startCurrent();
       }
 
-      const duration = this.timeline.items[this.index]?.duration ?? 0;
+      const current = this.timeline.items[this.index];
+      const duration = current?.duration ?? 0;
+      const rate = current?.item.kind === "answer" ? typingSpeed : this.speed;
+      const needed = (duration - this.elapsed) / rate;
 
-      if (this.elapsed + budget < duration) {
-        this.elapsed += budget;
+      if (budget < needed) {
+        this.elapsed += budget * rate;
         return true;
       }
 
-      budget -= duration - this.elapsed;
+      budget -= needed;
       const finished = this.timeline.items[this.index]?.item;
       this.finishCurrent();
       changed = true;
@@ -315,6 +329,7 @@ export class GamePlayback {
 
   private finishCurrent(): void {
     const item = this.timeline.items[this.index]?.item;
+    this.playedDuration += this.timeline.items[this.index]?.duration ?? 0;
 
     if (item?.kind === "answer") {
       this.played = boardReducer(this.played, { type: "answer", answer: item.answer });
