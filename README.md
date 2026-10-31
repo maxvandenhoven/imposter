@@ -18,18 +18,30 @@ starts the ADK developer UI, in which every new session plays a game.
 
 `make dev` starts the game API on port 8000 and the web app on
 [localhost:5173](http://localhost:5173), which reloads as its code changes. On the setup
-screen you choose how the secret word is picked (at random from a category, typed, or
-made up by Gemini), the model behind each of 3 to 8 seats, how players are named and the
-other rules, and the screen checks the options before the game can start. The board then
-shows the game as it is played: every game event as it arrives, which seats are thinking
-and the answer each of them is writing, token by token. The game runs as long as the
+screen you choose how the secret word is picked (at random from a category, typed, or made
+up by Gemini), the model behind each of 3 to 8 seats, optionally which players are the
+imposters (random otherwise), how players are named and the other rules, and the screen
+checks the options before the game can start. The board then shows the game as it is
+played, with the seats around a table card and a transcript next to it. Each seat shows
+its model's logo, its clues as chips per round and its statements as speech bubbles, and
+the seat whose turn it is glows while its answer appears token by token. The votes are
+revealed as arrows drawn between the seats, followed by the imposter's guess with the
+judge's verdict and a banner with the outcome. The header shows the phase, the tokens and
+estimated cost so far and a link to the game's trace in Cloud Trace.
+
+The board has two modes. Audience mode shows only what the players could see, and keeps
+the secret word, the roles, the secret votes, the private reasoning and the models' own
+thinking hidden until the reveal, also in answers that are still being written. God mode
+shows everything: the word on the table, a role badge on every seat and each player's
+private reasoning as a thought bubble while it is written. The game runs as long as the
 page is open, so the page asks before it is left, and leaving or stopping it aborts the
-game. The board is a first version, and a fuller one with seats around a table and an
-audience mode is planned.
+game. Playback controls, export and import and a debrief panel are planned.
 
 ![The setup screen of the web app](docs/images/web-setup-screen.jpg)
 
-![The board during the debrief, with every seat writing its reflection at once](docs/images/web-board-streaming.jpg)
+![The board in audience mode during the second clue round, with the speaking seat glowing](docs/images/web-board-audience.jpg)
+
+![The board after the reveal, with the vote counts, the caught imposter and the outcome banner](docs/images/web-board-outcome.jpg)
 
 The web app is a React app in `frontend/` (Vite, TypeScript, Tailwind CSS and
 shadcn/ui). `make frontend` builds it into `frontend/dist`, which the API app then serves
@@ -47,15 +59,15 @@ credentials mounted, so a real game plays in the container.
 
 ## Game API
 
-The backend is ADK's own API server
-for the game app, plus a `/catalog` route that lists the models, the word categories and
-the default lineup. A game is an ADK session: the client creates a session with the game
-options in its state, then plays it with `POST /run_sse`, which streams the game while it
-runs. Every game event comes as an ADK event with the event in its custom metadata, a
-"turn started" event says whose turn it is before the model answers, and with
-`"streaming": true` every answer streams token by token as it is written. The game runs
-as long as that request is open and is aborted when the client goes away.
-[`docs/plans/web-ui.md`](docs/plans/web-ui.md) describes the stream in detail.
+The backend is ADK's own API server for the game app, plus a `/catalog` route that lists
+the models, the word categories and the default lineup, and a `/traces/{game_id}` route
+with the Cloud Trace link of a game. A game is an ADK session: the client creates a
+session with the game options in its state, then plays it with `POST /run_sse`, which
+streams the game while it runs. Every game event comes as an ADK event with the event in
+its custom metadata, a "turn started" event says whose turn it is before the model
+answers, and with `"streaming": true` every answer streams token by token as it is
+written. The game runs as long as that request is open and is aborted when the client goes
+away. [`docs/plans/web-ui.md`](docs/plans/web-ui.md) describes the stream in detail.
 
 ## How a game runs
 

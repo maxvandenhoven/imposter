@@ -14,6 +14,7 @@ playing it is an ADK run.
 | `POST` | `/apps/imposter/users/{user_id}/sessions` | Create a game: the body is `{"state": {"game:request": <GameRequest>}}`. The session id is the game id |
 | `POST` | `/run_sse` | Play the game and stream its events. Body: `app_name`, `user_id`, `session_id`, `new_message` (any user message, for example "Play the game."), `"streaming": true` |
 | `GET` | `/apps/imposter/users/{user_id}/sessions/{session_id}` | The session with every stored event, for a finished game |
+| `GET` | `/traces/{game_id}` | Ours: `{"url": ...}`, the Trace Explorer link of the game's run once it started, or `null` when traces are not sent to Google Cloud. The trace plugin of `agent.py` notes the trace id of each run |
 | `GET` | `/health` | Liveness |
 | `GET` | `/` | Ours: the built frontend, from `IMPOSTER_FRONTEND_DIR` or `frontend/dist`, when it exists. Mounted after every API route, so unknown API paths stay 404 |
 
@@ -77,7 +78,7 @@ serve both.
 |---|---|
 | Build | Vite + React + TypeScript (strict, `noUncheckedIndexedAccess`), Node pinned in `.nvmrc` |
 | Package manager | npm, lockfile committed |
-| Styling | Tailwind CSS through `@tailwindcss/vite`, with a dark "game night" theme in the shadcn theme tokens of `index.css` and the Geist font |
+| Styling | Tailwind CSS through `@tailwindcss/vite`, with a light "game night" theme in the shadcn theme tokens of `index.css` (warm paper, a violet table and one colour each for speaking, imposter and civilian), Geist for text and Bricolage Grotesque for headings |
 | Components | shadcn/ui (Radix base, Lucide icons), copied into `frontend/src/components/ui/` and themed. App components build on them |
 | Animation | `motion` for chips, bubbles, the vote reveal and layout changes, with `prefers-reduced-motion` respected |
 | Server state | TanStack Query for the catalog |
@@ -86,11 +87,11 @@ serve both.
 | Lint, format, test | ESLint, Prettier, Vitest with Testing Library |
 
 There is no router: the app has a setup view and a board view. In development, `make dev`
-runs the API on port 8000 and the Vite dev server on port 5173, which forwards
-`/catalog`, `/apps` and `/run_sse` to the API. The proxy keeps the browser's `Host`
-header (no `changeOrigin`), because ADK's API server refuses a `POST` whose `Origin` is
-not the host it was sent to (found in WP 09). In the image, a Node stage builds
-`frontend/dist` (`infrastructure.md` §Build and deploy).
+runs the API on port 8000 and the Vite dev server on port 5173, which forwards `/catalog`,
+`/apps`, `/run_sse` and `/traces` to the API. The proxy keeps the browser's `Host` header
+(no `changeOrigin`), because ADK's API server refuses a `POST` whose `Origin` is not the
+host it was sent to (found in WP 09). In the image, a Node stage builds `frontend/dist`
+(`infrastructure.md` §Build and deploy).
 
 The stream client (`src/api/gameStream.ts`) creates the session for a fixed user id
 (`local`) until WP 13 uses the IAP identity. It reports a failed run once: the
@@ -109,7 +110,8 @@ Rules that keep the look consistent:
   playback cursor) lives in plain TypeScript functions in `frontend/src/lib/`, tested
   with Vitest, and components only render it.
 - Provider logos are small SVGs in `frontend/public/logos/`, at the paths the catalog's
-  `logo` field names.
+  `logo` field names. Logos for providers without a catalog model yet (DeepSeek, Grok,
+  Mistral, Qwen) are there too, coloured to show on the light theme.
 - It works at laptop and projector sizes, and a phone layout is nice to have.
 
 ### Setup screen
@@ -119,7 +121,9 @@ Kept simple: the essentials up front, the rest under "Advanced".
 - Word: tabs for *Random* (category dropdown), *Type* (text + optional category),
   *Surprise me* (generated).
 - Players: list of seats with a model dropdown each, add/remove (3–8), "randomise
-  lineup".
+  lineup". Each seat has a mask toggle that makes its player an imposter. Without a
+  choice the imposters are random, and choosing more players than there are imposters
+  is reported before Start.
 - Identity mode: segmented control (Seats / Names / Models).
 - Toggles: public category, imposter hint.
 - Advanced: clue rounds, discussion rounds, imposters, word caps, token budget,
@@ -132,20 +136,36 @@ Kept simple: the essentials up front, the rest under "Advanced".
 ### Game board
 
 - Seat cards around a central table card with the phase, round and category (and the
-  word in god mode), and a transcript next to it. Seats show the name, the model logo and
-  the role badge (in god mode or after the reveal), and a speaking indicator with a soft
-  glow and typing dots during the seat's turn.
-- Live answers: the partial JSON of the current answer is parsed as it grows, so the clue
-  or statement appears on the speaking seat's card while it is written.
-- Timeline/transcript: clues appear as chips per round sliding in; discussion as speech
-  bubbles; votes as a reveal sequence with arrows/counts; the imposter's guess and the
-  judge verdict; an outcome banner.
+  word in god mode), and a transcript next to it. The table takes the middle cell of a
+  3 by 3 grid and the seats spread clockwise over the cells around it, so 3 to 8 seats
+  fit without overlap. On narrow screens the table comes first and the seats follow.
+- Seats show the name, the model logo and name, the role badge (in god mode or after the
+  reveal), the clue chips per round and what the seat said last in the current round as
+  a speech bubble. The seat whose turn it is glows softly and shows typing dots. The
+  model logos show in both modes: the `usage` events name the model of each seat
+  publicly anyway, and comparing models is the point of watching.
+- Live answers: the partial JSON of the current answer is parsed as it grows
+  (`lib/partialJson.ts`), so the clue or statement appears on the speaking seat's card
+  while it is written. In audience mode the secret word is masked in live clues and
+  statements, including a start of it at the end of the text, because a player who
+  says the word only becomes a `secret_word_said` event once the turn ends.
+- Timeline/transcript: clues appear as chips per round sliding in, discussion as speech
+  bubbles, votes as a reveal sequence with curved arrows drawn one after another between
+  the seats and a vote count popping onto each target, the imposter's guess with the
+  judge verdict, and an outcome banner in the winning side's colour. `player_error`
+  warnings sit under the transcript entry of their turn, or stand alone when that turn
+  is hidden (a secret vote in audience mode).
 - God mode: the word, roles, and each turn's private reasoning shown live as a
-  "thought bubble" next to the public action. The models' own thought parts are shown
-  collapsed. Audience mode hides all of these until the reveal, also in the partial text.
-- Header: phase indicator, running token and cost estimate, link to the trace in Cloud
-  Trace, mode toggle (audience / god).
-- Errors (`player_error`) shown inline as a small warning on the turn.
+  "thought bubble" next to the public action, and the secret votes as dashed arrows as
+  they come in. The models' own thought parts are shown collapsed. Audience mode hides
+  all of these until the reveal, also in the partial text. After the `outcome` event
+  everything is shown in both modes.
+- Header: phase steps, running token and cost estimate (from the `usage` events and the
+  catalog prices), link to the trace in Cloud Trace (from `/traces/{game_id}`), mode
+  toggle (audience / god).
+- `lib/boardView.ts` builds all of this as one view model from the events up to a
+  cursor, the partial answers and the mode, and its tests check that audience mode shows
+  nothing private at any cursor before the reveal.
 
 ### Playback
 
