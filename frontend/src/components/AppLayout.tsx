@@ -1,9 +1,9 @@
-import { cn } from "cn";
 import type { ReactNode } from "react";
 
 /**
- * The page frame: the view, with the app's name on top of the setup. The board is wide
- * and has no title, since its header carries the logo.
+ * The page frame. The setup has a dark bar across the top with the app's name, above the
+ * view. The board is wide and brings its own dark header bar, with the logo, so the
+ * frame leaves the whole width to it.
  */
 export function AppLayout({
   children,
@@ -12,15 +12,14 @@ export function AppLayout({
   children: ReactNode;
   wide?: boolean;
 }) {
+  if (wide) {
+    return <main className="flex min-h-screen flex-col">{children}</main>;
+  }
+
   return (
-    <div
-      className={cn(
-        "mx-auto flex min-h-screen flex-col gap-5 px-4 py-5 sm:px-8",
-        wide ? "max-w-[120rem]" : "max-w-6xl",
-      )}
-    >
-      {!wide && (
-        <header className="flex items-center gap-3">
+    <div className="flex min-h-screen flex-col">
+      <header className="night border-b bg-background text-foreground">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
           <img src="/favicon.svg" alt="" className="size-8" />
           <div>
             <h1 className="font-heading text-xl font-semibold tracking-tight">
@@ -30,9 +29,11 @@ export function AppLayout({
               Language models play the social deduction game.
             </p>
           </div>
-        </header>
-      )}
-      <main className="flex flex-1 flex-col gap-6">{children}</main>
+        </div>
+      </header>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 sm:px-8">
+        {children}
+      </main>
     </div>
   );
 }

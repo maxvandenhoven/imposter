@@ -32,6 +32,8 @@ const SURROUNDING_PUNCTUATION = /^[\s"'.,;:!?()[\]{}]+|[\s"'.,;:!?()[\]{}]+$/g;
 
 /** A seat of the setup screen: its model and whether it must be an imposter. */
 export interface SetupSeat {
+  /** A stable id, so a seat keeps its row when the seats are reordered. */
+  id: number;
   modelId: string;
   /** Whether this player is an imposter, wherever its seat ends up. */
   imposter: boolean;
@@ -59,6 +61,41 @@ export interface SetupForm {
   temperature: number | null;
 }
 
+/** The id of the next new seat. */
+let nextSeatId = 0;
+
+/** A new seat with a model, not an imposter, with an id no other seat has. */
+export function newSeat(modelId: string): SetupSeat {
+  nextSeatId += 1;
+
+  return { id: nextSeatId, modelId, imposter: false };
+}
+
+/**
+ * Move the seat at `from` to `to`, keeping its model and whether it is an imposter.
+ *
+ * An index out of range leaves the seats as they are.
+ */
+export function moveSeat({
+  seats,
+  from,
+  to,
+}: {
+  seats: SetupSeat[];
+  from: number;
+  to: number;
+}): SetupSeat[] {
+  const moved = seats[from];
+
+  if (moved === undefined || to < 0 || to >= seats.length || from === to) {
+    return seats;
+  }
+
+  const rest = seats.filter((_, index) => index !== from);
+
+  return [...rest.slice(0, to), moved, ...rest.slice(to)];
+}
+
 /**
  * The setup form with the defaults of `game-rules.md` and the catalog's lineup, with one
  * imposter on a random seat.
@@ -69,7 +106,7 @@ export function defaultSetupForm(
   catalog: CatalogResponse,
   random: () => number = Math.random,
 ): SetupForm {
-  const seats = catalog.default_lineup.map((modelId) => ({ modelId, imposter: false }));
+  const seats = catalog.default_lineup.map((modelId) => newSeat(modelId));
 
   return {
     wordMode: "random",
@@ -146,32 +183,46 @@ function isWholeNumberBetween(value: number, min: number, max: number): boolean 
   return Number.isInteger(value) && value >= min && value <= max;
 }
 
+/** The sections of the setup screen, where a problem with the options is shown. */
+export type SetupSection = "word" | "players" | "rules";
+
+/** A problem with the options, with the section of the setup screen it belongs to. */
+export interface SetupProblem {
+  section: SetupSection;
+  message: string;
+}
+
 /**
  * Check the options against the limits the server enforces, returning every problem.
  *
  * Invalid options only fail once the game's run starts, so the setup screen checks them
- * before Start. An empty list means the game can start.
+ * before Start and shows each problem in its section. An empty list means the game can
+ * start.
  */
-export function setupProblems(form: SetupForm): string[] {
-  const problems: string[] = [];
+export function setupProblems(form: SetupForm): SetupProblem[] {
+  const problems: SetupProblem[] = [];
+  const add = (section: SetupSection, message: string) => {
+    problems.push({ section, message });
+  };
   const players = form.seats.length;
 
   if (form.wordMode === "typed" && !SINGLE_WORD.test(cleanWord(form.word))) {
-    problems.push("The secret word must be exactly one word.");
+    add("word", "The secret word must be exactly one word.");
   }
 
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) {
-    problems.push(`A game needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players.`);
+    add("players", `A game needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players.`);
   } else if (imposterCount(form.seats) === 0) {
-    problems.push("Choose at least one imposter.");
+    add("players", "Choose at least one imposter.");
   } else if (imposterCount(form.seats) > maxImposters(players)) {
-    problems.push(
+    add(
+      "players",
       `${players} players allow at most ${maxImposters(players)} imposters, not ${imposterCount(form.seats)}.`,
     );
   }
 
   if (!isWholeNumberBetween(form.clueRounds, CLUE_ROUNDS.min, CLUE_ROUNDS.max)) {
-    problems.push(`Clue rounds must be ${CLUE_ROUNDS.min} to ${CLUE_ROUNDS.max}.`);
+    add("rules", `Clue rounds must be ${CLUE_ROUNDS.min} to ${CLUE_ROUNDS.max}.`);
   }
 
   if (
@@ -181,7 +232,8 @@ export function setupProblems(form: SetupForm): string[] {
       DISCUSSION_ROUNDS.max,
     )
   ) {
-    problems.push(
+    add(
+      "rules",
       `Discussion rounds must be ${DISCUSSION_ROUNDS.min} to ${DISCUSSION_ROUNDS.max}.`,
     );
   }
@@ -194,7 +246,7 @@ export function setupProblems(form: SetupForm): string[] {
 
   for (const [value, label] of positive) {
     if (!isWholeNumberBetween(value, 1, Number.MAX_SAFE_INTEGER)) {
-      problems.push(`${label} must be a whole number of at least 1.`);
+      add("rules", `${label} must be a whole number of at least 1.`);
     }
   }
 
@@ -204,7 +256,7 @@ export function setupProblems(form: SetupForm): string[] {
     temperature !== null &&
     !(temperature >= TEMPERATURE.min && temperature <= TEMPERATURE.max)
   ) {
-    problems.push(`The temperature must be ${TEMPERATURE.min} to ${TEMPERATURE.max}.`);
+    add("rules", `The temperature must be ${TEMPERATURE.min} to ${TEMPERATURE.max}.`);
   }
 
   return problems;
@@ -272,4 +324,51 @@ export function randomLineup(
   }
 
   return lineup;
+}
+
+/**
+ * The slot a dragged seat would drop into: its own slot moved by the drag `offset` in
+ * whole rows of `step` pixels, kept within the `count` seats.
+ */
+export function dragTarget({
+  from,
+  offset,
+  step,
+  count,
+}: {
+  from: number;
+  offset: number;
+  step: number;
+  count: number;
+}): number {
+  const moved = step > 0 ? Math.round(offset / step) : 0;
+
+  return Math.min(Math.max(from + moved, 0), count - 1);
+}
+
+/**
+ * How far, in pixels, the seat at `index` steps aside while the seat at `from` is
+ * dragged to `target`: one row of `step` pixels up or down for the seats it passes, and
+ * none for the others. The dragged seat itself follows the pointer instead.
+ */
+export function dragShift({
+  index,
+  from,
+  target,
+  step,
+}: {
+  index: number;
+  from: number;
+  target: number;
+  step: number;
+}): number {
+  if (index > from && index <= target) {
+    return -step;
+  }
+
+  if (index < from && index >= target) {
+    return step;
+  }
+
+  return 0;
 }

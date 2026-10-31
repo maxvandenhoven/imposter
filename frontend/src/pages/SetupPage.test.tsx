@@ -29,6 +29,16 @@ function renderSetup(
 }
 
 describe("SetupPage", () => {
+  it("explains the rules of the game below the form", async () => {
+    renderSetup();
+
+    expect(
+      await screen.findByRole("heading", { name: "How to play" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: "Saying the word" })).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Breaks a rule").length).toBeGreaterThan(0);
+  });
+
   it("imports an exported game", async () => {
     const onImport = vi.fn();
     renderSetup(vi.fn(), onImport);
@@ -71,6 +81,43 @@ describe("SetupPage", () => {
     );
   });
 
+  it("moves a seat with its model and mask by the arrow keys on its handle", async () => {
+    const onStart = vi.fn();
+    renderSetup(onStart);
+
+    (await screen.findByRole("button", { name: "Move seat 1" })).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await userEvent.click(screen.getByRole("button", { name: "Start game" }));
+
+    const request = onStart.mock.calls[0]?.[0] as GameRequest;
+    const [first, second, ...rest] = CATALOG.default_lineup;
+    expect(request.config.players.map((player) => player.model_id)).toEqual([
+      second,
+      first,
+      ...rest,
+    ]);
+    expect(request.config.players.map((player) => player.imposter)).toEqual(
+      CATALOG.default_lineup.map((_, index) => index === 1),
+    );
+  });
+
+  it("starts a custom word with a category of free text", async () => {
+    const onStart = vi.fn();
+    renderSetup(onStart);
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Custom" }));
+    await userEvent.type(screen.getByLabelText("Secret word"), "beacon");
+    await userEvent.type(screen.getByLabelText("Category"), "buildings");
+    await userEvent.click(screen.getByRole("button", { name: "Start game" }));
+
+    const request = onStart.mock.calls[0]?.[0] as GameRequest;
+    expect(request.words).toEqual({
+      mode: "typed",
+      word: "beacon",
+      category: "buildings",
+    });
+  });
+
   it("starts a game with the imposters that were chosen", async () => {
     const onStart = vi.fn();
     renderSetup(onStart);
@@ -110,7 +157,7 @@ describe("SetupPage", () => {
     const onStart = vi.fn();
     renderSetup(onStart);
 
-    await userEvent.click(await screen.findByRole("tab", { name: "Type" }));
+    await userEvent.click(await screen.findByRole("tab", { name: "Custom" }));
 
     expect(
       screen.getByText("The secret word must be exactly one word."),

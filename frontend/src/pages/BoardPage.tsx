@@ -17,6 +17,7 @@ import type { BoardState, BoardStatus } from "@/lib/board";
 import { type BoardMode, buildBoardView, type ModelPrices } from "@/lib/boardView";
 import { buildDebrief } from "@/lib/debrief";
 import type { GamePlayback } from "@/lib/playback";
+import { PHASE_STEPS, phaseEnd, phaseSteps, playedPhases } from "@/lib/table";
 
 const ENDED_LABELS: Record<Exclude<BoardStatus, "running">, BoardStatusLabel> = {
   finished: "Finished",
@@ -65,6 +66,10 @@ export function BoardPage({
     running: streaming || !playback.atLive,
     prices,
   });
+  // A phase that has ended in the game can be jumped to, also while replaying before it.
+  const phaseEnds = Object.fromEntries(
+    PHASE_STEPS.map(({ phase }) => [phase, phaseEnd(playback.timeline.events, phase)]),
+  );
   let status: BoardStatusLabel = playback.atLive ? "Live" : "Catching up";
 
   if (!streaming) {
@@ -77,42 +82,55 @@ export function BoardPage({
   useLeaveWarning(streaming);
 
   return (
-    <div className="flex flex-col gap-5 pb-24">
+    <div className="flex flex-col pb-24">
       <BoardHeader
         view={view}
+        steps={phaseSteps({
+          phase: view.phase,
+          finished: view.finished,
+          played: playedPhases(played.events),
+        })}
+        phaseEnds={phaseEnds}
         status={status}
         running={streaming}
         mode={mode}
         traceUrl={trace.data ?? null}
         onModeChange={setMode}
+        onSeek={(events) => {
+          changePlayback((current) => {
+            current.seek(events);
+          });
+        }}
         onExport={onExport}
         onStop={onStop}
         onNewGame={onNewGame}
       />
-      {board.errors.map((message, index) => (
-        <Alert key={index} variant="destructive">
-          <AlertTitle>The game failed</AlertTitle>
-          <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
-        </Alert>
-      ))}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]">
-        <div className="flex flex-col gap-5">
-          {view.outcome !== null && <OutcomeBanner outcome={view.outcome} />}
-          <GameTable view={view} models={models} />
+      <div className="mx-auto flex w-full max-w-[120rem] flex-col gap-5 px-4 pt-5 sm:px-8">
+        {board.errors.map((message, index) => (
+          <Alert key={index} variant="destructive">
+            <AlertTitle>The game failed</AlertTitle>
+            <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
+          </Alert>
+        ))}
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]">
+          <div className="flex flex-col gap-5">
+            {view.outcome !== null && <OutcomeBanner outcome={view.outcome} />}
+            <GameTable view={view} models={models} />
+          </div>
+          <Transcript
+            entries={view.transcript}
+            seats={view.seats}
+            models={models}
+            className="h-[36rem] gap-0 pb-0 xl:sticky xl:top-5 xl:h-[calc(100vh-10rem)]"
+          />
         </div>
-        <Transcript
-          entries={view.transcript}
-          seats={view.seats}
-          models={models}
-          className="h-[36rem] gap-0 pb-0 xl:sticky xl:top-5 xl:h-[calc(100vh-10rem)]"
-        />
+        {view.finished && (
+          <DebriefPanel
+            seats={buildDebrief({ events: played.events, prices })}
+            models={models}
+          />
+        )}
       </div>
-      {view.finished && (
-        <DebriefPanel
-          seats={buildDebrief({ events: played.events, prices })}
-          models={models}
-        />
-      )}
       <PlaybackBar playback={playback} onChange={changePlayback} />
     </div>
   );

@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   ANY_CATEGORY,
   defaultSetupForm,
+  dragShift,
+  dragTarget,
   gameRequest,
   maxImposters,
+  moveSeat,
   randomImposters,
   randomLineup,
   removeSeat,
@@ -21,6 +24,7 @@ function form(patch: Partial<SetupForm> = {}): SetupForm {
 /** `count` seats of one model, the first `imposters` of them chosen as imposters. */
 function seats(count: number, imposters = 0): SetupSeat[] {
   return Array.from({ length: count }, (_, index) => ({
+    id: index,
     modelId: "gpt-oss",
     imposter: index < imposters,
   }));
@@ -57,13 +61,21 @@ describe("setupProblems", () => {
       "The secret word must be exactly one word.",
     ],
   ] as [Partial<SetupForm>, string][])("reports %o", (patch, problem) => {
-    expect(setupProblems(form(patch))).toEqual([problem]);
+    expect(setupProblems(form(patch)).map(({ message }) => message)).toEqual([problem]);
   });
 
   it("accepts a typed word with surrounding punctuation and inner hyphens", () => {
     expect(
       setupProblems(form({ wordMode: "typed", word: ' "jack-o-lantern!" ' })),
     ).toEqual([]);
+  });
+
+  it("puts each problem in the section of the setup where it is fixed", () => {
+    const problems = setupProblems(
+      form({ wordMode: "typed", word: "", seats: seats(4), clueRounds: 9 }),
+    );
+
+    expect(problems.map(({ section }) => section)).toEqual(["word", "players", "rules"]);
   });
 
   it("allows more imposters in larger games", () => {
@@ -165,5 +177,41 @@ describe("randomLineup", () => {
 
   it("gives no seats without models", () => {
     expect(randomLineup([], 3)).toEqual([]);
+  });
+});
+
+describe("moveSeat", () => {
+  it("moves a seat with its model and imposter mask", () => {
+    const lineup = seats(4, 1).map((seat, index) => ({ ...seat, modelId: `m${index}` }));
+
+    const moved = moveSeat({ seats: lineup, from: 0, to: 2 });
+
+    expect(moved.map((seat) => seat.modelId)).toEqual(["m1", "m2", "m0", "m3"]);
+    expect(moved[2]).toEqual({ id: 0, modelId: "m0", imposter: true });
+  });
+
+  it("leaves the seats as they are for an index out of range", () => {
+    const lineup = seats(3, 1);
+
+    expect(moveSeat({ seats: lineup, from: 0, to: 3 })).toBe(lineup);
+    expect(moveSeat({ seats: lineup, from: 5, to: 0 })).toBe(lineup);
+  });
+});
+
+describe("dragging a seat", () => {
+  it("drops into the slot the drag reached, within the seats", () => {
+    expect(dragTarget({ from: 0, offset: 70, step: 40, count: 4 })).toBe(2);
+    expect(dragTarget({ from: 1, offset: -15, step: 40, count: 4 })).toBe(1);
+    expect(dragTarget({ from: 3, offset: 400, step: 40, count: 4 })).toBe(3);
+    expect(dragTarget({ from: 1, offset: -400, step: 40, count: 4 })).toBe(0);
+  });
+
+  it("moves the passed seats one row aside and leaves the others", () => {
+    const shifts = (from: number, target: number) =>
+      [0, 1, 2, 3].map((index) => dragShift({ index, from, target, step: 40 }));
+
+    expect(shifts(0, 2)).toEqual([0, -40, -40, 0]);
+    expect(shifts(3, 1)).toEqual([0, 40, 40, 0]);
+    expect(shifts(2, 2)).toEqual([0, 0, 0, 0]);
   });
 });

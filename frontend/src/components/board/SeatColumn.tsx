@@ -1,9 +1,10 @@
 import { cn } from "cn";
 import { Check, Megaphone } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { forwardRef, memo } from "react";
+import { memo, type Ref } from "react";
 
 import type { CatalogModel } from "@/api/types";
+import { BallotChip } from "@/components/board/BallotChip";
 import { ModelThinking } from "@/components/board/ModelThinking";
 import { RoleBadge } from "@/components/board/RoleBadge";
 import { SeatAvatar } from "@/components/board/SeatAvatar";
@@ -13,6 +14,7 @@ import { TypingDots } from "@/components/board/TypingDots";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { bubbleKey, type SeatView } from "@/lib/boardView";
+import { type Ballot, BALLOT_FLIGHT_SECONDS } from "@/lib/table";
 
 /** The clues of a seat, one chip per round, sliding in as they are given. */
 function ClueChips({ seat }: { seat: SeatView }) {
@@ -43,6 +45,36 @@ function ClueChips({ seat }: { seat: SeatView }) {
   );
 }
 
+/**
+ * The ballots that landed on a seat, one chip per voter, popping in as each ballot
+ * arrives.
+ */
+function BallotChips({ ballots, caught }: { ballots: Ballot[]; caught: boolean }) {
+  if (ballots.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="flex flex-wrap justify-center gap-1" aria-label="Votes from">
+      {ballots.map((ballot) => (
+        <motion.li
+          key={`${ballot.revealed}-${ballot.voter}`}
+          initial={{ opacity: 0, scale: 0.4, y: -6 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 420,
+            damping: 18,
+            delay: ballot.delay + BALLOT_FLIGHT_SECONDS * 0.85,
+          }}
+        >
+          <BallotChip name={ballot.name} revealed={ballot.revealed} caught={caught} />
+        </motion.li>
+      ))}
+    </ul>
+  );
+}
+
 /** The vote count of a seat after the reveal, popping in. */
 function VoteCount({ count, caught }: { count: number; caught: boolean }) {
   return (
@@ -61,16 +93,26 @@ function VoteCount({ count, caught }: { count: number; caught: boolean }) {
 
 /**
  * A player's column in the row under the table: its card, its answer as a speech bubble
- * and, below it, its private reasoning as a thought bubble.
+ * and, below it, its private reasoning as a thought bubble. `cardRef` gets the card, so
+ * the ballots fly between the cards and not the growing columns.
  *
  * The bubble shares its key with the one on the table, so an answer written on the
  * table moves down into the column when the turn ends. Answers that every seat writes
  * at once, votes and reflections, are written in the column itself.
  */
-const SeatColumnPanel = forwardRef<
-  HTMLDivElement,
-  { seat: SeatView; model: CatalogModel | undefined; onStage: boolean }
->(function SeatColumnPanel({ seat, model, onStage }, ref) {
+function SeatColumnPanel({
+  seat,
+  model,
+  onStage,
+  ballots,
+  cardRef,
+}: {
+  seat: SeatView;
+  model: CatalogModel | undefined;
+  onStage: boolean;
+  ballots: Ballot[];
+  cardRef?: Ref<HTMLDivElement>;
+}) {
   const live = seat.live;
   const said = seat.said;
   const liveText = onStage ? null : (live?.text ?? null);
@@ -82,8 +124,9 @@ const SeatColumnPanel = forwardRef<
       : `live-${seat.seat}-${live?.phase ?? ""}`;
 
   return (
-    <div ref={ref} className="flex min-w-0 flex-col items-stretch gap-2">
+    <div className="flex min-w-0 flex-col items-stretch gap-2">
       <motion.div
+        ref={cardRef}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative"
@@ -131,6 +174,7 @@ const SeatColumnPanel = forwardRef<
             )}
           </div>
           <ClueChips seat={seat} />
+          <BallotChips ballots={ballots} caught={seat.caught} />
           {seat.caught && (
             <motion.span
               initial={{ opacity: 0, scale: 1.8, rotate: -24 }}
@@ -177,7 +221,7 @@ const SeatColumnPanel = forwardRef<
       {live?.thought != null && <ModelThinking text={live.thought} />}
     </div>
   );
-});
+}
 
 /**
  * A player's column, rendered again only when its player, model or stage changes, since
@@ -188,5 +232,7 @@ export const SeatColumn = memo(
   (previous, next) =>
     previous.model === next.model &&
     previous.onStage === next.onStage &&
+    previous.cardRef === next.cardRef &&
+    JSON.stringify(previous.ballots) === JSON.stringify(next.ballots) &&
     JSON.stringify(previous.seat) === JSON.stringify(next.seat),
 );

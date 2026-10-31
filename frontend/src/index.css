@@ -35,6 +35,7 @@
   --color-speaking: var(--speaking);
   --color-imposter: var(--imposter);
   --color-civilian: var(--civilian);
+  --color-skipped: var(--skipped);
   --color-table: var(--table);
   --color-table-foreground: var(--table-foreground);
   --color-table-muted: var(--table-muted);
@@ -81,6 +82,8 @@
   --speaking: #f2a516;
   --imposter: #e0384f;
   --civilian: #0f9b88;
+  /* A phase the game went past without playing it. */
+  --skipped: #b7791f;
 
   /* The table in the middle of the board, and the private thought bubbles. */
   --table: #2e2566;
@@ -88,6 +91,29 @@
   --table-muted: #b9b0e8;
   --thought: #f1edff;
   --thought-foreground: #4a3aa8;
+}
+
+/*
+ * Lights off, for the dark bars at the top of the page: the header of the board and of
+ * the setup. Only the elements inside a `.night` element take these colours.
+ */
+.night {
+  color-scheme: dark;
+  --background: #16131f;
+  --foreground: #f4f1fb;
+  --card: #1f1b2e;
+  --card-foreground: #f4f1fb;
+  --primary: #8f7cf7;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2650;
+  --secondary-foreground: #e6e0ff;
+  --muted: #262139;
+  --muted-foreground: #a9a3c2;
+  --accent: #2a2540;
+  --accent-foreground: #f4f1fb;
+  --border: #322c48;
+  --input: #3a3354;
+  --ring: #8f7cf7;
 }
 
 @layer base {
@@ -176,5 +202,17 @@
     .typing-dot {
       animation: typing-dot 1.2s ease-in-out infinite;
     }
+  }
+}
+
+@layer utilities {
+  /* The backdrop of a rule diagram: the page's dotted background, on a muted card. */
+  .board-surface {
+    background-color: var(--muted);
+    background-image: radial-gradient(
+      color-mix(in srgb, var(--foreground) 9%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 16px 16px;
   }
 }

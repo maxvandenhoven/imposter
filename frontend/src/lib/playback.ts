@@ -37,16 +37,6 @@ const EVENT_PAUSES: Partial<Record<GameEventType, number>> = {
   reflection: 800,
 };
 
-/** The engine events that end a seat's turn with its answer: one response each. */
-const RESPONSE_TYPES = new Set<GameEventType>([
-  "clue_given",
-  "statement_made",
-  "vote_cast",
-  "guess_made",
-  "secret_word_said",
-  "reflection",
-]);
-
 /** How long an engine event stays before the next item plays, at normal speed. */
 export function eventPause(event: GameEvent): number {
   switch (event.type) {
@@ -65,11 +55,6 @@ export function eventPause(event: GameEvent): number {
 /** Whether an item starts a new round or phase, after which a round is over. */
 function startsRound(item: TimelineItem): boolean {
   return item.kind === "event" && item.event.type === "phase_started";
-}
-
-/** Whether an item is a seat's response. */
-function isResponse(item: TimelineItem): boolean {
-  return item.kind === "event" && RESPONSE_TYPES.has(item.event.type);
 }
 
 /**
@@ -119,7 +104,7 @@ export class GameTimeline {
 }
 
 /** Why playback stopped by itself. */
-export type PlaybackPause = "round" | "step" | null;
+export type PlaybackPause = "round" | null;
 
 /**
  * Plays a game's timeline at a pace the audience can follow.
@@ -128,7 +113,8 @@ export type PlaybackPause = "round" | "step" | null;
  * `started`, which shows an engine event at once and writes an answer out over its
  * duration. Playback runs at `speed`. While more than `CATCH_UP_BACKLOG` of the
  * timeline waits, answers are written faster, smoothly and up to `MAX_CATCH_UP` times,
- * so it never shows a whole backlog at once, while the pauses to read stay as long. It can stop before each new round and after the next response.
+ * so it never shows a whole backlog at once, while the pauses to read stay as long.
+ * It can stop before each new round.
  *
  * Attributes:
  *   timeline: The timeline it plays.
@@ -138,7 +124,6 @@ export type PlaybackPause = "round" | "step" | null;
  *   playing: Whether the clock runs.
  *   speed: How fast it plays, 1 for normal speed.
  *   pauseAfterRounds: Whether it stops before each new round.
- *   stepping: Whether it stops after the next response.
  *   pausedFor: Why it stopped by itself, if it did.
  */
 export class GamePlayback {
@@ -149,7 +134,6 @@ export class GamePlayback {
   playing = true;
   speed = 1;
   pauseAfterRounds = false;
-  stepping = false;
   pausedFor: PlaybackPause = null;
   /** The time the played items take at normal speed, in milliseconds. */
   private playedDuration = 0;
@@ -182,12 +166,6 @@ export class GamePlayback {
     return this.timeline.events.length - this.eventsShown;
   }
 
-  /** The responses that arrived and have not played yet. */
-  get responsesBehind(): number {
-    return this.timeline.items.slice(this.index).filter((timed) => isResponse(timed.item))
-      .length;
-  }
-
   /**
    * The speed at which answers are written now: the chosen speed with the catch up for
    * the backlog. Engine events keep their pauses at the chosen speed, so a backlog never
@@ -202,20 +180,12 @@ export class GamePlayback {
   /** Run the clock, starting the item it stopped before. */
   play(): void {
     this.playing = true;
-    this.stepping = false;
     this.resume();
   }
 
   /** Stop the clock. */
   pause(): void {
     this.playing = false;
-  }
-
-  /** Play until the next response has been shown, then stop. */
-  step(): void {
-    this.playing = true;
-    this.stepping = true;
-    this.resume();
   }
 
   /**
@@ -253,7 +223,6 @@ export class GamePlayback {
     this.elapsed = 0;
     this.started = false;
     this.playing = false;
-    this.stepping = false;
     this.pausedFor = null;
   }
 
@@ -303,7 +272,6 @@ export class GamePlayback {
     }
 
     this.pausedFor = null;
-    this.stepping = false;
     this.playing = true;
   }
 
@@ -355,14 +323,8 @@ export class GamePlayback {
       }
 
       budget -= needed;
-      const finished = this.timeline.items[this.index]?.item;
       this.finishCurrent();
       changed = true;
-
-      if (this.stepping && finished !== undefined && isResponse(finished)) {
-        this.stopFor("step");
-        return changed;
-      }
     }
 
     return changed;
@@ -399,7 +361,6 @@ export class GamePlayback {
 
   private stopFor(reason: Exclude<PlaybackPause, null>): void {
     this.playing = false;
-    this.stepping = false;
     this.pausedFor = reason;
   }
 

@@ -3,7 +3,6 @@ import { useState } from "react";
 
 import { NumberField } from "@/components/setup/NumberField";
 import { OptionSwitch } from "@/components/setup/OptionSwitch";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,19 +23,27 @@ export function AdvancedOptions({
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-4">
       <CollapsibleTrigger asChild>
-        <Button variant="ghost" className="self-start">
+        {/* A plain button, so its text lines up with the fields above it. */}
+        <button
+          type="button"
+          className="flex items-center gap-1.5 self-start rounded-sm text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <ChevronDown
-            data-icon="inline-start"
-            className={open ? "rotate-180 transition-transform" : "transition-transform"}
+            className={
+              open
+                ? "size-4 rotate-180 transition-transform"
+                : "size-4 transition-transform"
+            }
           />
           Advanced
-        </Button>
+        </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <NumberField
             id="clue-rounds"
             label="Clue rounds"
+            description="Each player gives one clue a round. More rounds give more evidence to vote on."
             min={CLUE_ROUNDS.min}
             max={CLUE_ROUNDS.max}
             value={form.clueRounds}
@@ -47,6 +54,7 @@ export function AdvancedOptions({
           <NumberField
             id="discussion-rounds"
             label="Discussion rounds"
+            description="Each player makes one statement a round. With 0 the vote follows the clues."
             min={DISCUSSION_ROUNDS.min}
             max={DISCUSSION_ROUNDS.max}
             value={form.discussionRounds}
@@ -57,6 +65,7 @@ export function AdvancedOptions({
           <NumberField
             id="statement-cap"
             label="Statement word cap"
+            description="The most words of a statement. Longer statements are cut off."
             min={1}
             value={form.statementWordCap}
             onChange={(statementWordCap) => {
@@ -66,6 +75,7 @@ export function AdvancedOptions({
           <NumberField
             id="reasoning-cap"
             label="Reasoning word cap"
+            description="The most words of private reasoning a turn. More words cost more tokens."
             min={1}
             value={form.reasoningWordCap}
             onChange={(reasoningWordCap) => {
@@ -75,7 +85,7 @@ export function AdvancedOptions({
           <NumberField
             id="token-budget"
             label="Token budget"
-            description="The game is aborted when its players use more."
+            description="The game is aborted when its players use more tokens, which caps its cost."
             min={1}
             value={form.tokenBudget}
             onChange={(tokenBudget) => {
@@ -86,7 +96,7 @@ export function AdvancedOptions({
         <OptionSwitch
           id="model-clue-check"
           label="Model clue check"
-          description="A model judges every clue that passes the code checks, to catch synonyms and translations."
+          description="Gemini 3.5 Flash-Lite judges every clue that passes the code checks, to catch synonyms, translations and other ways of saying the word. A rejected civilian is asked again, and a rejected imposter passes."
           checked={form.modelClueCheck}
           onChange={(modelClueCheck) => {
             onChange({ modelClueCheck });
@@ -95,7 +105,7 @@ export function AdvancedOptions({
         <OptionSwitch
           id="temperature-override"
           label="Temperature override"
-          description="Sample every player at the same temperature instead of each model's own."
+          description="Sample every player at the same temperature instead of each model's own setting, which is 1.0 for every model in the catalog. Lower values make the answers more predictable and alike from game to game, higher values more varied but more erratic."
           checked={form.temperature !== null}
           onChange={(override) => {
             onChange({ temperature: override ? 1 : null });
@@ -106,6 +116,7 @@ export function AdvancedOptions({
             <NumberField
               id="temperature"
               label="Temperature"
+              description="From 0, the most predictable, to 2, the most random."
               min={TEMPERATURE.min}
               max={TEMPERATURE.max}
               step={0.1}
