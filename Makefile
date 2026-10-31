@@ -114,16 +114,18 @@ api-client: frontend/node_modules
 
 
 # Builds the image and plays it on port 8080, with `.env` and the gcloud application
-# default credentials mounted, as Cloud Run would run it.
+# default credentials mounted, as Cloud Run would run it. Under `sudo`, `HOME` is root's,
+# so pass the file: `sudo make docker ADC_FILE=$HOME/.config/gcloud/...`.
 DOCKER_IMAGE ?= imposter
 ADC_FILE ?= $(HOME)/.config/gcloud/application_default_credentials.json
 
 .PHONY: docker
 docker:
+	@test -f "$(ADC_FILE)" || { echo "No credentials at $(ADC_FILE): run gcloud auth application-default login or set ADC_FILE"; exit 1; }
 	@docker build -t $(DOCKER_IMAGE) .
 	@docker run --rm -it -p 8080:8080 \
 		$(if $(wildcard .env),--env-file .env) \
-		-v $(ADC_FILE):/tmp/adc.json:ro \
+		--mount type=bind,source=$(ADC_FILE),target=/tmp/adc.json,readonly \
 		-e GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json --user $$(id -u):$$(id -g) \
 		$(DOCKER_IMAGE)
 
