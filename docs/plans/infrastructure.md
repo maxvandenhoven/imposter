@@ -122,11 +122,15 @@ the better filter when implementing.
 
 ## Build and deploy
 
-- `Dockerfile` (multi-stage):
-  1. `css`: download the pinned standalone Tailwind CLI binary, compile
-     `web/input.css` → `web/tailwind.css`.
-  2. `app`: `python:3.13-slim` with uv, `uv sync --frozen --no-dev`, copy `src/` and the
-     compiled CSS, run `uvicorn imposter.api.app:app --host 0.0.0.0 --port $PORT`.
+- `Dockerfile` (multi-stage, added with the frontend in WP 09 so the image is built and
+  played locally early):
+  1. `frontend`: a Node image (the version of `frontend/.nvmrc`) runs `npm ci` and
+     `npm run build` into `frontend/dist`.
+  2. `deps`: uv with `uv sync --frozen --no-dev`.
+  3. `app`: `python:3.13-slim` with the environment, `src/` and `frontend/dist`, running
+     uvicorn with the app factory (`imposter.api.app:create_app`) on `0.0.0.0:$PORT`.
+- `make docker`: builds the image and runs it on port 8080 with `.env` and the gcloud
+  application default credentials mounted, so a real game plays in the container.
 - `make build`: `gcloud builds submit --tag <region>-docker.pkg.dev/<project>/imposter/app:<git sha>`
   (builds in GCP, no local Docker needed).
 - `make deploy`: build, resolve the image digest, then

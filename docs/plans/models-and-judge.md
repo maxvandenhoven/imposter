@@ -78,7 +78,7 @@ project (only `gpt-oss` so far). `models/factory.py` turns an entry into an ADK 
 object (`Gemini` on Vertex AI or `LiteLlm`) and a `GenerateContentConfig` per phase:
 temperature, `max_output_tokens` (a per-phase answer budget plus room for thinking) and
 the thinking level.
-`GET /api/catalog` serves the catalog (without prices if preferred) to the setup screen.
+`GET /catalog` serves the catalog to the setup screen (`web-ui.md` §API).
 
 ## Identity
 
