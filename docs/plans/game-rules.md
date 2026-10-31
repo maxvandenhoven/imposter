@@ -35,6 +35,7 @@ are resolved into a `SecretWord` (word, category, hint) before the game is creat
 | Category | one of the built-in categories | Required for random; optional for typed; returned by the generator |
 | Players | 3–8 seats, each a catalog model | The same model may appear several times |
 | Imposters | **1**, up to `floor((players - 1) / 2)` | Multi-imposter works in the engine; UI polish is future work |
+| Chosen imposters | **none**, or up to the number of imposters | A player marked `imposter` in its `PlayerConfig` is an imposter wherever its seat ends up, and the remaining imposters are random |
 | Identity mode | `seat`, **`names`**, `models` | See `models-and-judge.md` §Identity |
 | Public category | on, **off** | Everyone, including the imposter, knows the category. Off by default since playtest 1 (`playtests.md`): with a concrete category, one clue was enough for the imposter to infer the word. |
 | Imposter hint | **off**, on | A related word generated at setup, shown to the imposter only |
@@ -43,7 +44,9 @@ are resolved into a `SecretWord` (word, category, hint) before the game is creat
 | Discussion rounds | **2** (0–3) | |
 | Advanced (collapsed) | statement cap **100** words, reasoning cap **60** words, token budget **200k**, temperature override | |
 
-Seat order is randomised at setup. Imposters are chosen uniformly at random. A seed may be
+Seat order is randomised at setup. Imposters are chosen uniformly at random among the
+players not chosen as imposters, so a game without chosen imposters is random as
+before, and a seed gives the same roles. A seed may be
 given for reproducible role assignment (the LLM output itself is not reproducible). Seats
 are numbered from 0 after shuffling, so the seat number is also the turn order.
 

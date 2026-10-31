@@ -159,8 +159,9 @@ class Game:
     ) -> Self:
         """Set up a game: shuffle seats, pick imposters, name seats and start round 1.
 
-        Seat order and roles come from `config.seed`, so a fixed seed gives
-        the same setup.
+        Players chosen as imposters in the config are imposters wherever they sit, and
+        the remaining imposters are picked at random. Seat order and random roles come
+        from `config.seed`, so a fixed seed gives the same setup.
 
         Args:
             config: The options of the game.
@@ -184,7 +185,11 @@ class Game:
         rng = random.Random(config.seed)
         players = list(config.players)
         rng.shuffle(players)
-        imposters = set(rng.sample(range(len(players)), k=config.imposter_count))
+        # Players chosen as imposters keep the role, the other imposters are random.
+        chosen = [seat for seat, player in enumerate(players) if player.imposter]
+        others = [seat for seat in range(len(players)) if seat not in chosen]
+        picked = rng.sample(others, k=config.imposter_count - len(chosen))
+        imposters = set(chosen) | set(picked)
         names = seat_names(mode=config.identity_mode, players=players)
         seats = [
             Seat(

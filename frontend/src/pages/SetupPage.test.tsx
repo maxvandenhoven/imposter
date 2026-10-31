@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "@/api/queryClient";
 import type { GameRequest } from "@/api/types";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { SetupPage } from "@/pages/SetupPage";
 import { mockApi } from "@/test/api";
 import { CATALOG } from "@/test/fixtures";
@@ -14,7 +15,9 @@ function renderSetup(onStart: (request: GameRequest) => void = vi.fn()) {
 
   return render(
     <QueryClientProvider client={createQueryClient()}>
-      <SetupPage onStart={onStart} />
+      <TooltipProvider>
+        <SetupPage onStart={onStart} />
+      </TooltipProvider>
     </QueryClientProvider>,
   );
 }
@@ -31,6 +34,24 @@ describe("SetupPage", () => {
     expect(request.config.players.map((player) => player.model_id)).toEqual(
       CATALOG.default_lineup,
     );
+  });
+
+  it("starts a game with the imposter that was chosen", async () => {
+    const onStart = vi.fn();
+    renderSetup(onStart);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Seat 2 is an imposter" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Start game" }));
+
+    const request = onStart.mock.calls[0]?.[0] as GameRequest;
+    expect(request.config.players.map((player) => player.imposter)).toEqual([
+      false,
+      true,
+      false,
+      false,
+    ]);
   });
 
   it("checks the limits before the game can start", async () => {

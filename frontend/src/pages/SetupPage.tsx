@@ -66,7 +66,8 @@ export function SetupForm({
           <CardHeader>
             <CardTitle>Players</CardTitle>
             <CardDescription>
-              Seats are shuffled and one of them becomes the imposter.
+              Seats are shuffled and the imposters are picked at random, unless you choose
+              them with the mask.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -30,6 +30,13 @@ const SINGLE_WORD = /^[\p{L}\p{N}]+(?:['-][\p{L}\p{N}]+)*$/u;
 /** Characters the server strips from both ends of a typed word. */
 const SURROUNDING_PUNCTUATION = /^[\s"'.,;:!?()[\]{}]+|[\s"'.,;:!?()[\]{}]+$/g;
 
+/** A seat of the setup screen: its model and whether it must be an imposter. */
+export interface SetupSeat {
+  modelId: string;
+  /** Whether this player is an imposter, wherever its seat ends up. */
+  imposter: boolean;
+}
+
 /** The options of the setup screen, as the form holds them. */
 export interface SetupForm {
   wordMode: WordMode;
@@ -37,8 +44,8 @@ export interface SetupForm {
   word: string;
   /** The category of a random or typed word, `ANY_CATEGORY` for none. */
   category: string;
-  /** The catalog id of each seat's model, in seat order before shuffling. */
-  seats: string[];
+  /** The seats in order before shuffling, with their models and chosen imposters. */
+  seats: SetupSeat[];
   identityMode: IdentityMode;
   publicCategory: boolean;
   imposterHint: boolean;
@@ -59,7 +66,7 @@ export function defaultSetupForm(catalog: CatalogResponse): SetupForm {
     wordMode: "random",
     word: "",
     category: ANY_CATEGORY,
-    seats: [...catalog.default_lineup],
+    seats: catalog.default_lineup.map((modelId) => ({ modelId, imposter: false })),
     identityMode: "names",
     publicCategory: false,
     imposterHint: false,
@@ -110,6 +117,14 @@ export function setupProblems(form: SetupForm): string[] {
     );
   }
 
+  const chosen = form.seats.filter((seat) => seat.imposter).length;
+
+  if (chosen > form.imposterCount) {
+    problems.push(
+      `${chosen} players are chosen as imposters, but the game has only ${form.imposterCount}.`,
+    );
+  }
+
   if (!isWholeNumberBetween(form.clueRounds, CLUE_ROUNDS.min, CLUE_ROUNDS.max)) {
     problems.push(`Clue rounds must be ${CLUE_ROUNDS.min} to ${CLUE_ROUNDS.max}.`);
   }
@@ -156,10 +171,11 @@ export function gameRequest(form: SetupForm, models: CatalogModel[]): GameReques
 
   return {
     config: {
-      players: form.seats.map((modelId) => ({
+      players: form.seats.map(({ modelId, imposter }) => ({
         model_id: modelId,
         model_display_name: names.get(modelId) ?? null,
         persona: null,
+        imposter,
       })),
       imposter_count: form.imposterCount,
       identity_mode: form.identityMode,

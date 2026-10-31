@@ -35,6 +35,15 @@ def test_imposter_count_is_at_most_half_of_the_others(count: int, allowed: int) 
         GameConfig(players=players(count), imposter_count=allowed + 1)
 
 
+def test_chosen_imposters_fit_the_imposter_count() -> None:
+    chosen = PlayerConfig(model_id="model", imposter=True)
+
+    assert GameConfig(players=[chosen, *players(3)]).players[0].imposter
+
+    with pytest.raises(ValidationError, match="chosen as imposters"):
+        GameConfig(players=[chosen, chosen, *players(3)])
+
+
 @pytest.mark.parametrize(
     "fields", [{"clue_rounds": 0}, {"clue_rounds": 4}, {"discussion_rounds": 4}]
 )

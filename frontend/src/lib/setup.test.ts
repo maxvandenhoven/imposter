@@ -8,11 +8,20 @@ import {
   randomLineup,
   type SetupForm,
   setupProblems,
+  type SetupSeat,
 } from "@/lib/setup";
 import { CATALOG } from "@/test/fixtures";
 
 function form(patch: Partial<SetupForm> = {}): SetupForm {
   return { ...defaultSetupForm(CATALOG), ...patch };
+}
+
+/** `count` seats of one model, the first `imposters` of them chosen as imposters. */
+function seats(count: number, imposters = 0): SetupSeat[] {
+  return Array.from({ length: count }, (_, index) => ({
+    modelId: "gpt-oss",
+    imposter: index < imposters,
+  }));
 }
 
 describe("setupProblems", () => {
@@ -21,8 +30,12 @@ describe("setupProblems", () => {
   });
 
   it.each([
-    [{ seats: Array<string>(2).fill("gpt-oss") }, "A game needs 3 to 8 players."],
-    [{ seats: Array<string>(9).fill("gpt-oss") }, "A game needs 3 to 8 players."],
+    [{ seats: seats(2) }, "A game needs 3 to 8 players."],
+    [{ seats: seats(9) }, "A game needs 3 to 8 players."],
+    [
+      { seats: seats(4, 2) },
+      "2 players are chosen as imposters, but the game has only 1.",
+    ],
     [{ imposterCount: 2 }, "4 players allow 1 to 1 imposters, not 2."],
     [{ imposterCount: 0 }, "4 players allow 1 to 1 imposters, not 0."],
     [{ clueRounds: 0 }, "Clue rounds must be 1 to 3."],
@@ -57,9 +70,7 @@ describe("setupProblems", () => {
 
   it("allows more imposters in larger games", () => {
     expect(maxImposters(7)).toBe(3);
-    expect(
-      setupProblems(form({ seats: Array<string>(7).fill("gpt-oss"), imposterCount: 3 })),
-    ).toEqual([]);
+    expect(setupProblems(form({ seats: seats(7, 2), imposterCount: 3 }))).toEqual([]);
   });
 });
 
@@ -74,10 +85,22 @@ describe("gameRequest", () => {
       model_id: "gemini-flash",
       model_display_name: "Gemini Flash",
       persona: null,
+      imposter: false,
     });
     expect(request.config.clue_rounds).toBe(3);
     expect(request.config.temperature).toBe(0.5);
     expect(request.words).toEqual({ mode: "random", word: null, category: null });
+  });
+
+  it("sends the players chosen as imposters", () => {
+    const request = gameRequest(form({ seats: seats(4, 1) }), CATALOG.models);
+
+    expect(request.config.players.map((player) => player.imposter)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 
   it("sends the cleaned typed word with its category", () => {
