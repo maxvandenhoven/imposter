@@ -190,20 +190,26 @@ playback (`GamePlayback`) plays it at a pace the audience can follow, driven by 
 animation frame clock.
 
 - Each item takes a time at normal speed. An answer takes the time its new characters
-  need at 60 characters a second, so every model is written out at the same smooth
-  rate, and the model's own thinking takes no time. An engine event shows at once and
-  then pauses so it can be read: longest for a statement (by its length, up to 5 s),
-  the vote reveal (by the number of votes, so the arrows can draw) and the outcome.
+  need at 30 characters a second, slow enough to read along, so every model is written
+  out at the same smooth rate, and the model's own thinking takes no time. An engine
+  event shows at once and then pauses so it can be read: 2 s for a new phase or round
+  and for a clue, a statement 1.5 s plus 0.12 s a word (up to 6 s), the vote reveal 3 s
+  plus 0.8 s a vote (so the arrows can draw), the guess 4 s and the outcome 6 s.
 - When the timeline is ahead of the playback, after a pause or because the pauses add
-  up, playback speeds up smoothly in proportion to the backlog, up to five times, once
-  more than 8 s are waiting. It never shows a backlog at once, so the board keeps the
-  same streaming look.
+  up, answers are written faster, smoothly and in proportion to the backlog, up to twice
+  as fast once more than 20 s are waiting. The pauses to read are never shortened by
+  the catch up, only by the chosen speed, so the vote, the guess and the outcome keep
+  their time after a long discussion. The board never shows a backlog at once.
 - The playback bar floats under the board: play and pause, "Next response" (play until
   the next answer is in, then pause), "Pause after rounds" (stop before every new
   round), the speed (1×, 2×, 4×), and "N responses behind · Go live", which jumps to the
   live game.
 - The stream keeps running while the playback is paused, and the header says "Catching
   up" until the playback reaches the live end.
+- The board renders at most about 30 times a second while answers are written, the
+  transcript and the player columns only render again when what they show changes, and
+  the cards are only measured while the vote arrows show, which keeps a debrief with
+  every player writing at once smooth.
 - Stepping back is not supported yet. The tab must stay open until the game finishes,
   since it holds the SSE connection.
 
