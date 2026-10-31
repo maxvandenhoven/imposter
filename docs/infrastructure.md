@@ -227,11 +227,17 @@ more than a month of all the infrastructure above. Two settings keep the infrast
 cost low: a cleanup policy on Artifact Registry that keeps only the last few images,
 and `max_instance_count = 1` with request-based billing on Cloud Run.
 
-## Removing the app
+## Setting up and removing the app
 
-1. Run `terraform -chdir=infra destroy` to remove every resource that Terraform manages.
-   The APIs stay enabled.
-2. If you also want to remove the state, delete the state bucket last with
-   `gcloud storage rm --recursive gs://<project id>-imposter-tfstate`.
-3. You can leave the models enabled in Model Garden, because enablement costs nothing
-   without calls.
+`make up` does the whole setup after the manual prerequisites in [`setup.md`](setup.md):
+it runs `make tf-setup` and then `make deploy`, and prints the service URL. Because the
+service is private, `make proxy` opens it on `http://localhost:8081`.
+
+`make down` runs `terraform destroy` after asking for confirmation, which removes every
+resource that Terraform manages, including the build bucket and its contents. The APIs
+stay enabled, the state bucket stays, and the models stay enabled in Model Garden, so
+`make up` works again right away. `make nuke` does the same and then also deletes the
+state bucket with every earlier state, which leaves nothing of the app in the project
+except the Cloud Build records and the traces and logs, which expire by themselves.
+You can leave the models enabled in Model Garden, because enablement costs nothing without
+calls.

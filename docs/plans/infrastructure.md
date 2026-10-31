@@ -148,6 +148,10 @@ the better filter when implementing.
   service only exists once `image` is set.
 - Rollback: `make deploy-image` with an earlier digest. `make proxy` opens the private
   service locally until IAP (WP 13).
+- `make up` is `tf-setup` plus `deploy`. `make down` destroys what Terraform manages (the
+  build bucket has `force_destroy`), and `make nuke` also deletes the state bucket.
+  `tf-plan`, `tf-apply` and `down` pass the image of the running service, so that an
+  empty `image` does not remove it.
 - Budgets need `billing_account_id`. A second budget on the Vertex AI service covers the
   model spend that the label filter cannot see (it includes other work in the project).
 - `make tf-setup` once, then `make tf-plan` / `make tf-apply` for infra-only

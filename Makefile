@@ -157,14 +157,20 @@ tf-init: tf-require-project
 	@terraform -chdir=$(TF_DIR) init -input=false -reconfigure -backend-config="bucket=$(TF_STATE_BUCKET)"
 
 
+# The image of the running service, so that plan and apply keep it. Without it Terraform
+# would see an empty `image` and remove the service. Empty when nothing is deployed.
+CURRENT_IMAGE = $(shell gcloud run services describe imposter --project=$(GOOGLE_CLOUD_PROJECT) \
+	--region=$(TF_REGION) --format='value(spec.template.spec.containers[0].image)' 2>/dev/null)
+
+
 .PHONY: tf-plan
 tf-plan: tf-init
-	@terraform -chdir=$(TF_DIR) plan
+	@terraform -chdir=$(TF_DIR) plan $(if $(CURRENT_IMAGE),-var image=$(CURRENT_IMAGE))
 
 
 .PHONY: tf-apply
 tf-apply: tf-init
-	@terraform -chdir=$(TF_DIR) apply
+	@terraform -chdir=$(TF_DIR) apply $(if $(CURRENT_IMAGE),-var image=$(CURRENT_IMAGE))
 
 
 # The Artifact Registry repository, the build account and the source bucket that
@@ -214,6 +220,27 @@ deploy-image: tf-init
 proxy:
 	@gcloud run services proxy imposter --project=$(GOOGLE_CLOUD_PROJECT) \
 		--region=$(TF_REGION) --port=8081
+
+
+# Everything from scratch: the state bucket, the base APIs, the registry and build account,
+# the image and the service. Prints the service URL. Run `make proxy` to open it.
+.PHONY: up
+up: tf-setup deploy
+	@echo "Deployed: $$(terraform -chdir=$(TF_DIR) output -raw service_url)"
+	@echo "The service is private: run make proxy and open http://localhost:8081"
+
+
+# Removes every resource Terraform manages, after a confirmation. The state bucket, the
+# enabled APIs and the Model Garden terms stay, so `make up` works again right away.
+.PHONY: down
+down: tf-init
+	@terraform -chdir=$(TF_DIR) destroy $(if $(CURRENT_IMAGE),-var image=$(CURRENT_IMAGE))
+
+
+# Like `down`, and then also deletes the state bucket with every earlier state.
+.PHONY: nuke
+nuke: down
+	@gcloud storage rm --recursive gs://$(TF_STATE_BUCKET) --project=$(GOOGLE_CLOUD_PROJECT)
 
 
 .PHONY: install-hooks
