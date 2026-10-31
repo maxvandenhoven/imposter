@@ -67,7 +67,8 @@ function ViewSettings({
 }
 
 /**
- * The bar above the board: the status and cost on the left, the phases in the middle,
+ * The dark bar across the top of the board: the status and cost on the left, the phases
+ * in the middle,
  * and the trace link, the export, the view settings and the game controls on the right.
  */
 export function BoardHeader({
@@ -100,79 +101,84 @@ export function BoardHeader({
   const active = status === "Live" || status === "Catching up";
 
   return (
-    <div className="grid items-center gap-x-4 gap-y-3 rounded-2xl border bg-card px-4 py-2.5 shadow-xs xl:grid-cols-[minmax(max-content,1fr)_auto_minmax(max-content,1fr)]">
-      <div className="flex flex-wrap items-center gap-3">
-        <img src="/favicon.svg" alt="Imposter" className="size-7" />
-        <Badge variant={active ? "default" : "secondary"} className="h-6 gap-1.5 px-2.5">
-          {active && (
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full rounded-full bg-primary-foreground opacity-75 motion-safe:animate-ping" />
-              <span className="relative inline-flex size-2 rounded-full bg-primary-foreground" />
-            </span>
-          )}
-          {status}
-        </Badge>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="flex items-center gap-3 rounded-full bg-muted px-3 py-1 text-sm tabular-nums">
-              <span className="flex items-center gap-1">
-                <Coins className="size-3.5 text-speaking" />
-                {formatCost(view.usage.costUsd)}
+    <header className="night border-b bg-background text-foreground shadow-md">
+      <div className="mx-auto grid max-w-[120rem] items-center gap-x-4 gap-y-3 px-4 py-2.5 sm:px-8 xl:grid-cols-[minmax(max-content,1fr)_auto_minmax(max-content,1fr)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <img src="/favicon.svg" alt="Imposter" className="size-7" />
+          <Badge
+            variant={active ? "default" : "secondary"}
+            className="h-6 gap-1.5 px-2.5"
+          >
+            {active && (
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full rounded-full bg-primary-foreground opacity-75 motion-safe:animate-ping" />
+                <span className="relative inline-flex size-2 rounded-full bg-primary-foreground" />
               </span>
-              <span className="text-muted-foreground">
-                {formatTokens(view.usage.tokens)} tokens
-              </span>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            Estimated from the catalog prices of the models.
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <div className="flex justify-center overflow-x-auto">
-        <PhaseStepper steps={steps} ends={phaseEnds} onSeek={onSeek} />
-      </div>
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        {traceUrl !== null && (
+            )}
+            {status}
+          </Badge>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon-sm" asChild>
-                <a href={traceUrl} target="_blank" rel="noreferrer" aria-label="Trace">
-                  <Activity />
-                </a>
+              <span className="flex items-center gap-3 rounded-full bg-muted px-3 py-1 text-sm tabular-nums">
+                <span className="flex items-center gap-1">
+                  <Coins className="size-3.5 text-speaking" />
+                  {formatCost(view.usage.costUsd)}
+                </span>
+                <span className="text-muted-foreground">
+                  {formatTokens(view.usage.tokens)} tokens
+                </span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Estimated from the catalog prices of the models.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="flex justify-center overflow-x-auto">
+          <PhaseStepper steps={steps} ends={phaseEnds} onSeek={onSeek} />
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-2">
+          {traceUrl !== null && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon-sm" asChild>
+                  <a href={traceUrl} target="_blank" rel="noreferrer" aria-label="Trace">
+                    <Activity />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open the trace of the game in Cloud Trace.</TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="Export"
+                onClick={onExport}
+              >
+                <Download />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Open the trace of the game in Cloud Trace.</TooltipContent>
+            <TooltipContent>
+              Download the game as JSON. It holds the secrets of the game.
+            </TooltipContent>
           </Tooltip>
-        )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Export"
-              onClick={onExport}
-            >
-              <Download />
+          <ViewSettings mode={mode} onModeChange={onModeChange} />
+          {running ? (
+            <Button variant="destructive" size="sm" onClick={onStop}>
+              <Square data-icon="inline-start" />
+              Stop
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            Download the game as JSON. It holds the secrets of the game.
-          </TooltipContent>
-        </Tooltip>
-        <ViewSettings mode={mode} onModeChange={onModeChange} />
-        {running ? (
-          <Button variant="destructive" size="sm" onClick={onStop}>
-            <Square data-icon="inline-start" />
-            Stop
-          </Button>
-        ) : (
-          <Button size="sm" className="whitespace-nowrap" onClick={onNewGame}>
-            <RotateCcw data-icon="inline-start" />
-            New game
-          </Button>
-        )}
+          ) : (
+            <Button size="sm" className="whitespace-nowrap" onClick={onNewGame}>
+              <RotateCcw data-icon="inline-start" />
+              New game
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </header>
   );
 }

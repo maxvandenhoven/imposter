@@ -93,6 +93,29 @@
   --thought-foreground: #4a3aa8;
 }
 
+/*
+ * Lights off, for the dark bars at the top of the page: the header of the board and of
+ * the setup. Only the elements inside a `.night` element take these colours.
+ */
+.night {
+  color-scheme: dark;
+  --background: #16131f;
+  --foreground: #f4f1fb;
+  --card: #1f1b2e;
+  --card-foreground: #f4f1fb;
+  --primary: #8f7cf7;
+  --primary-foreground: #ffffff;
+  --secondary: #2c2650;
+  --secondary-foreground: #e6e0ff;
+  --muted: #262139;
+  --muted-foreground: #a9a3c2;
+  --accent: #2a2540;
+  --accent-foreground: #f4f1fb;
+  --border: #322c48;
+  --input: #3a3354;
+  --ring: #8f7cf7;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring;

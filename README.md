@@ -31,9 +31,9 @@ table and then moves down into the player's column, with the player's private re
 a thought bubble below it. When the votes are revealed, each vote flies as a ballot with
 the voter's name from the voter's card to the card of the player it is for and stays
 there, followed by the imposter's guess with the judge's verdict and a dark banner with
-the outcome. The header shows the phase, the tokens and estimated cost so far and a link
-to the game's trace in Cloud Trace. Every phase that has ended in the header can be
-clicked to jump to the end of that phase, so it can be discussed.
+the outcome. The dark header bar across the top shows the phase, the tokens and estimated
+cost so far and a link to the game's trace in Cloud Trace. Every phase that has ended in
+the header can be clicked to jump to the end of that phase, so it can be discussed.
 
 The board plays the game at a pace the audience can follow rather than as fast as the
 models answer: answers are written out at a steady rate and every clue, statement and

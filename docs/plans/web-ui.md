@@ -187,7 +187,8 @@ Kept simple: the essentials up front, the rest under "Advanced".
   they come in. The models' own thought parts are shown collapsed. Audience mode hides
   all of these until the reveal, also in the partial text. After the `outcome` event
   everything is shown in both modes.
-- Header: the status and the running token and cost estimate (from the `usage` events
+- Header: a dark bar across the full width of the page (the scoped `.night` colours in
+  `index.css`), with the status and the running token and cost estimate (from the `usage` events
   and the catalog prices) on the left, the phase steps in the middle, and the link to
   the trace in Cloud Trace (from `/traces/{game_id}`), Export, the view settings and
   Stop or New game on the right, with the trace and Export as icon buttons so the header
