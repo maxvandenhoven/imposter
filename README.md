@@ -48,9 +48,7 @@ or stopping it aborts the game. Export and import and a debrief panel are planne
 
 ![The setup screen of the web app](docs/images/web-setup-screen.jpg)
 
-![The board in audience mode during the second clue round, with the speaking seat glowing](docs/images/web-board-audience.jpg)
-
-![The board after the reveal, with the vote counts, the caught imposter and the outcome banner](docs/images/web-board-outcome.jpg)
+![The board in god mode during a discussion round, with the statement being written on the table, earlier statements and reasoning in the player columns and the playback bar](docs/images/web-board-discussion.jpg)
 
 The web app is a React app in `frontend/` (Vite, TypeScript, Tailwind CSS and
 shadcn/ui). `make frontend` builds it into `frontend/dist`, which the API app then serves
