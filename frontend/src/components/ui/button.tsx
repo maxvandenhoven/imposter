@@ -45,6 +45,7 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  type = "button",
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -57,6 +58,8 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      // A plain button by default, so buttons inside a form do not submit it.
+      type={asChild ? undefined : type}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

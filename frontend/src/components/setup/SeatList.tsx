@@ -12,12 +12,21 @@ import {
 } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { MAX_PLAYERS, MIN_PLAYERS, randomLineup, type SetupSeat } from "@/lib/setup";
+import {
+  imposterCount,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  randomImposters,
+  randomLineup,
+  removeSeat,
+  type SetupSeat,
+} from "@/lib/setup";
 
 /**
  * The seats of the game, each with a model, which can be added, removed and shuffled.
  *
- * A seat can be chosen as an imposter. Without a choice the imposters are random.
+ * The seats chosen with the mask are the imposters, and their number is the number of
+ * imposters. "Randomise imposters" moves the masks to random seats, keeping their number.
  */
 export function SeatList({
   seats,
@@ -37,7 +46,41 @@ export function SeatList({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          onClick={() => {
+            const lineup = randomLineup(
+              models.map((model) => model.id),
+              seats.length,
+            );
+            onChange(
+              lineup.map((modelId, index) => ({
+                modelId,
+                imposter: seats[index]?.imposter ?? false,
+              })),
+            );
+          }}
+        >
+          <Shuffle data-icon="inline-start" />
+          Randomise lineup
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            onChange(randomImposters(seats));
+          }}
+        >
+          <VenetianMask data-icon="inline-start" />
+          Randomise imposters
+        </Button>
+        <span className="ml-auto text-sm text-muted-foreground">
+          {imposterCount(seats) === 1
+            ? "1 imposter"
+            : `${imposterCount(seats)} imposters`}
+        </span>
+      </div>
       <ol className="flex flex-col gap-2">
         {seats.map(({ modelId, imposter }, index) => (
           <li key={index} className="flex items-center gap-2">
@@ -91,7 +134,7 @@ export function SeatList({
               title={`Remove seat ${index + 1}`}
               disabled={seats.length <= MIN_PLAYERS}
               onClick={() => {
-                onChange(seats.filter((_, other) => other !== index));
+                onChange(removeSeat(seats, index));
               }}
             >
               <X />
@@ -113,24 +156,6 @@ export function SeatList({
         >
           <Plus data-icon="inline-start" />
           Add seat
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            const lineup = randomLineup(
-              models.map((model) => model.id),
-              seats.length,
-            );
-            onChange(
-              lineup.map((modelId, index) => ({
-                modelId,
-                imposter: seats[index]?.imposter ?? false,
-              })),
-            );
-          }}
-        >
-          <Shuffle data-icon="inline-start" />
-          Randomise lineup
         </Button>
       </div>
     </div>

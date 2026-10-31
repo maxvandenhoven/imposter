@@ -11,6 +11,8 @@ import { mockApi } from "@/test/api";
 import { CATALOG } from "@/test/fixtures";
 
 function renderSetup(onStart: (request: GameRequest) => void = vi.fn()) {
+  // The default imposter sits on the first seat.
+  vi.spyOn(Math, "random").mockReturnValue(0);
   mockApi({ "GET /catalog": () => ({ body: CATALOG }) });
 
   return render(
@@ -36,22 +38,39 @@ describe("SetupPage", () => {
     );
   });
 
-  it("starts a game with the imposter that was chosen", async () => {
+  it("starts a game with the imposters that were chosen", async () => {
     const onStart = vi.fn();
     renderSetup(onStart);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Seat 2 is an imposter" }),
+      await screen.findByRole("button", { name: "Seat 1 is an imposter" }),
     );
+
+    expect(screen.getByText("Choose at least one imposter.")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Seat 2 is an imposter" }));
     await userEvent.click(screen.getByRole("button", { name: "Start game" }));
 
     const request = onStart.mock.calls[0]?.[0] as GameRequest;
+    expect(request.config.imposter_count).toBe(1);
     expect(request.config.players.map((player) => player.imposter)).toEqual([
       false,
       true,
       false,
       false,
     ]);
+  });
+
+  it("changes the seats without starting the game", async () => {
+    const onStart = vi.fn();
+    renderSetup(onStart);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add seat" }));
+    await userEvent.click(screen.getByRole("button", { name: "Randomise lineup" }));
+    await userEvent.click(screen.getByRole("button", { name: "Randomise imposters" }));
+    await userEvent.click(screen.getByRole("button", { name: "Advanced" }));
+
+    expect(onStart).not.toHaveBeenCalled();
   });
 
   it("checks the limits before the game can start", async () => {
