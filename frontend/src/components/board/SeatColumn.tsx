@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import { Check, Megaphone } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 
 import type { CatalogModel } from "@/api/types";
 import { ModelThinking } from "@/components/board/ModelThinking";
@@ -67,10 +67,10 @@ function VoteCount({ count, caught }: { count: number; caught: boolean }) {
  * table moves down into the column when the turn ends. Answers that every seat writes
  * at once, votes and reflections, are written in the column itself.
  */
-export const SeatColumn = forwardRef<
+const SeatColumnPanel = forwardRef<
   HTMLDivElement,
   { seat: SeatView; model: CatalogModel | undefined; onStage: boolean }
->(function SeatColumn({ seat, model, onStage }, ref) {
+>(function SeatColumnPanel({ seat, model, onStage }, ref) {
   const live = seat.live;
   const said = seat.said;
   const liveText = onStage ? null : (live?.text ?? null);
@@ -91,11 +91,17 @@ export const SeatColumn = forwardRef<
         {seat.votesReceived !== null && seat.votesReceived > 0 && (
           <VoteCount count={seat.votesReceived} caught={seat.caught} />
         )}
+        {seat.speaking && (
+          <span
+            aria-hidden
+            className="speaking-halo pointer-events-none absolute inset-0 rounded-xl"
+          />
+        )}
         <Card
           data-role={seat.role ?? "unknown"}
           className={cn(
-            "items-center gap-2 border-t-4 border-t-transparent px-3 text-center transition-colors data-[role=civilian]:border-t-civilian data-[role=imposter]:border-t-imposter",
-            seat.speaking && "speaking-glow",
+            "relative items-center gap-2 border-t-4 border-t-transparent px-3 text-center transition-colors data-[role=civilian]:border-t-civilian data-[role=imposter]:border-t-imposter",
+            seat.speaking && "ring-2 ring-speaking",
             seat.caught && "bg-imposter/5",
           )}
         >
@@ -172,3 +178,15 @@ export const SeatColumn = forwardRef<
     </div>
   );
 });
+
+/**
+ * A player's column, rendered again only when its player, model or stage changes, since
+ * the board renders many times a second while one answer is written.
+ */
+export const SeatColumn = memo(
+  SeatColumnPanel,
+  (previous, next) =>
+    previous.model === next.model &&
+    previous.onStage === next.onStage &&
+    JSON.stringify(previous.seat) === JSON.stringify(next.seat),
+);

@@ -1,5 +1,5 @@
-import { LayoutGroup } from "motion/react";
-import { type CSSProperties, useLayoutEffect } from "react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import type { CSSProperties } from "react";
 
 import type { CatalogModel } from "@/api/types";
 import { SeatColumn } from "@/components/board/SeatColumn";
@@ -11,9 +11,6 @@ import type { BoardView } from "@/lib/boardView";
 /** The phases in which the votes are drawn as arrows across the table. */
 const ARROW_PHASES = new Set(["vote", "resolution", "guess", "outcome"]);
 
-/** The phases in which the arrows stay, faded behind the reflections. */
-const FADED_ARROW_PHASES = new Set(["debrief", "done"]);
-
 /** The key of the table card among the measured elements, next to the seats. */
 const TABLE_KEY = -1;
 
@@ -22,7 +19,7 @@ const TABLE_KEY = -1;
  *
  * Each player has a column with its card, its answer and its reasoning. From the vote
  * to the outcome the votes are drawn as arrows between the players, bending towards the
- * table, and they stay faded during the debrief.
+ * table, and they fade out when the debrief starts.
  */
 export function GameTable({
   view,
@@ -31,18 +28,10 @@ export function GameTable({
   view: BoardView;
   models: Map<string, CatalogModel>;
 }) {
-  const { containerRef, elementRef, measured, measure } = useElementRects();
-  const fadedArrows = FADED_ARROW_PHASES.has(view.phase ?? "");
-  const showArrows =
-    view.votes !== null && (ARROW_PHASES.has(view.phase ?? "") || fadedArrows);
+  const showArrows = view.votes !== null && ARROW_PHASES.has(view.phase ?? "");
+  // Measuring renders again on every resize, so it only runs while the arrows show.
+  const { containerRef, elementRef, measured } = useElementRects(showArrows);
   const table = measured.rects.get(TABLE_KEY);
-
-  // Measure again when the arrows appear, since the cards may have moved since.
-  useLayoutEffect(() => {
-    if (showArrows) {
-      measure();
-    }
-  }, [showArrows, measure, view.votes?.votes.length]);
 
   return (
     <div ref={containerRef} className="relative flex flex-col gap-6">
@@ -66,26 +55,29 @@ export function GameTable({
           ))}
         </div>
       </LayoutGroup>
-      {showArrows && view.votes !== null && (
-        <div
-          data-faded={fadedArrows}
-          className="pointer-events-none hidden transition-opacity duration-700 data-[faded=true]:opacity-25 lg:block"
-        >
-          <VoteArrows
-            votes={view.votes.votes}
-            rects={measured.rects}
-            towards={
-              table === undefined
-                ? undefined
-                : { x: table.x + table.width / 2, y: table.y + table.height / 2 }
-            }
-            revealed={view.votes.revealed}
-            caught={view.votes.caught}
-            width={measured.width}
-            height={measured.height}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {showArrows && view.votes !== null && (
+          <motion.div
+            key="arrows"
+            className="pointer-events-none hidden lg:block"
+            exit={{ opacity: 0, transition: { duration: 1 } }}
+          >
+            <VoteArrows
+              votes={view.votes.votes}
+              rects={measured.rects}
+              towards={
+                table === undefined
+                  ? undefined
+                  : { x: table.x + table.width / 2, y: table.y + table.height / 2 }
+              }
+              revealed={view.votes.revealed}
+              caught={view.votes.caught}
+              width={measured.width}
+              height={measured.height}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

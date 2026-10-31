@@ -55,6 +55,8 @@ export function PhaseStepper({ steps }: { steps: PhaseStep[] }) {
               {step.state === "current" && (
                 <motion.span
                   layoutId="phase-pill"
+                  // Measured only when the phase changes, not on every render.
+                  layoutDependency={step.phase}
                   className="absolute inset-0 rounded-full bg-primary shadow-md shadow-primary/30"
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
                 />

@@ -14,7 +14,7 @@ import {
   Vote,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { memo, type ReactNode, useEffect, useRef } from "react";
 
 import type { CatalogModel, GamePhase } from "@/api/types";
 import { SeatAvatar } from "@/components/board/SeatAvatar";
@@ -274,23 +274,40 @@ function Entry({ entry, context }: { entry: TranscriptEntry; context: EntryConte
   }
 }
 
+interface TranscriptProps {
+  entries: TranscriptEntry[];
+  seats: SeatView[];
+  models: Map<string, CatalogModel>;
+  className?: string;
+}
+
+/**
+ * Sum up what the transcript shows, to tell whether it needs to render again.
+ *
+ * The board renders many times a second while answers are written, and the transcript
+ * only changes when an entry, an error, a shown private field or a player's name, role
+ * or model changes.
+ */
+function transcriptSignature({ entries, seats, models }: TranscriptProps): string {
+  const shown = entries.map((entry) => {
+    const errors = "errors" in entry ? entry.errors.length : 0;
+    const reasoning = "reasoning" in entry && entry.reasoning !== null ? 1 : 0;
+    const text = "text" in entry && entry.text !== null ? 1 : 0;
+
+    return `${entry.key}:${errors}:${reasoning}:${text}`;
+  });
+  const players = seats.map((seat) => `${seat.name}:${seat.role}:${seat.modelId}`);
+
+  return `${shown.join("|")}#${players.join("|")}#${models.size}`;
+}
+
 /**
  * The transcript of the game next to the table, newest last.
  *
  * It follows new entries, and the growing ones, while it is scrolled to the bottom, and
  * stays put while the reader scrolls back.
  */
-export function Transcript({
-  entries,
-  seats,
-  models,
-  className,
-}: {
-  entries: TranscriptEntry[];
-  seats: SeatView[];
-  models: Map<string, CatalogModel>;
-  className?: string;
-}) {
+function TranscriptPanel({ entries, seats, models, className }: TranscriptProps) {
   const viewport = useRef<HTMLDivElement | null>(null);
   // Whether the reader is at the bottom, which the reader changes by scrolling.
   const pinned = useRef(true);
@@ -373,3 +390,11 @@ export function Transcript({
     </Card>
   );
 }
+
+/** The transcript, rendered again only when what it shows changes. */
+export const Transcript = memo(
+  TranscriptPanel,
+  (previous, next) =>
+    previous.className === next.className &&
+    transcriptSignature(previous) === transcriptSignature(next),
+);

@@ -37,10 +37,12 @@ function sameRects(a: ElementRects, b: ElementRects): boolean {
 /**
  * Measure keyed elements relative to a container, again whenever any of them resizes.
  *
+ * It only measures while `enabled` is set, because every measurement renders the
+ * component again, and the elements resize on every frame while answers are written.
  * Returns a ref for the container, a stable ref callback per key for the elements, the
  * latest measurements and a function that measures again.
  */
-export function useElementRects() {
+export function useElementRects(enabled: boolean) {
   const container = useRef<HTMLDivElement | null>(null);
   const elements = useRef(new Map<number, HTMLElement>());
   const refs = useRef(new Map<number, ElementRef>());
@@ -75,6 +77,10 @@ export function useElementRects() {
   }, []);
 
   useLayoutEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const resizeObserver = new ResizeObserver(measure);
     observer.current = resizeObserver;
 
@@ -86,11 +92,13 @@ export function useElementRects() {
       resizeObserver.observe(element);
     }
 
+    measure();
+
     return () => {
       resizeObserver.disconnect();
       observer.current = null;
     };
-  }, [measure]);
+  }, [enabled, measure]);
 
   const elementRef = useCallback((key: number): ElementRef => {
     const cached = refs.current.get(key);

@@ -115,7 +115,6 @@
       auto,
       auto,
       22px 22px;
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -129,28 +128,29 @@
 }
 
 @layer utilities {
-  /* The soft pulsing glow around the seat whose turn it is. */
-  @keyframes speaking-glow {
+  /*
+   * The soft pulsing glow behind the seat whose turn it is. Only its opacity animates,
+   * which the compositor handles without repainting the shadow on every frame.
+   */
+  @keyframes speaking-halo {
     0%,
     100% {
-      box-shadow:
-        0 0 0 2px var(--speaking),
-        0 0 18px 2px color-mix(in srgb, var(--speaking) 35%, transparent);
+      opacity: 0.45;
     }
     50% {
-      box-shadow:
-        0 0 0 2px var(--speaking),
-        0 0 32px 8px color-mix(in srgb, var(--speaking) 45%, transparent);
+      opacity: 1;
     }
   }
 
-  .speaking-glow {
-    box-shadow: 0 0 0 2px var(--speaking);
+  .speaking-halo {
+    box-shadow: 0 0 28px 6px color-mix(in srgb, var(--speaking) 45%, transparent);
+    opacity: 0.7;
+    will-change: opacity;
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .speaking-glow {
-      animation: speaking-glow 2.4s ease-in-out infinite;
+    .speaking-halo {
+      animation: speaking-halo 2.4s ease-in-out infinite;
     }
   }
 

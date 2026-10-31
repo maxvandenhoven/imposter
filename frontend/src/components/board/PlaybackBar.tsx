@@ -24,7 +24,7 @@ export function PlaybackBar({
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-full border bg-card/95 px-3 py-2 shadow-lg backdrop-blur">
+      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-lg">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

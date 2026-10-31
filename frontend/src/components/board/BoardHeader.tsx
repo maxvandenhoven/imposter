@@ -39,7 +39,7 @@ export function BoardHeader({
   const active = status === "Live" || status === "Catching up";
 
   return (
-    <div className="grid items-center gap-x-4 gap-y-3 rounded-2xl border bg-card/80 px-4 py-2.5 shadow-xs backdrop-blur xl:grid-cols-[1fr_auto_1fr]">
+    <div className="grid items-center gap-x-4 gap-y-3 rounded-2xl border bg-card px-4 py-2.5 shadow-xs xl:grid-cols-[1fr_auto_1fr]">
       <div className="flex flex-wrap items-center gap-3">
         <img src="/favicon.svg" alt="Imposter" className="size-7" />
         <Badge variant={active ? "default" : "secondary"} className="h-6 gap-1.5 px-2.5">
