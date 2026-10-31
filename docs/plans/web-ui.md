@@ -139,7 +139,8 @@ Kept simple: the essentials up front, the rest under "Advanced".
 - Advanced: clue rounds, discussion rounds, word caps, token budget, temperature
   override.
 - The limits are checked in the browser before Start, because invalid options only fail
-  once the run starts.
+  once the run starts. Each problem is shown in the section where it is fixed (the word,
+  the players or the rules), and Start says to fix the marked sections.
 - Layout: one column of about 64rem with a numbered row per section (1. Secret word,
   2. Players, 3. Rules) in one panel, Import and Start below it. The sections grow with
   their content (more seats, other word modes), which made side by side cards end at

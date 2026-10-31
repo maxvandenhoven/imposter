@@ -1,4 +1,4 @@
-import { Eye, Play, SlidersHorizontal, Upload, Users } from "lucide-react";
+import { CircleAlert, Eye, Play, SlidersHorizontal, Upload, Users } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 
 import { useCatalog } from "@/api/catalog";
@@ -17,8 +17,45 @@ import {
   defaultSetupForm,
   gameRequest,
   type SetupForm as SetupFormState,
+  type SetupProblem,
   setupProblems,
+  type SetupSection,
 } from "@/lib/setup";
+
+/** The problems of one section of the setup form, shown where they are fixed. */
+function SectionProblems({
+  problems,
+  section,
+}: {
+  problems: SetupProblem[];
+  section: SetupSection;
+}) {
+  const messages = problems
+    .filter((problem) => problem.section === section)
+    .map((problem) => problem.message);
+
+  if (messages.length === 0) {
+    return null;
+  }
+
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertTitle>
+        {messages.length === 1 ? messages[0] : "Fix these to start"}
+      </AlertTitle>
+      {messages.length > 1 && (
+        <AlertDescription>
+          <ul className="list-inside list-disc">
+            {messages.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </AlertDescription>
+      )}
+    </Alert>
+  );
+}
 
 /** The setup form, once the catalog is known, with `actions` beside the start button. */
 export function SetupForm({
@@ -64,6 +101,7 @@ export function SetupForm({
           }
         >
           <WordOptions form={form} categories={catalog.categories} onChange={update} />
+          <SectionProblems problems={problems} section="word" />
         </NumberedSection>
         <NumberedSection
           id="setup-players"
@@ -85,6 +123,7 @@ export function SetupForm({
               update({ seats });
             }}
           />
+          <SectionProblems problems={problems} section="players" />
         </NumberedSection>
         <NumberedSection
           id="setup-rules"
@@ -94,7 +133,7 @@ export function SetupForm({
           intro={
             <p>
               Decide what the players know about each other and about the word. The
-              defaults suit most games, and Advanced sets the length and the limits.
+              defaults suit most games, and Advanced sets the length and limits.
             </p>
           }
         >
@@ -125,22 +164,16 @@ export function SetupForm({
             />
           </div>
           <AdvancedOptions form={form} onChange={update} />
+          <SectionProblems problems={problems} section="rules" />
         </NumberedSection>
       </SectionPanel>
-      {problems.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTitle>The game cannot start yet</AlertTitle>
-          <AlertDescription>
-            <ul className="list-inside list-disc">
-              {problems.map((problem) => (
-                <li key={problem}>{problem}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         {actions}
+        {problems.length > 0 && (
+          <p className="ml-auto self-center text-sm text-destructive">
+            Fix the marked sections to start the game.
+          </p>
+        )}
         <Button
           type="submit"
           size="lg"

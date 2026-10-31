@@ -135,7 +135,7 @@ export function HowToPlay() {
                   Dave: { knows: WORD },
                   Charlie: { knows: "???" },
                 })}
-                caption="Alice, Bob and Dave are civilians and know the word. Charlie is the imposter and does not."
+                caption="Alice, Bob and Dave know the word. Charlie is the imposter and does not."
               />
               <RuleDiagram
                 title="With the imposter hint"
@@ -183,9 +183,9 @@ export function HowToPlay() {
               <RuleDiagram
                 title="Repeating a clue"
                 players={lineup({
-                  ...quietExcept("Alice", "Dave"),
+                  ...quietExcept("Alice", "Charlie"),
                   Alice: { says: "beam", mark: "good" },
-                  Dave: { says: "beam", mark: "bad" },
+                  Charlie: { says: "beam", mark: "bad" },
                 })}
                 caption="Every clue must be new. A repeated clue is replaced by a pass."
               />
@@ -202,7 +202,7 @@ export function HowToPlay() {
         >
           <p>
             The game has a few clue rounds. In each round every player, in turn, gives one
-            word that is related to the secret word.
+            word related to the secret word.
           </p>
           <p>
             A clue may never be the secret word itself, not even as part of a longer word,
@@ -223,7 +223,7 @@ export function HowToPlay() {
                   Bob: { says: "Charlie's “tall” is too vague." },
                   Charlie: { suspected: true },
                 })}
-                caption="Bob points at the clue that fits the word least."
+                caption="Bob calls out the clue that fits the worst."
               />
               <RuleDiagram
                 title="A defence"
@@ -238,10 +238,10 @@ export function HowToPlay() {
           }
         >
           <p>
-            In the discussion rounds every player, in turn, makes a short public statement
-            to accuse, defend or ask a question.
+            In each discussion round every player, in turn, makes a public statement to
+            accuse, defend or question.
           </p>
-          <p>The secret word may not be said here either.</p>
+          <p>The secret word is still off limits.</p>
         </RuleSection>
         <RuleSection
           icon={STEP_ICONS.vote}

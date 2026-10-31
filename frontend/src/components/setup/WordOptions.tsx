@@ -129,8 +129,8 @@ export function WordOptions({
           />
           <FieldDescription>
             Optional. A short, broad theme the word belongs to, such as emotions, animals
-            or buildings. The players only see it with the public category rule, and the
-            imposter hint is generated with it.
+            or buildings. Players only see it with the public category rule, and the
+            imposter hint is based on it.
           </FieldDescription>
         </Field>
       </TabsContent>

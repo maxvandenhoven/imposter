@@ -61,13 +61,21 @@ describe("setupProblems", () => {
       "The secret word must be exactly one word.",
     ],
   ] as [Partial<SetupForm>, string][])("reports %o", (patch, problem) => {
-    expect(setupProblems(form(patch))).toEqual([problem]);
+    expect(setupProblems(form(patch)).map(({ message }) => message)).toEqual([problem]);
   });
 
   it("accepts a typed word with surrounding punctuation and inner hyphens", () => {
     expect(
       setupProblems(form({ wordMode: "typed", word: ' "jack-o-lantern!" ' })),
     ).toEqual([]);
+  });
+
+  it("puts each problem in the section of the setup where it is fixed", () => {
+    const problems = setupProblems(
+      form({ wordMode: "typed", word: "", seats: seats(4), clueRounds: 9 }),
+    );
+
+    expect(problems.map(({ section }) => section)).toEqual(["word", "players", "rules"]);
   });
 
   it("allows more imposters in larger games", () => {

@@ -105,7 +105,7 @@ export function AdvancedOptions({
         <OptionSwitch
           id="temperature-override"
           label="Temperature override"
-          description="Sample every player at the same temperature instead of each model's own setting, which is 1.0 for every model in the catalog. Lower values make the answers more predictable and alike from game to game, higher values more varied but also more erratic."
+          description="Sample every player at the same temperature instead of each model's own setting, which is 1.0 for every model in the catalog. Lower values make the answers more predictable and alike from game to game, higher values more varied but more erratic."
           checked={form.temperature !== null}
           onChange={(override) => {
             onChange({ temperature: override ? 1 : null });

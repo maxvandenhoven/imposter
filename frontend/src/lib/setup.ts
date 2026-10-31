@@ -183,32 +183,46 @@ function isWholeNumberBetween(value: number, min: number, max: number): boolean 
   return Number.isInteger(value) && value >= min && value <= max;
 }
 
+/** The sections of the setup screen, where a problem with the options is shown. */
+export type SetupSection = "word" | "players" | "rules";
+
+/** A problem with the options, with the section of the setup screen it belongs to. */
+export interface SetupProblem {
+  section: SetupSection;
+  message: string;
+}
+
 /**
  * Check the options against the limits the server enforces, returning every problem.
  *
  * Invalid options only fail once the game's run starts, so the setup screen checks them
- * before Start. An empty list means the game can start.
+ * before Start and shows each problem in its section. An empty list means the game can
+ * start.
  */
-export function setupProblems(form: SetupForm): string[] {
-  const problems: string[] = [];
+export function setupProblems(form: SetupForm): SetupProblem[] {
+  const problems: SetupProblem[] = [];
+  const add = (section: SetupSection, message: string) => {
+    problems.push({ section, message });
+  };
   const players = form.seats.length;
 
   if (form.wordMode === "typed" && !SINGLE_WORD.test(cleanWord(form.word))) {
-    problems.push("The secret word must be exactly one word.");
+    add("word", "The secret word must be exactly one word.");
   }
 
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) {
-    problems.push(`A game needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players.`);
+    add("players", `A game needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players.`);
   } else if (imposterCount(form.seats) === 0) {
-    problems.push("Choose at least one imposter.");
+    add("players", "Choose at least one imposter.");
   } else if (imposterCount(form.seats) > maxImposters(players)) {
-    problems.push(
+    add(
+      "players",
       `${players} players allow at most ${maxImposters(players)} imposters, not ${imposterCount(form.seats)}.`,
     );
   }
 
   if (!isWholeNumberBetween(form.clueRounds, CLUE_ROUNDS.min, CLUE_ROUNDS.max)) {
-    problems.push(`Clue rounds must be ${CLUE_ROUNDS.min} to ${CLUE_ROUNDS.max}.`);
+    add("rules", `Clue rounds must be ${CLUE_ROUNDS.min} to ${CLUE_ROUNDS.max}.`);
   }
 
   if (
@@ -218,7 +232,8 @@ export function setupProblems(form: SetupForm): string[] {
       DISCUSSION_ROUNDS.max,
     )
   ) {
-    problems.push(
+    add(
+      "rules",
       `Discussion rounds must be ${DISCUSSION_ROUNDS.min} to ${DISCUSSION_ROUNDS.max}.`,
     );
   }
@@ -231,7 +246,7 @@ export function setupProblems(form: SetupForm): string[] {
 
   for (const [value, label] of positive) {
     if (!isWholeNumberBetween(value, 1, Number.MAX_SAFE_INTEGER)) {
-      problems.push(`${label} must be a whole number of at least 1.`);
+      add("rules", `${label} must be a whole number of at least 1.`);
     }
   }
 
@@ -241,7 +256,7 @@ export function setupProblems(form: SetupForm): string[] {
     temperature !== null &&
     !(temperature >= TEMPERATURE.min && temperature <= TEMPERATURE.max)
   ) {
-    problems.push(`The temperature must be ${TEMPERATURE.min} to ${TEMPERATURE.max}.`);
+    add("rules", `The temperature must be ${TEMPERATURE.min} to ${TEMPERATURE.max}.`);
   }
 
   return problems;
