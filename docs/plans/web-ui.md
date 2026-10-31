@@ -15,7 +15,7 @@ playing it is an ADK run.
 | `POST` | `/run_sse` | Play the game and stream its events. Body: `app_name`, `user_id`, `session_id`, `new_message` (any user message, for example "Play the game."), `"streaming": true` |
 | `GET` | `/apps/imposter/users/{user_id}/sessions/{session_id}` | The session with every stored event, for a finished game |
 | `GET` | `/health` | Liveness |
-| `GET` | `/` | Ours: the built frontend (`frontend/dist`), when it exists |
+| `GET` | `/` | Ours: the built frontend, from `IMPOSTER_FRONTEND_DIR` or `frontend/dist`, when it exists. Mounted after every API route, so unknown API paths stay 404 |
 
 ADK's other routes (artifacts, memory, `/list-apps`, `/run`) are there too and unused.
 
@@ -87,8 +87,17 @@ serve both.
 
 There is no router: the app has a setup view and a board view. In development, `make dev`
 runs the API on port 8000 and the Vite dev server on port 5173, which forwards
-`/catalog`, `/apps` and `/run_sse` to the API. In the image, a Node stage builds
+`/catalog`, `/apps` and `/run_sse` to the API. The proxy keeps the browser's `Host`
+header (no `changeOrigin`), because ADK's API server refuses a `POST` whose `Origin` is
+not the host it was sent to (found in WP 09). In the image, a Node stage builds
 `frontend/dist` (`infrastructure.md` §Build and deploy).
+
+The stream client (`src/api/gameStream.ts`) creates the session for a fixed user id
+(`local`) until WP 13 uses the IAP identity. It reports a failed run once: the
+`errorCode` event of the game runner when there is one, and otherwise ADK's last error
+line. Leaving or stopping the game aborts the fetch, and the server stops the run, but the
+stored session then ends without a `game_aborted` event, because the run is cancelled
+before it can store one.
 
 Rules that keep the look consistent:
 

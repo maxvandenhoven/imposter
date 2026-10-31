@@ -124,13 +124,20 @@ the better filter when implementing.
 
 - `Dockerfile` (multi-stage, added with the frontend in WP 09 so the image is built and
   played locally early):
-  1. `frontend`: a Node image (the version of `frontend/.nvmrc`) runs `npm ci` and
+  1. `frontend`: `node:24-slim` (the version of `frontend/.nvmrc`) runs `npm ci` and
      `npm run build` into `frontend/dist`.
-  2. `deps`: uv with `uv sync --frozen --no-dev`.
-  3. `app`: `python:3.13-slim` with the environment, `src/` and `frontend/dist`, running
-     uvicorn with the app factory (`imposter.api.app:create_app`) on `0.0.0.0:$PORT`.
+  2. `deps`: `python:3.13-slim` with uv (the version the repo uses), `uv sync --frozen
+     --no-dev --no-editable`, so the virtual environment holds the package itself and
+     the next stage needs no `src/`.
+  3. `app`: `python:3.13-slim` with the virtual environment and `frontend/dist`
+     (`IMPOSTER_FRONTEND_DIR`), as a non-root user, running uvicorn with the app factory
+     (`imposter.api.app:create_app`) on `0.0.0.0:$PORT` (8080 by default).
+  `.dockerignore` lets in only `pyproject.toml`, `uv.lock`, `README.md`, `src/` and
+  `frontend/` without its `node_modules` and `dist`.
 - `make docker`: builds the image and runs it on port 8080 with `.env` and the gcloud
-  application default credentials mounted, so a real game plays in the container.
+  application default credentials mounted, so a real game plays in the container. It
+  runs as the host user (`--user $(id -u):$(id -g)`), so the credentials file, which only
+  its owner may read, can be read in the container.
 - `make build`: `gcloud builds submit --tag <region>-docker.pkg.dev/<project>/imposter/app:<git sha>`
   (builds in GCP, no local Docker needed).
 - `make deploy`: build, resolve the image digest, then

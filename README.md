@@ -14,9 +14,40 @@ claude-haiku -p gpt-oss"`, where `--god` also shows the secret word, the roles a
 private reasoning. `uv run imposter play --help` lists every option. `make adk-web`
 starts the ADK developer UI, in which every new session plays a game.
 
+## Web app
+
+`make dev` starts the game API on port 8000 and the web app on
+[localhost:5173](http://localhost:5173), which reloads as its code changes. On the setup
+screen you choose how the secret word is picked (at random from a category, typed, or
+made up by Gemini), the model behind each of 3 to 8 seats, how players are named and the
+other rules, and the screen checks the options before the game can start. The board then
+shows the game as it is played: every game event as it arrives, which seats are thinking
+and the answer each of them is writing, token by token. The game runs as long as the
+page is open, so the page asks before it is left, and leaving or stopping it aborts the
+game. The board is a first version, and a fuller one with seats around a table and an
+audience mode is planned.
+
+![The setup screen of the web app](docs/images/web-setup-screen.jpg)
+
+![The board during the debrief, with every seat writing its reflection at once](docs/images/web-board-streaming.jpg)
+
+The web app is a React app in `frontend/` (Vite, TypeScript, Tailwind CSS and
+shadcn/ui). `make frontend` builds it into `frontend/dist`, which the API app then serves
+at `/`, so the built app and the API share one origin on port 8000. Its TypeScript types
+of the API, the game request and the game events are generated from the app's OpenAPI
+schema with `make api-client`.
+
+## Container
+
+The `Dockerfile` builds the image that runs the app: a Node stage builds the web app, a
+uv stage installs the package, and a slim Python image serves both with uvicorn on
+`$PORT` (8080 by default). `make docker` builds the image and runs it on
+[localhost:8080](http://localhost:8080) with `.env` and the gcloud application default
+credentials mounted, so a real game plays in the container.
+
 ## Game API
 
-`make dev` serves the game over HTTP on port 8000. The backend is ADK's own API server
+The backend is ADK's own API server
 for the game app, plus a `/catalog` route that lists the models, the word categories and
 the default lineup. A game is an ADK session: the client creates a session with the game
 options in its state, then plays it with `POST /run_sse`, which streams the game while it

@@ -35,8 +35,13 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `src/imposter/telemetry/` — OpenTelemetry setup, span helpers, cost estimates
 - `src/imposter/api/` — the API app: ADK's API server for the game app, plus the catalog
   route
-- `frontend/` — React app (Vite, TypeScript, Tailwind, shadcn/ui), planned: see
-  `docs/plans/web-ui.md` §Frontend. Its built files will be served by the API app at `/`
+- `frontend/` — React app (Vite, TypeScript, Tailwind, shadcn/ui, TanStack Query): see
+  `docs/plans/web-ui.md` §Frontend. `src/api/` has the generated `schema.ts` and the stream
+  client, `src/lib/` the tested logic that turns events into what is shown, `src/pages/`
+  and `src/components/` the views, `src/components/ui/` the shadcn/ui primitives. Its
+  built files (`frontend/dist`) are served by the API app at `/`
+- `Dockerfile` — the image: a Node stage builds the frontend, a uv stage installs the
+  package, a slim Python runtime serves both with uvicorn on `$PORT`
 - `src/imposter/cli.py` — `imposter` command line entry point (Typer)
 - `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for `src/imposter/engine/`
 - `scripts/tooling/` — development tooling such as the comment and docstring checkers
@@ -47,19 +52,23 @@ root. Code is layered, and each layer imports only from the layers below it:
 
 ## Setup and commands
 
-Dependency management uses `uv`. Python 3.13.x is required (no other minor versions).
-Copy `.env.example` to `.env` for local settings.
+Dependency management uses `uv` for Python and `npm` for the frontend (Node pinned in
+`frontend/.nvmrc`, lockfile committed). Python 3.13.x is required (no other minor
+versions). Copy `.env.example` to `.env` for local settings.
 
 ```
-make sync           # uv sync --all-groups
-make format         # ruff format and import sorting
-make lint           # ruff check --fix, the comment and docstring checkers
-make type           # ty check
+make sync           # uv sync --all-groups and npm ci in frontend/
+make format         # ruff format and import sorting, Prettier
+make lint           # ruff check --fix, the comment and docstring checkers, ESLint
+make type           # ty check, tsc
 make check          # format + lint + type + Terraform fmt/validate (no tests)
-make test           # pytest with coverage, excluding `slow` tests
+make test           # pytest with coverage (excluding `slow` tests), Vitest
 make test-slow      # pytest -m slow (real Vertex AI calls)
 make play           # imposter play with real models (options in ARGS="...")
-make dev            # imposter serve --reload: the game API on port 8000
+make dev            # the game API on port 8000 and the Vite dev server on port 5173
+make frontend       # build frontend/dist, which the API app serves at /
+make api-client     # regenerate frontend/src/api/schema.ts from the OpenAPI schema
+make docker         # build the image and play it on port 8080 with .env and ADC
 make adk-web        # adk web --otel_to_cloud src: the ADK developer UI, one game per session
 make tf-setup       # once: base APIs and Terraform state bucket (gcloud)
 make tf-plan        # terraform plan for infra (tf-apply to apply)
@@ -71,10 +80,16 @@ GCP, why and how it connects is in `docs/infrastructure.md`. Update that page in
 PR as every change to `infra/` or to manual GCP steps. `uv run --env-file .env
 python scripts/check_models.py` sends one test call per candidate model on Vertex AI.
 
+`format`, `lint`, `type` and `test` each have a `-python` and a `-frontend` half (for
+example `make test-frontend`). The frontend halves install `frontend/node_modules` from
+the lockfile when it is missing or stale. After changing an API model, an engine event or
+the `GameRequest`, run `make api-client` and commit the generated `schema.ts`.
+
 Run a single test with:
 
 ```
 uv run pytest tests/path/to/test_file.py::test_name
+cd frontend && npx vitest run src/path/to/file.test.ts
 ```
 
 ## Code style
@@ -150,7 +165,8 @@ Uses `ty` (Astral) — not mypy. Run via `make type`.
 
 - PostToolUse on `Edit|Write|MultiEdit` runs `.claude/hooks/format-file.sh`, which formats
   the edited `.py` file with `ruff format` and `ruff check --fix`, then runs the comment
-  checker (and the docstring checker for files in `src/`). Remaining errors are reported
+  checker (and the docstring checker for files in `src/`), and formats edited
+  `frontend/src/**/*.{ts,tsx,css}` files with Prettier. Remaining errors are reported
   back on stderr; fix them.
 - Stop runs `make check`.
 
