@@ -5,13 +5,14 @@ import pytest
 from conftest import run_turns
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import errors, types
+from litellm.exceptions import MidStreamFallbackError
 from pydantic import Field
 
 from imposter.config import GameConfig, GamePhase, PlayerConfig, PlayerRole, SecretWord
 from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
 from imposter.models.catalog import ModelCatalogEntry, ModelPrice, ModelProvider, ModelVia
-from imposter.players.adk_player import AdkPlayer
+from imposter.players.adk_player import ANSWER_ATTEMPTS, AdkPlayer
 from imposter.players.base import (
     PHASE_RESPONSE_TYPES,
     ClueResponse,
@@ -249,10 +250,12 @@ async def test_answer_that_misses_the_schema_is_asked_again_with_the_error() -> 
     assert "clue" in request_text(model.requests[1])
 
 
-async def test_second_answer_that_misses_the_schema_gives_up_with_an_error() -> None:
+async def test_last_answer_that_misses_the_schema_gives_up_with_an_error() -> None:
     game = new_game()
     player, _, view = new_player(
-        game=game, replies=['{"hint": "neck"}', "still no json"], structured=False
+        game=game,
+        replies=['{"hint": "neck"}', "still no json", "nor this"],
+        structured=False,
     )
 
     response = await take_turn(player, view)
@@ -260,7 +263,7 @@ async def test_second_answer_that_misses_the_schema_gives_up_with_an_error() -> 
     assert response.output is None
     assert response.error is not None
     assert response.error.startswith("no valid answer: ValidationError")
-    assert response.usage is not None and response.usage.output_tokens == 20
+    assert response.usage is not None and response.usage.output_tokens == 30
 
 
 async def test_model_errors_give_up_without_asking_again() -> None:
@@ -276,6 +279,21 @@ async def test_model_errors_give_up_without_asking_again() -> None:
     assert response.error is not None
     assert response.error.startswith("no valid answer: RESOURCE_EXHAUSTED")
     assert len(model.requests) == 1
+
+
+async def test_broken_streams_are_asked_again_up_to_the_attempt_limit() -> None:
+    game = new_game()
+    broken = MidStreamFallbackError(
+        message="Timeout on reading data.", model="m", llm_provider="vertex_ai"
+    )
+    player, model, view = new_player(game=game, replies=[broken, broken, broken])
+
+    response = await take_turn(player, view)
+
+    assert response.output is None
+    assert response.error is not None
+    assert response.error.startswith("no valid answer: MidStreamFallbackError")
+    assert len(model.requests) == ANSWER_ATTEMPTS
 
 
 async def test_error_responses_give_up_with_an_error() -> None:

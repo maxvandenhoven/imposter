@@ -14,7 +14,7 @@ from imposter.words.generator import WordGenerator
 from imposter.words.options import SecretWordResolver, WordOptions
 from imposter.words.picker import WordPicker
 
-DEFAULT_MODEL_IDS = ["gemini-flash", "claude-haiku", "gpt-oss", "gemini-flash-lite"]
+DEFAULT_MODEL_IDS = ["gemini-flash", "claude-haiku", "mistral-small", "gemini-flash-lite"]
 """The default lineup: models of three families, cheap enough for a quick game."""
 
 

@@ -222,6 +222,10 @@ CANDIDATES = [
         model_id="qwen/qwen3-235b-a22b-instruct-2507-maas", family=ModelFamily.OPEN
     ),
     ModelCandidate(model_id="openai/gpt-oss-120b-maas", family=ModelFamily.OPEN),
+    ModelCandidate(model_id="mistral-small-2503", family=ModelFamily.OPEN),
+    ModelCandidate(
+        model_id="deepseek-ai/deepseek-v4.1-flash-maas", family=ModelFamily.OPEN
+    ),
     ModelCandidate(
         model_id="meta/llama-4-maverick-17b-128e-instruct-maas", family=ModelFamily.OPEN
     ),

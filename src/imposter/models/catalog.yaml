@@ -5,7 +5,8 @@
 # Gemini Pro and Flash cannot switch thinking off (`off` maps to the minimal thinking
 # level, which only Flash-Lite accepts), so they think at `low`. LiteLLM implements
 # structured output for Claude with a forced tool choice, which Claude Sonnet rejects, so
-# it gets the JSON schema in the prompt instead.
+# it gets the JSON schema in the prompt instead. GPT-OSS always reasons, so `off` is sent
+# to it as the lowest `reasoning_effort` (`low`).
 - id: gemini-pro
   display_name: Gemini 3.1 Pro
   provider: google
@@ -75,5 +76,30 @@
   logo: logos/openai.svg
   supports_structured_output: false
   thinking: "off"
+  always_reasons: true
   temperature: 1.0
   price_per_mtok: {input: 0.09, output: 0.36}
+
+- id: mistral-small
+  display_name: Mistral Small 3.1
+  provider: mistral
+  adk_model: vertex_ai/mistral-small-2503
+  via: litellm
+  location: us-central1
+  logo: logos/mistral.svg
+  supports_structured_output: false
+  thinking: "off"
+  temperature: 1.0
+  price_per_mtok: {input: 0.1, output: 0.3}
+
+- id: deepseek-flash
+  display_name: DeepSeek V4.1 Flash
+  provider: deepseek
+  adk_model: vertex_ai/deepseek-ai/deepseek-v4.1-flash-maas
+  via: litellm
+  location: global
+  logo: logos/deepseek.svg
+  supports_structured_output: false
+  thinking: "off"
+  temperature: 1.0
+  price_per_mtok: {input: 0.14, output: 0.28}
