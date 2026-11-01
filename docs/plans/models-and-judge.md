@@ -34,6 +34,8 @@ column after every run; WP 04 copies the working IDs into the catalog.
 | Open | `deepseek-ai/deepseek-v3.2-maas` | `global` | 404 (not enabled in the project), dropped |
 | Open | `qwen/qwen3-235b-a22b-instruct-2507-maas` | `global` | 404 (not enabled in the project), dropped |
 | Open | `openai/gpt-oss-120b-maas` | `global` | OK (2026-10-29), in the catalog as `gpt-oss` |
+| Open | `mistral-small-2503` | `us-central1` only | OK (2026-11-01), in the catalog as `mistral-small` |
+| Open | `deepseek-ai/deepseek-v4.1-flash-maas` | `global` | OK (2026-11-01), in the catalog as `deepseek-flash` |
 | Open | `meta/llama-4-maverick-17b-128e-instruct-maas` | `global` | 404 (not enabled in the project), dropped |
 
 Findings from WP 04, also noted in `catalog.yaml`:
@@ -69,6 +71,8 @@ settings the players use. Median total time of four runs, in seconds:
 | `gemini-flash-lite` | 1.0 | 1.0 | No thinking. |
 | `claude-sonnet` | 1.5 | 4.9 | No thinking. |
 | `claude-haiku` | 1.2 | 2.9 | No thinking. |
+| `mistral-small` | 1.3 | 1.4 | No thinking, slowest run 2.5 s. |
+| `deepseek-flash` | 0.9 | 1.1 | No thinking, one 11 s stall in eight runs. |
 | `gpt-oss` before | 21.1 (max 41.2) | not measured | Default reasoning effort, 60 s timeout. |
 | `gpt-oss` after | 0.8 (max 1.7) | 2.7 (max 3.1) | `reasoning_effort: low`, 10 s timeout. |
 
@@ -85,8 +89,9 @@ Findings:
 - LiteLLM retries only a call that fails before the first chunk. A stream that breaks
   off midway (`MidStreamFallbackError`) reached the runner as a failed turn, so
   `AdkPlayer` now asks again (`ANSWER_ATTEMPTS`, 3 calls).
-- The other open models in the table above are not enabled in the project, so `gpt-oss`
-  stays in the default lineup. With the short timeout its slow tail is bounded.
+- `gpt-oss` stalls the most, so the default lineup uses `mistral-small` as its open
+  model instead (Gemini Flash, Claude Haiku, Mistral Small, Gemini Flash-Lite). A full
+  default game with `make play` took about 63 s. `gpt-oss` stays in the catalog.
 
 ## Catalog (`models/catalog.yaml`)
 
