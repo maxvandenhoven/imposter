@@ -27,13 +27,17 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "google-cloud-aiplatform>=2.2,<3",
     "httpx>=0.28.1",
     "hypothesis>=6.170.9",
+    "pandas>=3.1.1",
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.1",
     "pytest-cov>=7.1.0",
+    "rouge-score>=0.1.2",
     "ruff>=0.17.2",
+    "tabulate>=0.10.0",
     "ty>=0.0.91",
     "types-pyyaml>=6.0.12.20260906",
 ]
@@ -41,7 +45,7 @@ dev = [
 [tool.ruff]
 line-length = 90
 indent-width = 4
-include = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
+include = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py", "evals/**/*.py"]
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true
@@ -85,14 +89,14 @@ convention = "google"
 
 [tool.ty.environment]
 python-version = "3.13"
-extra-paths = ["scripts", "scripts/tooling"]
+extra-paths = ["scripts", "scripts/tooling", "evals"]
 
 [tool.ty.src]
-include = ["src", "tests", "scripts"]
+include = ["src", "tests", "scripts", "evals"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["scripts", "scripts/tooling"]
+pythonpath = ["scripts", "scripts/tooling", "evals"]
 addopts = ["--strict-markers"]
 markers = ["slow: long-running tests, excluded from `make test` (run with `make test-slow`)"]
 asyncio_mode = "auto"

@@ -1,6 +1,6 @@
 It is time to vote, Dave. The votes are secret until everyone has voted.
 
-Vote for the one other player you think is the imposter. Use their exact name, one of: Alice, Bob, Charlie, Eve. You cannot vote for yourself. Also write your private reasoning about this vote, at most 60 words.
+Vote for the one other player you think is the imposter. Use their exact name, one of: Alice, Bob, Charlie, Eve. You cannot vote for yourself. Also write your private reasoning about this vote in one or two short sentences, at most 60 words.
 
 Your previous answer in this turn was rejected: "Zed" is not a player. Answer again and fix this.
 

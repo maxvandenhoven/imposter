@@ -176,6 +176,12 @@ class JudgeVerdict(BaseModel):
   shared stem for clues). Only undecided cases reach the LLM.
 - `judge/llm_judge.py`: `LlmJudge`, implementing `JudgeProtocol` with Gemini Flash-Lite and
   structured output. Temperature 0.
+- A clue is invalid only when it is a form of the secret word (another grammatical
+  form, a word that contains it or is contained in it, a translation). Synonyms are
+  valid: the first judge prompt also rejected synonyms, and in practice it rejected 37%
+  of the clues it saw, many of them fair associations such as `keeper` for lighthouse.
+  The judge eval (`evaluation.md`) checks the judge against hand-labelled clues from
+  played games.
 - `GameRunner` takes one `judge: JudgeProtocol` for both clues and guesses. The game
   setting `model_clue_check` (on by default) decides whether clues reach the model.
   When it is off, or no judge is set, only the code checks judge clues. When the

@@ -1,0 +1,13 @@
+{
+  "criteria": {
+    "word_kept_secret": 1.0
+  },
+  "custom_metrics": {
+    "word_kept_secret": {
+      "code_config": {
+        "name": "imposter_metrics.word_kept_secret"
+      },
+      "description": "The clue or statement does not say the secret word, by the engine's rules."
+    }
+  }
+}

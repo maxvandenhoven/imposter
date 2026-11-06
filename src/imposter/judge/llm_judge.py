@@ -32,9 +32,11 @@ VALID_CLUE_TASK = """\
 Secret word: {word}
 Clue: {clue}
 
-Is the clue valid? A clue is invalid when it is a trivial derivative of the secret
-word: another form of it, a compound or word that contains it, a direct synonym, or a
-translation. Associations, however strong, are valid."""
+Is the clue valid? A clue is invalid only when it is a form of the secret word itself:
+the same word in another grammatical form (a plural, or the verb, adjective or adverb
+of the same root), a word that contains the secret word or is contained in it, or a
+translation of it. Every other clue is valid, however close or obvious: synonyms,
+parts, examples, associations and words that often appear next to the secret word."""
 
 
 class JudgeAnswer(BaseModel):
@@ -104,7 +106,7 @@ class LlmJudge:
         return verdict
 
     async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict:
-        """Decide whether a clue is allowed, that is not a trivial derivative of the word.
+        """Decide whether a clue is allowed, that is not a form of the secret word.
 
         Args:
             clue: The one-word clue.

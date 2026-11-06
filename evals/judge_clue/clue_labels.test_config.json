@@ -1,0 +1,11 @@
+{
+  "criteria": {
+    "verdict_match": 1.0
+  },
+  "custom_metrics": {
+    "verdict_match": {
+      "code_config": {"name": "imposter_metrics.verdict_match"},
+      "description": "The verdict of the judge equals the labelled verdict of the clue."
+    }
+  }
+}

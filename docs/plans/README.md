@@ -13,6 +13,7 @@ the order in which work happens. Topic files go deeper on each area:
 | [`web-ui.md`](web-ui.md) | ADK's API server with the event stream a client reads, React frontend (Vite, TypeScript, Tailwind, shadcn/ui), setup screen, game board, audience and god mode, playback, export and import |
 | [`infrastructure.md`](infrastructure.md) | GCP basics, organising resources in the shared sandbox project, Terraform layout, Cloud Run, IAP, budget, Dockerfile, `make deploy` |
 | [`tooling.md`](tooling.md) | Code style, ruff/ty/pytest, custom checkers, Makefile, pre-commit, Claude Code hooks (mirrors the hive repo) |
+| [`evaluation.md`](evaluation.md) | The ADK evals of the judge and the players: eval sets, metrics, how to run them, scores, and the log of prompt changes made because of them |
 | [`playtests.md`](playtests.md) | Real games worth remembering: transcripts, findings and the rule changes they led to |
 | [`future-work.md`](future-work.md) | Designed-for but not planned: personas, A2A players, Agent Engine, persistence, Laya judge, CI/CD, ... |
 
@@ -53,7 +54,7 @@ In scope: everything in the milestones below. Single game at a time, in memory.
 
 Out of scope for now, documented in [`future-work.md`](future-work.md): personas, A2A
 remote players, Agent Engine deployment, persistence (Firestore, BigQuery leaderboard),
-concurrent games, CI/CD, a self-hosted Laya judge, ADK's eval framework, OpenAI models,
+concurrent games, CI/CD, a self-hosted Laya judge, OpenAI models,
 public multi-user access.
 
 ## 3. Architecture overview
@@ -92,7 +93,7 @@ layers.
 |---|---|---|
 | D1 | Target audience is the owner plus colleagues in demos: a watchable live UI and a deployed URL, but no public multi-user app. | Learning value of ADK, deployment and tracing, without auth, rate limiting and abuse protection for strangers. |
 | D2 | Game flow: setup → 2 clue rounds → 2 discussion rounds → secret simultaneous vote → resolution → imposter guess (always) → outcome → debrief. Details in `game-rules.md`. | Two clue rounds create tension, two discussion rounds allow rebuttals of accusations. |
-| D3 | Clues are exactly one word, no repeats of any earlier clue (own clues included), no trivial derivatives. Saying the secret word in a clue or statement ends the game at once and loses it for the speaker's side (playtest 1). Discussion statements and private reasoning are capped (100 and 60 words), enforced in the prompt and by hard truncation in code. | Prevents endless discussion and keeps costs predictable. |
+| D3 | Clues are exactly one word, no repeats of any earlier clue (own clues included), no forms of the secret word (other grammatical forms, words that contain it or are contained in it, translations). Synonyms are allowed but discouraged in the prompts (D33). Saying the secret word in a clue or statement ends the game at once and loses it for the speaker's side (playtest 1). Discussion statements and private reasoning are capped (100 and 60 words), enforced in the prompt and by hard truncation in code. | Prevents endless discussion and keeps costs predictable. |
 | D4 | Most votes is caught; a tie catches nobody. Imposter not caught wins; caught imposter who guesses the word steals the win; otherwise civilians win. Before that, whoever says the secret word loses for their side. | Deterministic, simple, matches the spirit of the app. |
 | D5 | All models via Vertex AI in the project: Gemini natively, Claude via Model Garden, open models via Vertex MaaS, non-Gemini models through ADK `LiteLlm` (`vertex_ai/...`). No OpenAI. | Keep everything GCP-native: one bill, IAM, quotas and logs in one project. |
 | D6 | Orchestration is deterministic code: an ADK graph `Workflow` with a node per phase (D32) runs a `GameRunner`, which asks players for their action (I/O) and applies it to a pure `Game` object that owns the rules and the event log. No LLM game master. | Rules cannot be broken, information hiding is guaranteed by construction, each turn is a clean span. |
@@ -119,9 +120,10 @@ layers.
 | D27 | The browser buffers all events. A playback cursor supports live, step (prev/next, next phase) and autoplay; a badge shows how far behind live you are. Games can be exported and imported as JSON. | Presentable demos without backend persistence; recordings as a fallback when live APIs fail. |
 | D28 | Concurrency: clues and discussion sequential, votes and debrief in parallel. Each LLM call has a 60 s timeout (10 s for LiteLLM models, whose stalls are short and retried fast) and 2 retries with exponential backoff on 429/5xx, then a pass/abstain fallback with a `player_error` event. | Robust against low default Model Garden quotas. |
 | D29 | Cost guardrails: max 8 players, `max_output_tokens` per phase, per-game token budget (default 200k, aborts cleanly), running cost estimate in the UI, Terraform billing budget with alerts. | No surprise bills. |
-| D30 | Testing: pure engine unit tests with scripted fake players; Hypothesis leak tests (imposter never sees the word, nobody sees others' private reasoning, votes hidden before the reveal); SSE tests with fakes; one `slow` smoke game against cheap real models; a tournament CLI for model statistics. ADK's eval framework is future work. | The leak invariant is the most important property and is cheap to guarantee. |
+| D30 | Testing: pure engine unit tests with scripted fake players; Hypothesis leak tests (imposter never sees the word, nobody sees others' private reasoning, votes hidden before the reveal); SSE tests with fakes; one `slow` smoke game against cheap real models; a tournament CLI for model statistics. Prompt quality is measured with ADK evals (D33). | The leak invariant is the most important property and is cheap to guarantee. |
 | D31 | Region: app resources in `europe-west4`; models on the Vertex `global` endpoint, with a per-model `location` override in the catalog. | EU app, best model availability and quota. |
 | D32 | Orchestration is an ADK 2.x graph `Workflow` (`orchestration/runner_workflow.py`) whose nodes are the game phases and whose edges are generated from the engine's transition table (`PHASE_TRANSITIONS`), routed by the next phase. Rounds are loop edges, so the graph is static. Each node plays one phase and round through the `GameRunner` and routes by the event log. Live objects (game, players, bus) stay outside ADK state, looked up by session id. This replaces the first version, a custom `BaseAgent` (`GameRunnerAgent`) with an imperative loop, which was deleted once the workflow played the same seeded games event for event. | The graph keeps D6: the engine still decides every transition. In return `adk web` draws the phase graph and highlights the active phase, and ADK's `invoke_workflow` and `invoke_node` spans give the game and phase levels of the trace for free (`observability.md`). Configurable round counts fit as loop edges, and per-seat fan-out stays in `GameRunner`, so the worry that made the first version imperative did not hold. Each turn runs in a `PlayerTurnNode`, a dynamic child node of the phase node (`ctx.run_node`), so the trace has a turn level of ADK's and the players' agents run inside the game invocation (WP 08). |
+| D33 | Prompt quality is measured with ADK's own eval framework: eval sets (`*.evalset.json`) and `EvalConfig` files run by `adk eval`, with one folder per agent under test in `evals/` whose `root_agent` is the production agent (or a `clone()` of it that reads the turn from the session state). Cases are built from the prompts and answers that ADK logs to Cloud Logging, and the judge eval uses hand-labelled clues. Metrics are ADK's built-in rubric metric plus custom metrics that reuse the game's own rules. Every prompt change made because of an eval is recorded in `evaluation.md`. Synonyms are legal clues (changed after the first judge eval): the judge only rejects forms of the word, and the player prompts discourage synonyms instead. | One format serves `adk eval`, `adk web` and `adk optimize` (GEPA), so no harness of our own is needed and prompt optimisation stays possible. `agents-cli eval run` and `grade` were left out: they use another dataset format and run custom metrics in the CLI's own Python, so every metric would exist twice. A judge that rejected synonyms rejected so many fair clues that games slowed down and players felt punished for good clues. |
 
 ## 5. Target repo structure
 
@@ -157,6 +159,10 @@ imposter/
 │                              # state), src/components/ui/ (shadcn/ui), public/logos/, dist/ (built)
 ├─ tests/                      # mirrors src/imposter/; tests/tooling/ for the checkers
 ├─ scripts/tooling/            # check_comments.py, check_docstrings.py (from hive)
+├─ scripts/                    # harvest_traces.py, build_evalsets.py, eval_report.py (evals)
+├─ evals/                      # ADK eval apps (judge_clue/, player_clue/), their eval sets and
+│                              # test_config.json, imposter_metrics.py, data/clue_labels.yaml,
+│                              # raw/ (exported logs and traces, git-ignored)
 └─ infra/                      # one Terraform root: APIs, service account, Artifact Registry,
                                # Cloud Run, IAP, budget (`make tf-setup` first)
 ```
@@ -171,6 +177,7 @@ imposter/
 | **M3 Web UI** | ADK's API server with streaming, the React frontend and the Docker image that serves it, setup screen, live game board, audience and god mode, playback, export and import, debrief panel | A full game can be configured, watched, stepped through and exported in the browser locally |
 | **M4 Deploy** | Terraform for the app, Cloud Build, Cloud Run behind IAP, `make deploy`, identity on traces | The app runs at its Cloud Run URL behind IAP, scales to zero, and deployed games appear in Cloud Trace with the user's identity |
 | **M5 Evaluate** | Tournament CLI and model statistics | `imposter tournament` runs N games and reports per-model win rates, detection accuracy, guess accuracy and clue leakiness |
+| **M6 Prompt quality** | ADK evals of the judge and the player turns, and prompt changes based on them | `make eval` grades the judge and every model of the default lineup, the scores and prompt changes are recorded in `evaluation.md` |
 
 ## 7. Work packages and implementation order
 
@@ -195,6 +202,7 @@ issue should not be started.
 | 12 | Terraform app resources, Cloud Build and `make deploy` | M4 | 02, 09 | #12 |
 | 13 | IAP, identity on traces and cloud smoke test | M4 | 07, 11, 12 | #13 |
 | 14 | Tournament CLI and model statistics | M5 | 07 | #14 |
+| 17 | Evaluate and improve the prompts with ADK eval | M6 | 07 | #29 |
 
 ```mermaid
 flowchart LR
@@ -206,7 +214,7 @@ flowchart LR
   WP08 --> WP09 --> WP10 --> WP11
   WP02 & WP09 --> WP12
   WP07 & WP11 & WP12 --> WP13
-  WP07 --> WP14
+  WP07 --> WP14 & WP17
 ```
 
 Recommended order: 01, 02, 03, 04, 05, 06, 15, 07, 08, 09, 10, 11, 12, 13, 14. WP 03 can run

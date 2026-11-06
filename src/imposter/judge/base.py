@@ -23,7 +23,7 @@ class JudgeVerdict(BaseModel):
 
 
 class JudgeProtocol(Protocol):
-    """Decides what the code rules of the engine cannot: synonyms and derivatives."""
+    """Decides what the code rules cannot: synonym guesses and forms of the word."""
 
     async def is_same_word(self, guess: str, word: str) -> JudgeVerdict:
         """Decide whether a guess names the secret word.
@@ -38,7 +38,7 @@ class JudgeProtocol(Protocol):
         ...
 
     async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict:
-        """Decide whether a clue is allowed, that is not a trivial derivative of the word.
+        """Decide whether a clue is allowed, that is not a form of the secret word.
 
         Args:
             clue: The one-word clue.

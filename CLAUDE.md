@@ -46,6 +46,14 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for `src/imposter/engine/`
 - `scripts/tooling/` — development tooling such as the comment and docstring checkers
   (tests in `tests/tooling/`)
+- `evals/` — ADK evals (`adk eval`), see `docs/plans/evaluation.md`: one folder per agent
+  under test (`judge_clue/`, `player_clue/`, `player_discussion/`, `player_debrief/`) with
+  its `agent.py`, `*.evalset.json` and `*.test_config.json`, the shared player eval agent
+  in `player_turn.py`, the custom metrics in `imposter_metrics.py`, the hand-made clue
+  labels in `data/clue_labels.yaml`, and exported logs and traces in `raw/` (git-ignored).
+  `scripts/harvest_traces.py`, `scripts/build_evalsets.py` and `scripts/eval_report.py`
+  export games, build the eval sets and report the runs (tests in `tests/evals/` and
+  `tests/scripts/`)
 - `infra/` — Terraform (one flat root) for the app's resources in the existing sandbox
   project (no bootstrap; `make tf-setup` enables the base APIs and creates the state
   bucket)
@@ -64,6 +72,8 @@ make type           # ty check, tsc
 make check          # format + lint + type + Terraform fmt/validate (no tests)
 make test           # pytest with coverage (excluding `slow` tests), Vitest
 make test-slow      # pytest -m slow (real Vertex AI calls)
+make eval           # ADK evals of the judge and the player turns (real model calls)
+make eval-compare   # compare two eval runs (APP=..., BASE=..., NEW=...)
 make play           # imposter play with real models (options in ARGS="...")
 make dev            # the game API on port 8000 and the Vite dev server on port 5173
 make frontend       # build frontend/dist, which the API app serves at /

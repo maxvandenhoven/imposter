@@ -27,7 +27,7 @@ Your hint, a word related to the secret word, is "savanna".
 
 Your goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.
 
-If you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.
+If you think you know the secret word, your best guess is most likely the secret word itself, so treat it as forbidden: never give it as a clue, never use it in a statement, and never give a word that contains it. Saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep your guess for the end of the game.
 
 # The game so far
 
@@ -54,7 +54,8 @@ Players in turn order: Alice, Bob, Charlie, Dave, Eve (you).
 It is clue round 2 of 2 and your turn, Eve.
 
 Give exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.
+The clues of the others all point to the secret word, so the most obvious word that fits them all is most likely the secret word itself, even when it feels like a safe, general word. Never give that word, or a word that contains it, as your clue. Give a word one step away from it instead, like the clues of the others.
 
 Words already used as clues, which you must not repeat (this includes your own): smooth, classic, modern, winter, small, cold, heavy, soft, noisy.
 
-Also write your private reasoning about this clue, at most 60 words.
+Also write your private reasoning about this clue in one or two short sentences, at most 60 words.

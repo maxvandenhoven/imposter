@@ -1,0 +1,20 @@
+{
+  "criteria": {
+    "word_kept_secret": 1.0,
+    "clue_follows_rules": 1.0
+  },
+  "custom_metrics": {
+    "word_kept_secret": {
+      "code_config": {
+        "name": "imposter_metrics.word_kept_secret"
+      },
+      "description": "The clue or statement does not say the secret word, by the engine's rules."
+    },
+    "clue_follows_rules": {
+      "code_config": {
+        "name": "imposter_metrics.clue_follows_rules"
+      },
+      "description": "The clue is one word, new, and does not say the secret word (code rules only, no judge)."
+    }
+  }
+}
