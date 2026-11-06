@@ -37,7 +37,7 @@ lint: lint-python lint-frontend
 
 lint-python:
 	@uv run ruff check --fix --output-format concise
-	@uv run python scripts/tooling/check_comments.py src tests scripts
+	@uv run python scripts/tooling/check_comments.py src tests scripts evals
 	@uv run python scripts/tooling/check_docstrings.py src
 
 lint-frontend: frontend/node_modules
@@ -82,6 +82,57 @@ test-frontend: frontend/node_modules
 .PHONY: test-slow
 test-slow:
 	@uv run $(if $(wildcard .env),--env-file .env) pytest -m slow
+
+
+# Evals with real model calls, never part of `make test` (docs/plans/evaluation.md).
+# `adk eval` imports the custom metrics from evals/, and the full log of each run goes
+# to evals/<app>/.adk/<model>.log. EVAL_SUITES lists eval sets as <app>/<name>, played
+# with evals/<app>/<name>.test_config.json. A suite without a single eval set file uses
+# the EVAL_SPLIT (dev or holdout) one. Pick the player models with EVAL_MODELS. Compare
+# two runs with `make eval-compare APP=player_clue BASE=<run id> NEW=<run id>`.
+EVAL_MODELS ?= gemini-flash claude-haiku mistral-small gemini-flash-lite
+EVAL_SPLIT ?= dev
+EVAL_SUITES ?= player_clue/civilian player_clue/imposter player_clue/word_said \
+	player_discussion/statement player_discussion/word_said player_debrief/reflection
+ADK_EVAL := PYTHONPATH=evals uv run --env-file .env adk eval
+
+.PHONY: eval eval-harvest eval-sets eval-judge eval-players eval-summary eval-compare
+eval: eval-judge eval-players eval-summary
+
+eval-harvest:
+	@uv run --env-file .env python scripts/harvest_traces.py
+
+eval-sets:
+	@uv run python scripts/build_evalsets.py labels
+	@uv run python scripts/build_evalsets.py judge
+	@uv run python scripts/build_evalsets.py players
+
+eval-judge:
+	@uv run python scripts/build_evalsets.py judge
+	@mkdir -p evals/judge_clue/.adk
+	@$(ADK_EVAL) evals/judge_clue evals/judge_clue/clue_labels.evalset.json \
+		--config_file_path evals/judge_clue/clue_labels.test_config.json \
+		> evals/judge_clue/.adk/judge.log 2>&1 || true
+	@uv run python scripts/eval_report.py show judge_clue --by-kind
+
+eval-players:
+	@for suite in $(EVAL_SUITES); do \
+		app=$${suite%/*}; set=evals/$$suite.evalset.json; \
+		[ -f $$set ] || set=evals/$${suite}_$(EVAL_SPLIT).evalset.json; \
+		mkdir -p evals/$$app/.adk; \
+		for model in $(EVAL_MODELS); do \
+			echo "Evaluating $$set with $$model."; \
+			IMPOSTER_EVAL_MODEL=$$model $(ADK_EVAL) evals/$$app $$set \
+				--config_file_path evals/$$suite.test_config.json \
+				> evals/$$app/.adk/$$model.log 2>&1 || true; \
+		done; \
+	done
+
+eval-summary:
+	@uv run python scripts/eval_report.py summary
+
+eval-compare:
+	@uv run python scripts/eval_report.py compare $(APP) $(BASE) $(NEW)
 
 
 # Pass options with ARGS, for example `make play ARGS="--god --seed 7"`.

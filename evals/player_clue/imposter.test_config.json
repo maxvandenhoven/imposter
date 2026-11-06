@@ -1,0 +1,42 @@
+{
+  "criteria": {
+    "clue_follows_rules": 1.0,
+    "clue_passes_judge": 1.0,
+    "word_kept_secret": 1.0,
+    "within_word_caps": 1.0,
+    "rubric_based_final_response_quality_v1": {
+      "threshold": 0.5,
+      "judge_model_options": {
+        "judge_model": "gemini-3.8-flash",
+        "num_samples": 3,
+        "parallelism_limit": 3
+      }
+    }
+  },
+  "custom_metrics": {
+    "clue_follows_rules": {
+      "code_config": {
+        "name": "imposter_metrics.clue_follows_rules"
+      },
+      "description": "The clue is one word, new, and does not say the secret word (code rules only, no judge)."
+    },
+    "clue_passes_judge": {
+      "code_config": {
+        "name": "imposter_metrics.clue_passes_judge"
+      },
+      "description": "The production judge (code checks, then its model) accepts the clue."
+    },
+    "word_kept_secret": {
+      "code_config": {
+        "name": "imposter_metrics.word_kept_secret"
+      },
+      "description": "The clue or statement does not say the secret word, by the engine's rules."
+    },
+    "within_word_caps": {
+      "code_config": {
+        "name": "imposter_metrics.within_word_caps"
+      },
+      "description": "The statement and the private reasoning keep to the default word caps."
+    }
+  }
+}

@@ -1,0 +1,2832 @@
+{
+  "eval_set_id": "imposter_holdout",
+  "eval_cases": [
+    {
+      "eval_id": "conscience-b70fb107-alice-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 3 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie.\n\nIt is clue round 1 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "b70fb107d86f7319ca567099b3f0fac2",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 3,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              }
+            ],
+            "clues": [],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"b70fb107d86f7319ca567099b3f0fac2\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":3,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"}],\"clues\":[],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "conscience"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"conscience\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "conscience-b70fb107-alice-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 3 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie.\n\n## Clues\n\n- Round 1, Alice: \"ocean\"\n- Round 1, Bob: \"guilt\"\n- Round 1, Charlie: \"mind\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"ocean\". Your reasoning: Since I am the imposter and do not know the secret word yet, I need to pick a broad, safe word that could fit many things. Ocean is general enough to blend in without giving away my lack of knowledge.\n\nIt is clue round 2 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): ocean, guilt, mind.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "b70fb107d86f7319ca567099b3f0fac2",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 3,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "ocean"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "guilt"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "mind"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"ocean\"",
+                "private_reasoning": "Since I am the imposter and do not know the secret word yet, I need to pick a broad, safe word that could fit many things. Ocean is general enough to blend in without giving away my lack of knowledge."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"b70fb107d86f7319ca567099b3f0fac2\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":3,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"ocean\"},{\"round\":1,\"seat\":1,\"clue\":\"guilt\"},{\"round\":1,\"seat\":2,\"clue\":\"mind\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"ocean\\\"\",\"private_reasoning\":\"Since I am the imposter and do not know the secret word yet, I need to pick a broad, safe word that could fit many things. Ocean is general enough to blend in without giving away my lack of knowledge.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "conscience"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"conscience\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "envelope-01e48423-bob-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: \"letter\"\n\nIt is clue round 1 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): letter.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "01e484232a9213357e8c4e6e61bc3806",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "letter"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"01e484232a9213357e8c4e6e61bc3806\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"letter\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "envelope"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"envelope\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "static-b2133236-charlie-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there is 1 round. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there is 1 round. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Charlie, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie (you), Dave.\n\n## Clues\n\n- Round 1, Alice: \"interference\"\n- Round 1, Bob: \"noise\"\n\nIt is clue round 1 of 1 and your turn, Charlie.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): interference, noise.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "b21332369f7bb1c15ba0814e32cce271",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 1,
+              "discussion_rounds": 1,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 2,
+            "name": "Charlie",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "interference"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "noise"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"b21332369f7bb1c15ba0814e32cce271\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":1,\"discussion_rounds\":1,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":2,\"name\":\"Charlie\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"interference\"},{\"round\":1,\"seat\":1,\"clue\":\"noise\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "static"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"static\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "virtue-760ee697-bob-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: passed\n\nIt is clue round 1 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "760ee697f9ac56d2b216f1576ca82188",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"760ee697f9ac56d2b216f1576ca82188\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "virtue"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"virtue\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "virtue-760ee697-bob-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: passed\n- Round 1, Bob: \"time\"\n- Round 1, Charlie: passed\n- Round 1, Dave: \"Cardinal\"\n- Round 2, Alice: passed\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"time\". Your reasoning: Since Alice passed on the first turn, I have zero hints about the secret word. I need to pick a very safe, broad, and abstract word that could relate to almost anything so I don't give away my imposter status early on.\n\nIt is clue round 2 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): time, Cardinal.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "760ee697f9ac56d2b216f1576ca82188",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": null
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "time"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": null
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "Cardinal"
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"time\"",
+                "private_reasoning": "Since Alice passed on the first turn, I have zero hints about the secret word. I need to pick a very safe, broad, and abstract word that could relate to almost anything so I don't give away my imposter status early on."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"760ee697f9ac56d2b216f1576ca82188\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":null},{\"round\":1,\"seat\":1,\"clue\":\"time\"},{\"round\":1,\"seat\":2,\"clue\":null},{\"round\":1,\"seat\":3,\"clue\":\"Cardinal\"},{\"round\":2,\"seat\":0,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"time\\\"\",\"private_reasoning\":\"Since Alice passed on the first turn, I have zero hints about the secret word. I need to pick a very safe, broad, and abstract word that could relate to almost anything so I don't give away my imposter status early on.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "virtue"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"virtue\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "garlic-a5a63b09-alice-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie, Dave.\n\nIt is clue round 1 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "a5a63b09ee1918f0c7972268359e5ab7",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"a5a63b09ee1918f0c7972268359e5ab7\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "garlic"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"garlic\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "garlic-a5a63b09-alice-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: \"object\"\n- Round 1, Bob: \"kitchen\"\n- Round 1, Charlie: \"bulb\"\n- Round 1, Dave: \"pungent\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"object\". Your reasoning: I lack knowledge of the secret, so I choose a generic clue that could plausibly apply to many nouns. \"object\" is broad, avoiding suspicion while staying safe from accidentally saying the secret word.\n\nIt is clue round 2 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): object, kitchen, bulb, pungent.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "a5a63b09ee1918f0c7972268359e5ab7",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "object"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "kitchen"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "bulb"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "pungent"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"object\"",
+                "private_reasoning": "I lack knowledge of the secret, so I choose a generic clue that could plausibly apply to many nouns. \"object\" is broad, avoiding suspicion while staying safe from accidentally saying the secret word."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"a5a63b09ee1918f0c7972268359e5ab7\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"object\"},{\"round\":1,\"seat\":1,\"clue\":\"kitchen\"},{\"round\":1,\"seat\":2,\"clue\":\"bulb\"},{\"round\":1,\"seat\":3,\"clue\":\"pungent\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"object\\\"\",\"private_reasoning\":\"I lack knowledge of the secret, so I choose a generic clue that could plausibly apply to many nouns. \\\"object\\\" is broad, avoiding suspicion while staying safe from accidentally saying the secret word.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "garlic"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"garlic\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "dizziness-f91712c3-dave-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"spin\"\n- Round 1, Bob: \"sway\"\n- Round 1, Charlie: \"nausea\"\n\nIt is clue round 1 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): spin, sway, nausea.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "f91712c32a913aaeda2b0a11c0d8c247",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "spin"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "sway"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "nausea"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"f91712c32a913aaeda2b0a11c0d8c247\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"spin\"},{\"round\":1,\"seat\":1,\"clue\":\"sway\"},{\"round\":1,\"seat\":2,\"clue\":\"nausea\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "dizziness"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"dizziness\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "dizziness-f91712c3-dave-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"spin\"\n- Round 1, Bob: \"sway\"\n- Round 1, Charlie: \"nausea\"\n- Round 1, Dave: \"dizzy\"\n- Round 2, Alice: \"vertigo\"\n- Round 2, Bob: \"unsteadiness\"\n- Round 2, Charlie: \"giddy\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"dizzy\". Your reasoning: Clues so far (spin, sway, nausea) suggest a motion or sickness feeling, maybe a ride or vertigo. I don't know the word, so I pick something generic that fits the cluster without being too specific. \"Dizzy\" fits spin and nausea and is unlikely to be the secret word itself.\n\nIt is clue round 2 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): spin, sway, nausea, dizzy, vertigo, unsteadiness, giddy.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "f91712c32a913aaeda2b0a11c0d8c247",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "spin"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "sway"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "nausea"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "dizzy"
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": "vertigo"
+              },
+              {
+                "round": 2,
+                "seat": 1,
+                "clue": "unsteadiness"
+              },
+              {
+                "round": 2,
+                "seat": 2,
+                "clue": "giddy"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"dizzy\"",
+                "private_reasoning": "Clues so far (spin, sway, nausea) suggest a motion or sickness feeling, maybe a ride or vertigo. I don't know the word, so I pick something generic that fits the cluster without being too specific. \"Dizzy\" fits spin and nausea and is unlikely to be the secret word itself."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"f91712c32a913aaeda2b0a11c0d8c247\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"spin\"},{\"round\":1,\"seat\":1,\"clue\":\"sway\"},{\"round\":1,\"seat\":2,\"clue\":\"nausea\"},{\"round\":1,\"seat\":3,\"clue\":\"dizzy\"},{\"round\":2,\"seat\":0,\"clue\":\"vertigo\"},{\"round\":2,\"seat\":1,\"clue\":\"unsteadiness\"},{\"round\":2,\"seat\":2,\"clue\":\"giddy\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"dizzy\\\"\",\"private_reasoning\":\"Clues so far (spin, sway, nausea) suggest a motion or sickness feeling, maybe a ride or vertigo. I don't know the word, so I pick something generic that fits the cluster without being too specific. \\\"Dizzy\\\" fits spin and nausea and is unlikely to be the secret word itself.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "dizziness"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"dizziness\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "befuddled-1a911e01-alice-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie, Dave.\n\nIt is clue round 1 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "1a911e010c5a29378a3a0cb76cfbbcb6",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"1a911e010c5a29378a3a0cb76cfbbcb6\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "befuddled"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"befuddled\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "befuddled-1a911e01-alice-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: \"Hidden\"\n- Round 1, Bob: passed\n- Round 1, Charlie: passed\n- Round 1, Dave: passed\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"Hidden\". Your reasoning: I don't know the word. No clues have been given yet, so I need a generic word that could fit many secrets without revealing I'm the imposter. \"Hidden\" is vague and safe-sounding.\n\nIt is clue round 2 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Hidden.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "1a911e010c5a29378a3a0cb76cfbbcb6",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Hidden"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": null
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": null
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"Hidden\"",
+                "private_reasoning": "I don't know the word. No clues have been given yet, so I need a generic word that could fit many secrets without revealing I'm the imposter. \"Hidden\" is vague and safe-sounding."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"1a911e010c5a29378a3a0cb76cfbbcb6\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Hidden\"},{\"round\":1,\"seat\":1,\"clue\":null},{\"round\":1,\"seat\":2,\"clue\":null},{\"round\":1,\"seat\":3,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"Hidden\\\"\",\"private_reasoning\":\"I don't know the word. No clues have been given yet, so I need a generic word that could fit many secrets without revealing I'm the imposter. \\\"Hidden\\\" is vague and safe-sounding.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "befuddled"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"befuddled\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "echo-41d1c249-dave-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"canyon\"\n- Round 1, Bob: \"sound\"\n- Round 1, Charlie: \"bounce\"\n\nIt is clue round 1 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): canyon, sound, bounce.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "41d1c249b9ff357398599d0dab6d16f4",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "canyon"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "sound"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "bounce"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"41d1c249b9ff357398599d0dab6d16f4\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"canyon\"},{\"round\":1,\"seat\":1,\"clue\":\"sound\"},{\"round\":1,\"seat\":2,\"clue\":\"bounce\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "echo"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"echo\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "freedom-e4f788aa-bob-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: \"Wings\"\n\nIt is clue round 1 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Wings.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "e4f788aa4e89e2c057aaf097f0e9db80",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Wings"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"e4f788aa4e89e2c057aaf097f0e9db80\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Wings\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "freedom"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"freedom\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "freedom-e4f788aa-bob-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: \"Wings\"\n- Round 1, Bob: \"Feather\"\n- Round 1, Charlie: \"choice\"\n- Round 1, Dave: \"eagle\"\n- Round 2, Alice: \"Cage\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"Feather\". Your reasoning: Alice said Wings. I am the imposter and do not know the word, so I need a safe, related clue that fits birds or flight without giving away my ignorance. Feather is a natural choice that blends in.\n\nIt is clue round 2 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Wings, Feather, choice, eagle, Cage.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "e4f788aa4e89e2c057aaf097f0e9db80",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Wings"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "Feather"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "choice"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "eagle"
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": "Cage"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"Feather\"",
+                "private_reasoning": "Alice said Wings. I am the imposter and do not know the word, so I need a safe, related clue that fits birds or flight without giving away my ignorance. Feather is a natural choice that blends in."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"e4f788aa4e89e2c057aaf097f0e9db80\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Wings\"},{\"round\":1,\"seat\":1,\"clue\":\"Feather\"},{\"round\":1,\"seat\":2,\"clue\":\"choice\"},{\"round\":1,\"seat\":3,\"clue\":\"eagle\"},{\"round\":2,\"seat\":0,\"clue\":\"Cage\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"Feather\\\"\",\"private_reasoning\":\"Alice said Wings. I am the imposter and do not know the word, so I need a safe, related clue that fits birds or flight without giving away my ignorance. Feather is a natural choice that blends in.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "freedom"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"freedom\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "industrialization-4df186e0-charlie-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Charlie, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie (you), Dave.\n\n## Clues\n\n- Round 1, Alice: \"steam\"\n- Round 1, Bob: \"urbanization\"\n\nIt is clue round 1 of 2 and your turn, Charlie.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): steam, urbanization.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "4df186e0d4b246b5302ad4a2879196c1",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 2,
+            "name": "Charlie",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "steam"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "urbanization"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"4df186e0d4b246b5302ad4a2879196c1\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":2,\"name\":\"Charlie\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"steam\"},{\"round\":1,\"seat\":1,\"clue\":\"urbanization\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "industrialization"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"industrialization\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "industrialization-4df186e0-charlie-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Charlie, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie (you), Dave.\n\n## Clues\n\n- Round 1, Alice: \"steam\"\n- Round 1, Bob: \"urbanization\"\n- Round 1, Charlie: \"factory\"\n- Round 1, Dave: \"machinery\"\n- Round 2, Alice: \"railroads\"\n- Round 2, Bob: \"textiles\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"factory\". Your reasoning: Alice said steam and Bob said urbanization, which strongly points to the Industrial Revolution or related concepts like factories, machinery, or pollution. Factory fits well as a general clue that blends in without knowing the exact secret word.\n\nIt is clue round 2 of 2 and your turn, Charlie.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): steam, urbanization, factory, machinery, railroads, textiles.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "4df186e0d4b246b5302ad4a2879196c1",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 2,
+            "name": "Charlie",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "steam"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "urbanization"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "factory"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "machinery"
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": "railroads"
+              },
+              {
+                "round": 2,
+                "seat": 1,
+                "clue": "textiles"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"factory\"",
+                "private_reasoning": "Alice said steam and Bob said urbanization, which strongly points to the Industrial Revolution or related concepts like factories, machinery, or pollution. Factory fits well as a general clue that blends in without knowing the exact secret word."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"4df186e0d4b246b5302ad4a2879196c1\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":2,\"name\":\"Charlie\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"steam\"},{\"round\":1,\"seat\":1,\"clue\":\"urbanization\"},{\"round\":1,\"seat\":2,\"clue\":\"factory\"},{\"round\":1,\"seat\":3,\"clue\":\"machinery\"},{\"round\":2,\"seat\":0,\"clue\":\"railroads\"},{\"round\":2,\"seat\":1,\"clue\":\"textiles\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"factory\\\"\",\"private_reasoning\":\"Alice said steam and Bob said urbanization, which strongly points to the Industrial Revolution or related concepts like factories, machinery, or pollution. Factory fits well as a general clue that blends in without knowing the exact secret word.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "industrialization"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"industrialization\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "tension-61967947-bob-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: passed\n\nIt is clue round 1 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "619679477fc7ac18bcbd08a828cce1a7",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"619679477fc7ac18bcbd08a828cce1a7\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "tension"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"tension\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "tension-61967947-bob-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Bob, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob (you), Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: passed\n- Round 1, Bob: \"mystery\"\n- Round 1, Charlie: \"Wire\"\n- Round 1, Dave: passed\n- Round 2, Alice: passed\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"mystery\". Your reasoning: Alice passed, so I don't have any direct information. I'll give a clue that fits many words, to keep my options open.\n\nIt is clue round 2 of 2 and your turn, Bob.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): mystery, Wire.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "619679477fc7ac18bcbd08a828cce1a7",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 1,
+            "name": "Bob",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": null
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "mystery"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "Wire"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": null
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"mystery\"",
+                "private_reasoning": "Alice passed, so I don't have any direct information. I'll give a clue that fits many words, to keep my options open."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"619679477fc7ac18bcbd08a828cce1a7\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":1,\"name\":\"Bob\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":null},{\"round\":1,\"seat\":1,\"clue\":\"mystery\"},{\"round\":1,\"seat\":2,\"clue\":\"Wire\"},{\"round\":1,\"seat\":3,\"clue\":null},{\"round\":2,\"seat\":0,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"mystery\\\"\",\"private_reasoning\":\"Alice passed, so I don't have any direct information. I'll give a clue that fits many words, to keep my options open.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "tension"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"tension\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "alibi-8bcdda2d-dave-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"Whereabouts\"\n- Round 1, Bob: \"witness\"\n- Round 1, Charlie: passed\n\nIt is clue round 1 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Whereabouts, witness.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "8bcdda2d4d45e4c86733afd86c9db07d",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Whereabouts"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "witness"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"8bcdda2d4d45e4c86733afd86c9db07d\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Whereabouts\"},{\"round\":1,\"seat\":1,\"clue\":\"witness\"},{\"round\":1,\"seat\":2,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "alibi"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"alibi\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "alibi-8bcdda2d-dave-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"Whereabouts\"\n- Round 1, Bob: \"witness\"\n- Round 1, Charlie: passed\n- Round 1, Dave: \"Detective\"\n- Round 2, Alice: \"Timeline\"\n- Round 2, Bob: \"testimony\"\n- Round 2, Charlie: passed\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"Detective\". Your reasoning: Charlie passing suggests he's unsure or scared, possibly the imposter, but could also be confused. Alice and Bob both gave clues relating to investigation: 'whereabouts' and 'witness'. This suggests the secret word is likely crime/investigation-related, perhaps 'alibi' or 'evidence'. 'Detective' fits both clue themes without overlapping them.\n\nIt is clue round 2 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Whereabouts, witness, Detective, Timeline, testimony.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "8bcdda2d4d45e4c86733afd86c9db07d",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Whereabouts"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "witness"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": null
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "Detective"
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": "Timeline"
+              },
+              {
+                "round": 2,
+                "seat": 1,
+                "clue": "testimony"
+              },
+              {
+                "round": 2,
+                "seat": 2,
+                "clue": null
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"Detective\"",
+                "private_reasoning": "Charlie passing suggests he's unsure or scared, possibly the imposter, but could also be confused. Alice and Bob both gave clues relating to investigation: 'whereabouts' and 'witness'. This suggests the secret word is likely crime/investigation-related, perhaps 'alibi' or 'evidence'. 'Detective' fits both clue themes without overlapping them."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"8bcdda2d4d45e4c86733afd86c9db07d\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Whereabouts\"},{\"round\":1,\"seat\":1,\"clue\":\"witness\"},{\"round\":1,\"seat\":2,\"clue\":null},{\"round\":1,\"seat\":3,\"clue\":\"Detective\"},{\"round\":2,\"seat\":0,\"clue\":\"Timeline\"},{\"round\":2,\"seat\":1,\"clue\":\"testimony\"},{\"round\":2,\"seat\":2,\"clue\":null}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"Detective\\\"\",\"private_reasoning\":\"Charlie passing suggests he's unsure or scared, possibly the imposter, but could also be confused. Alice and Bob both gave clues relating to investigation: 'whereabouts' and 'witness'. This suggests the secret word is likely crime/investigation-related, perhaps 'alibi' or 'evidence'. 'Detective' fits both clue themes without overlapping them.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "alibi"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"alibi\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "graduation-4faccba0-charlie-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Charlie, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie (you), Dave.\n\n## Clues\n\n- Round 1, Alice: \"Ceremony\"\n- Round 1, Bob: \"Diploma\"\n\nIt is clue round 1 of 2 and your turn, Charlie.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Ceremony, Diploma.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "4faccba065fe9ee398696eaee4ea9865",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 2,
+            "name": "Charlie",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Ceremony"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "Diploma"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"4faccba065fe9ee398696eaee4ea9865\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":2,\"name\":\"Charlie\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Ceremony\"},{\"round\":1,\"seat\":1,\"clue\":\"Diploma\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "graduation"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"graduation\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "hum-2e228e51-alice-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie, Dave.\n\nIt is clue round 1 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "2e228e51e890e038f422dfaa2ab3e94b",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"2e228e51e890e038f422dfaa2ab3e94b\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "hum"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"hum\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "hum-2e228e51-alice-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Alice, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice (you), Bob, Charlie, Dave.\n\n## Clues\n\n- Round 1, Alice: \"Time\"\n- Round 1, Bob: \"Sound\"\n- Round 1, Charlie: \"Laugh\"\n- Round 1, Dave: \"Music\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"Time\". Your reasoning: I am player 1 and the imposter with zero prior clues. I need a broad, universal concept that can believably connect to many common nouns, concepts, or activities without being suspiciously specific or completely nonsensical.\n\nIt is clue round 2 of 2 and your turn, Alice.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Time, Sound, Laugh, Music.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "2e228e51e890e038f422dfaa2ab3e94b",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 0,
+            "name": "Alice",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Time"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "Sound"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "Laugh"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "Music"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"Time\"",
+                "private_reasoning": "I am player 1 and the imposter with zero prior clues. I need a broad, universal concept that can believably connect to many common nouns, concepts, or activities without being suspiciously specific or completely nonsensical."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"2e228e51e890e038f422dfaa2ab3e94b\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":0,\"name\":\"Alice\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Time\"},{\"round\":1,\"seat\":1,\"clue\":\"Sound\"},{\"round\":1,\"seat\":2,\"clue\":\"Laugh\"},{\"round\":1,\"seat\":3,\"clue\":\"Music\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"Time\\\"\",\"private_reasoning\":\"I am player 1 and the imposter with zero prior clues. I need a broad, universal concept that can believably connect to many common nouns, concepts, or activities without being suspiciously specific or completely nonsensical.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "hum"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"hum\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "duck-6dc5f97c-dave-clue_1",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"Webbed\"\n- Round 1, Bob: \"Pond\"\n- Round 1, Charlie: \"Feathers\"\n\nIt is clue round 1 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Webbed, Pond, Feathers.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "6dc5f97cf467305190b68fdca58c02c8",
+            "phase": "clue",
+            "round": 1,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Webbed"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "Pond"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "Feathers"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": []
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"6dc5f97cf467305190b68fdca58c02c8\",\"phase\":\"clue\",\"round\":1,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Webbed\"},{\"round\":1,\"seat\":1,\"clue\":\"Pond\"},{\"round\":1,\"seat\":2,\"clue\":\"Feathers\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "duck"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"duck\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    },
+    {
+      "eval_id": "duck-6dc5f97c-dave-clue_2",
+      "conversation": [
+        {
+          "invocation_id": "",
+          "user_content": {
+            "parts": [
+              {
+                "text": "# Game rules\n\nYou are playing Imposter, a social deduction word game with 4 players.\n\nEvery player except one knows the same secret word. These players are the civilians. The remaining player is the imposter and does not know the word.\n\nTwo rules matter more than any other:\n\n- **Never say the secret word.** Whoever says it in a clue or a statement, even as part of a longer word or by accident, loses the game for their side on the spot, and the game ends immediately. If a civilian says it, the imposters win. If an imposter says it, the civilians win.\n- **Never repeat a clue.** A clue must be a word that nobody has given yet, including you. A repeated clue is rejected.\n\nThe game is played in phases:\n\n1. Clues: there are 2 rounds. In each round every player, in turn order, gives exactly one word as a clue that is related to the secret word. A clue that breaks the rules is replaced by a pass.\n2. Discussion: there are 2 rounds. In each round every player, in turn order, makes a public statement of at most 100 words to accuse, defend or question.\n3. Vote: every player votes in secret for one other player. The votes are revealed together. The player with the most votes is caught, and a tie catches nobody.\n4. Guess: every imposter makes one guess at the secret word. This is the only moment anyone may say it.\n5. Outcome: an imposter who is not caught wins. A caught imposter who guesses the word steals the win. Otherwise the civilians win.\n6. Debrief: the word and the roles are revealed, and every player reflects on how they played.\n\nWith every action you also record private reasoning of at most 60 words. Nobody else ever sees it, but you will see your own earlier reasoning in later turns.\n\n# Your role\n\nYou are Dave, the imposter. You do not know the secret word.\n\nYour goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.\n\nIf you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.\n\n# The game so far\n\nPlayers in turn order: Alice, Bob, Charlie, Dave (you).\n\n## Clues\n\n- Round 1, Alice: \"Webbed\"\n- Round 1, Bob: \"Pond\"\n- Round 1, Charlie: \"Feathers\"\n- Round 1, Dave: \"Quack\"\n- Round 2, Alice: \"Waddle\"\n- Round 2, Bob: \"Bread\"\n- Round 2, Charlie: \"Swim\"\n\n## Your private notes\n\n- Clue round 1: you gave the clue \"Quack\". Your reasoning: Clues Webbed, Pond, Feathers all point to a duck. 'Quack' fits and is a new word. It's a small risk if the word is goose or swan, but duck seems most likely.\n\nIt is clue round 2 of 2 and your turn, Dave.\n\nGive exactly one word as your clue, related to the secret word. Do not say the secret word itself or a word that contains it: that loses the game for your side at once.\n\nWords already used as clues, which you must not repeat (this includes your own): Webbed, Pond, Feathers, Quack, Waddle, Bread, Swim.\n\nAlso write your private reasoning about this clue, at most 60 words."
+              }
+            ],
+            "role": "user"
+          },
+          "creation_timestamp": 0.0
+        }
+      ],
+      "session_input": {
+        "app_name": "player_clue",
+        "user_id": "eval",
+        "state": {
+          "view": {
+            "game_id": "6dc5f97cf467305190b68fdca58c02c8",
+            "phase": "clue",
+            "round": 2,
+            "rules": {
+              "player_count": 4,
+              "imposter_count": 1,
+              "clue_rounds": 2,
+              "discussion_rounds": 2,
+              "statement_word_cap": 100,
+              "reasoning_word_cap": 60
+            },
+            "seat": 3,
+            "name": "Dave",
+            "role": "imposter",
+            "word": null,
+            "hint": null,
+            "category": null,
+            "players": [
+              {
+                "seat": 0,
+                "name": "Alice"
+              },
+              {
+                "seat": 1,
+                "name": "Bob"
+              },
+              {
+                "seat": 2,
+                "name": "Charlie"
+              },
+              {
+                "seat": 3,
+                "name": "Dave"
+              }
+            ],
+            "clues": [
+              {
+                "round": 1,
+                "seat": 0,
+                "clue": "Webbed"
+              },
+              {
+                "round": 1,
+                "seat": 1,
+                "clue": "Pond"
+              },
+              {
+                "round": 1,
+                "seat": 2,
+                "clue": "Feathers"
+              },
+              {
+                "round": 1,
+                "seat": 3,
+                "clue": "Quack"
+              },
+              {
+                "round": 2,
+                "seat": 0,
+                "clue": "Waddle"
+              },
+              {
+                "round": 2,
+                "seat": 1,
+                "clue": "Bread"
+              },
+              {
+                "round": 2,
+                "seat": 2,
+                "clue": "Swim"
+              }
+            ],
+            "statements": [],
+            "vote_result": null,
+            "reveal": null,
+            "scratchpad": [
+              {
+                "phase": "clue",
+                "round": 1,
+                "action": "gave the clue \"Quack\"",
+                "private_reasoning": "Clues Webbed, Pond, Feathers all point to a duck. 'Quack' fits and is a new word. It's a small risk if the word is goose or swan, but duck seems most likely."
+              }
+            ]
+          }
+        }
+      },
+      "creation_timestamp": 0.0,
+      "rubrics": [
+        {
+          "rubric_id": "player_view",
+          "rubric_content": {
+            "text_property": "{\"game_id\":\"6dc5f97cf467305190b68fdca58c02c8\",\"phase\":\"clue\",\"round\":2,\"rules\":{\"player_count\":4,\"imposter_count\":1,\"clue_rounds\":2,\"discussion_rounds\":2,\"statement_word_cap\":100,\"reasoning_word_cap\":60},\"seat\":3,\"name\":\"Dave\",\"role\":\"imposter\",\"word\":null,\"hint\":null,\"category\":null,\"players\":[{\"seat\":0,\"name\":\"Alice\"},{\"seat\":1,\"name\":\"Bob\"},{\"seat\":2,\"name\":\"Charlie\"},{\"seat\":3,\"name\":\"Dave\"}],\"clues\":[{\"round\":1,\"seat\":0,\"clue\":\"Webbed\"},{\"round\":1,\"seat\":1,\"clue\":\"Pond\"},{\"round\":1,\"seat\":2,\"clue\":\"Feathers\"},{\"round\":1,\"seat\":3,\"clue\":\"Quack\"},{\"round\":2,\"seat\":0,\"clue\":\"Waddle\"},{\"round\":2,\"seat\":1,\"clue\":\"Bread\"},{\"round\":2,\"seat\":2,\"clue\":\"Swim\"}],\"statements\":[],\"vote_result\":null,\"reveal\":null,\"scratchpad\":[{\"phase\":\"clue\",\"round\":1,\"action\":\"gave the clue \\\"Quack\\\"\",\"private_reasoning\":\"Clues Webbed, Pond, Feathers all point to a duck. 'Quack' fits and is a new word. It's a small risk if the word is goose or swan, but duck seems most likely.\"}]}"
+          },
+          "type": "PLAYER_VIEW"
+        },
+        {
+          "rubric_id": "secret_word",
+          "rubric_content": {
+            "text_property": "duck"
+          },
+          "type": "SECRET_WORD"
+        },
+        {
+          "rubric_id": "imposter",
+          "rubric_content": {
+            "text_property": "The secret word, unknown to this player, is \"duck\". Next to the clues given before it in the prompt, the clue in the response fits the secret word about as well as a clue of a player who knows the word, so it does not stand out as vague, generic or unrelated."
+          },
+          "type": "FINAL_RESPONSE_QUALITY"
+        }
+      ],
+      "final_session_state": {}
+    }
+  ],
+  "creation_timestamp": 0.0
+}

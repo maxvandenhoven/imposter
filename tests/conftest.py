@@ -19,6 +19,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic import Field, SkipValidation
 
+from imposter.config import GameConfig, PlayerRole, SecretWord
 from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
 from imposter.judge.base import JudgeProtocol
@@ -175,3 +176,32 @@ def span_exporter() -> InMemorySpanExporter:
     trace.set_tracer_provider(provider)
 
     return exporter
+
+
+@pytest.fixture(scope="function")
+def civilian_clue_view() -> PlayerView:
+    """The view of a civilian at the start of clue round 2, after a round with a pass.
+
+    The category is public, so every part of a clue turn's instruction is rendered.
+    """
+    config = GameConfig.model_validate(
+        {
+            "players": [{"model_id": f"model-{seat}"} for seat in range(4)],
+            "seed": 7,
+            "public_category": True,
+        }
+    )
+    game = Game.create(
+        config=config, secret=SecretWord(word="giraffe", category="animals")
+    )
+
+    for clue in ["neck", "savanna", None, "spots"]:
+        seat = game.pending_seats[0]
+        game.start_turn(seat)
+        game.submit_clue(
+            seat=seat, clue=clue, private_reasoning=f"Seat {seat} thinks. It is careful."
+        )
+
+    civilian = next(seat for seat in game.seats if seat.role is PlayerRole.CIVILIAN)
+
+    return game.view_for(civilian.seat)
