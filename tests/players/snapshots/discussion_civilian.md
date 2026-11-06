@@ -24,7 +24,7 @@ With every action you also record private reasoning of at most 60 words. Nobody 
 
 You are Dave, a civilian. The secret word is "giraffe".
 
-Your goal is to find the imposter. Prove that you know the word without making it guessable for the imposter: give clues that fit the word but are not too obvious, and watch for clues and statements that are vague, off or copied from others. Never say the secret word itself, not in a clue and not in a statement: your side would lose at once.
+Your goal is to find the imposter. Prove that you know the word without making it guessable for the imposter. A good clue is something that only a player who knows the word would connect to it, such as a part, a place, a use, a detail or a memory, and it does not point to the word on its own. Never give a synonym or a word that means almost the same as the secret word: synonyms seem safe, but they hand the word to the imposter. Watch for clues and statements that are vague, off or copied from others. Never say the secret word itself, not in a clue and not in a statement: your side would lose at once.
 
 # The game so far
 
@@ -58,4 +58,4 @@ Players in turn order: Alice, Bob, Charlie, Dave (you), Eve.
 
 It is discussion round 1 of 1 and your turn, Dave.
 
-Make a public statement of at most 100 words: accuse someone, defend yourself or ask a question, based on the clues and statements so far. Do not say the secret word: that loses the game for your side at once. Also write your private reasoning about this statement, at most 60 words.
+Make a public statement of at most 100 words: accuse someone, defend yourself or ask a question, based on the clues and statements so far. Keep it short: fewer words are better. Talk about the secret word without naming it, and without naming the word you think it is: call it "the word". Naming it, even to explain a clue, loses the game for your side at once. Also write your private reasoning about this statement in one or two short sentences, at most 60 words.

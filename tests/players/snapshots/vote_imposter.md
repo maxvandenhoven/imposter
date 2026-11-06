@@ -27,7 +27,7 @@ Your hint, a word related to the secret word, is "savanna".
 
 Your goal is to blend in and not get caught. Infer the word from the clues and statements of the others, give clues and statements that would fit it, and never reveal that you do not know the word. If you are caught, you can still win by guessing the word.
 
-If you think you know the secret word, do not say it in a clue or a statement: saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep the word itself for your guess.
+If you think you know the secret word, your best guess is most likely the secret word itself, so treat it as forbidden: never give it as a clue, never use it in a statement, and never give a word that contains it. Saying it makes you lose at once. Give a clue that is related to it instead, exactly as a civilian would, and keep your guess for the end of the game.
 
 # The game so far
 
@@ -64,4 +64,4 @@ Players in turn order: Alice, Bob, Charlie, Dave, Eve (you).
 
 It is time to vote, Eve. The votes are secret until everyone has voted.
 
-Vote for the one other player you think is the imposter. Use their exact name, one of: Alice, Bob, Charlie, Dave. You cannot vote for yourself. Also write your private reasoning about this vote, at most 60 words.
+Vote for the one other player you think is the imposter. Use their exact name, one of: Alice, Bob, Charlie, Dave. You cannot vote for yourself. Also write your private reasoning about this vote in one or two short sentences, at most 60 words.
