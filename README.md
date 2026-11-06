@@ -137,6 +137,18 @@ Traces go to Cloud Trace when `GOOGLE_CLOUD_PROJECT` is set. `IMPOSTER_TELEMETRY
 `--telemetry` option) chooses `cloud`, `console` to print the spans in the terminal, or
 `none`.
 
+## Evaluating the prompts
+
+The prompts of the players and the clue judge are measured with ADK's eval framework
+(`adk eval`) on situations from real games. `make eval-harvest` exports the logged prompts
+and answers of recent games, and `make eval-sets` turns them into eval sets: the judge is
+graded on hand-labelled clues, and the players on their clue, discussion and debrief
+turns, with metrics for saying the secret word, clues that break the rules or give the
+word away, synonyms and length. `make eval` runs every eval set for each model of the
+default lineup and prints the pass rates. The evals make real model calls, so they are
+not part of `make test`. [`docs/plans/evaluation.md`](docs/plans/evaluation.md)
+describes the eval sets and metrics and keeps the log of prompt changes.
+
 ## Design and setup
 
 The design notes and decisions behind the app are in [`docs/plans/`](docs/plans/README.md).

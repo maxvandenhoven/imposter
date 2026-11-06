@@ -59,12 +59,6 @@ package it in a second Cloud Run service on CPU (2–4 GiB), scaling to zero, ca
 service-to-service IAM auth, behind a `LayaJudge` adapter. Compare its verdicts with the
 Gemini judge on the same games.
 
-## ADK eval framework
-
-`adk eval` / `agents-cli eval` with eval sets per phase (for example "civilian clue does
-not reveal the word", "imposter guess quality") and LLM-as-judge metrics, complementing the
-tournament CLI.
-
 ## CI/CD
 
 GitHub Actions running `make check test`, and deploy on merge to `main` with Workload
