@@ -39,7 +39,7 @@ are resolved into a `SecretWord` (word, category, hint) before the game is creat
 | Identity mode | `seat`, **`names`**, `models` | See `models-and-judge.md` §Identity |
 | Public category | on, **off** | Everyone, including the imposter, knows the category. Off by default since playtest 1 (`playtests.md`): with a concrete category, one clue was enough for the imposter to infer the word. |
 | Imposter hint | **off**, on | A related word generated at setup, shown to the imposter only |
-| Model clue check | **on**, off | A model judges every clue that passes the code checks, to catch synonyms and translations. Off saves one Flash-Lite call per clue, and code checks still run. |
+| Model clue check | **on**, off | A model judges every clue that passes the code checks, to catch forms of the word that they miss, such as irregular forms and translations. Synonyms are allowed. Off saves one Flash-Lite call per clue, and code checks still run. |
 | Clue rounds | **2** (1–3) | |
 | Discussion rounds | **2** (0–3) | |
 | Advanced (collapsed) | statement cap **100** words, reasoning cap **60** words, token budget **200k**, temperature override | |
@@ -103,9 +103,13 @@ prompts:
 - **Clue**: a clue that is or contains the secret word after normalisation (also as part
   of a longer word or of several words) ends the game, see §Phases. Otherwise it must be
   one word after trimming (letters, digits, internal hyphens or apostrophes), not a
-  repeat of an earlier clue (own clues included), and not a trivial derivative of the
-  word (the judge decides, see `models-and-judge.md` §Judge). Code checks run first; the
-  judge is only consulted when code checks pass. An invalid clue gets one retry with the
+  repeat of an earlier clue (own clues included), and not a form of the word: another
+  grammatical form of it (a plural, or the verb, adjective or adverb of the same root),
+  a word that contains it or is contained in it, or a translation (the judge decides,
+  see `models-and-judge.md` §Judge). Synonyms and other close associations are allowed,
+  because rejecting them made the judge reject many fair clues (`evaluation.md`), and
+  the prompts ask players to avoid them as weak clues instead. Code checks run first, and
+  the judge is only consulted when they pass. An invalid clue gets one retry with the
   reason, then becomes `pass`. Exception: when an imposter's clue is rejected by the
   judge for being too close to the word, it passes at once without a retry or a reason,
   since the reason would hint at the word.

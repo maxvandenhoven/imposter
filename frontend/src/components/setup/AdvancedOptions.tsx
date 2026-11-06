@@ -96,7 +96,7 @@ export function AdvancedOptions({
         <OptionSwitch
           id="model-clue-check"
           label="Model clue check"
-          description="Gemini 3.5 Flash-Lite judges every clue that passes the code checks, to catch synonyms, translations and other ways of saying the word. A rejected civilian is asked again, and a rejected imposter passes."
+          description="Gemini 3.5 Flash-Lite judges every clue that passes the code checks, to catch forms of the word that the code checks miss, such as translations. Synonyms are allowed. A rejected civilian is asked again, and a rejected imposter passes."
           checked={form.modelClueCheck}
           onChange={(modelClueCheck) => {
             onChange({ modelClueCheck });

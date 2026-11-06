@@ -3526,7 +3526,8 @@ export interface components {
          *         public_category: Whether every player, including imposters, learns the category.
          *         imposter_hint: Whether imposters get a related hint word.
          *         model_clue_check: Whether a model judges clues that pass the code checks, to
-         *             catch synonyms and translations of the word. Code checks always run.
+         *             catch forms of the word they miss, such as irregular forms and
+         *             translations. Synonyms are allowed. Code checks always run.
          *         clue_rounds: The number of clue rounds.
          *         discussion_rounds: The number of discussion rounds.
          *         statement_word_cap: The maximum number of words in a discussion statement.
