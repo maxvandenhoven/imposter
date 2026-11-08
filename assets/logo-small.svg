@@ -1,15 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-<title id="title">imposter logo</title>
-<desc id="desc">A paper-filled rounded hexagonal project mark with flat print inks.</desc>
-<path d="M136 20L216 66Q224 70 224 80V176Q224 186 216 190L136 236Q128 240 120 236L40 190Q32 186 32 176V80Q32 70 40 66L120 20Q128 16 136 20Z" fill="#F8F6F1" stroke="#1E1B1A" stroke-width="5"/>
-<g stroke="#1E1B1A" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
-<circle cx="128" cy="128" r="39" fill="#F8F6F1" stroke="#1E1B1A" stroke-width="4"/>
-<circle cx="128" cy="77" r="16" fill="#FF6C2F" stroke="#1E1B1A" stroke-width="3"/>
-<circle cx="172" cy="102" r="16" fill="#F8F6F1" stroke="#1E1B1A" stroke-width="5"/>
-<path d="M166 108L178 96" fill="none" stroke="#FF6C2F" stroke-width="5"/>
-<circle cx="172" cy="153" r="16" fill="#1E1B1A" stroke="#1E1B1A" stroke-width="3"/>
-<circle cx="128" cy="179" r="16" fill="#FF6C2F" stroke="#1E1B1A" stroke-width="3"/>
-<circle cx="84" cy="153" r="16" fill="#1E1B1A" stroke="#1E1B1A" stroke-width="3"/>
-<circle cx="84" cy="102" r="16" fill="#1E1B1A" stroke="#1E1B1A" stroke-width="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="imposter-title imposter-desc">
+<title id="imposter-title">imposter logo</title>
+<desc id="imposter-desc">A ring of round players with one diamond-shaped outlier that the votes point to, printed as a risograph inside a point-up hexagon.</desc>
+<path id="imposter-paper" d="M180.56 36.964L221.259 60.462A23.72 23.72 0 0 1 233.119 81.004L233.119 174.996A23.72 23.72 0 0 1 221.259 195.538L139.86 242.534A23.72 23.72 0 0 1 116.14 242.534L34.741 195.538A23.72 23.72 0 0 1 22.881 174.996L22.881 81.004A23.72 23.72 0 0 1 34.741 60.462L116.14 13.466A23.72 23.72 0 0 1 139.86 13.466Z" fill="#F8F6F1"/>
+<g id="imposter-motif">
+<path d="M148 58C148 69.046 139.046 78 128 78C116.954 78 108 69.046 108 58C108 46.954 116.954 38 128 38C139.046 38 148 46.954 148 58Z" fill="#1E1B1A"/>
+<path d="M87.4 93C87.4 104.046 78.446 113 67.4 113C56.354 113 47.4 104.046 47.4 93C47.4 81.954 56.354 73 67.4 73C78.446 73 87.4 81.954 87.4 93Z" fill="#1E1B1A"/>
+<path d="M87.4 163C87.4 174.046 78.446 183 67.4 183C56.354 183 47.4 174.046 47.4 163C47.4 151.954 56.354 143 67.4 143C78.446 143 87.4 151.954 87.4 163Z" fill="#1E1B1A"/>
+<path d="M148 198C148 209.046 139.046 218 128 218C116.954 218 108 209.046 108 198C108 186.954 116.954 178 128 178C139.046 178 148 186.954 148 198Z" fill="#1E1B1A"/>
+<path d="M208.6 163C208.6 174.046 199.646 183 188.6 183C177.554 183 168.6 174.046 168.6 163C168.6 151.954 177.554 143 188.6 143C199.646 143 208.6 151.954 208.6 163Z" fill="#1E1B1A"/>
+<path d="M186.6 61L218.6 93L186.6 125L154.6 93Z" fill="#FF6C2F"/>
 </g>
+<path id="imposter-frame" d="M182.56 33.5L223.259 56.998A27.72 27.72 0 0 1 237.119 81.004L237.119 174.996A27.72 27.72 0 0 1 223.259 199.002L141.86 245.998A27.72 27.72 0 0 1 114.14 245.998L32.741 199.002A27.72 27.72 0 0 1 18.881 174.996L18.881 81.004A27.72 27.72 0 0 1 32.741 56.998L114.14 10.002A27.72 27.72 0 0 1 141.86 10.002ZM178.56 40.428L219.259 63.926A19.72 19.72 0 0 1 229.119 81.004L229.119 174.996A19.72 19.72 0 0 1 219.259 192.074L137.86 239.07A19.72 19.72 0 0 1 118.14 239.07L36.741 192.074A19.72 19.72 0 0 1 26.881 174.996L26.881 81.004A19.72 19.72 0 0 1 36.741 63.926L118.14 16.93A19.72 19.72 0 0 1 137.86 16.93Z" fill="#1E1B1A" fill-rule="evenodd"/>
 </svg>

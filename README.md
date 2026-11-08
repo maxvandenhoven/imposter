@@ -1,4 +1,4 @@
-<img src="assets/logo.svg" width="160" alt="Imposter logo">
+<img src="assets/logo.png" width="160" alt="Imposter logo">
 
 # Imposter
 
@@ -18,16 +18,22 @@ know without sharing their private scratchpads.
 
 ## Background
 
-A social deduction game makes model behavior visible in context. A clue has to convince
-other players without giving away the word, and a plausible accusation can still point
-to the wrong person. Following the public conversation alongside each agent's reported
-reasoning makes those decisions easier to inspect, while the debrief shows how players
-explain their choices after learning the truth.
+This project explores how AI agents perform at the social deduction game Imposter. It also
+provides a setting for experimenting with agent design principles such as deterministic
+workflows and tracing. The game works well for both because a clue has to convince other
+players without giving away the word, and a plausible accusation can still point to the
+wrong person, so every decision depends on what an agent knows and what it infers from
+the others. The public conversation can be read next to each agent's reported reasoning
+and the debrief where players explain their choices after learning the truth. That
+reasoning is text the model generates, so it offers a clue about a decision without
+proving how it was made.
 
-The project is also an experiment in agent orchestration and observability. The models
-choose their actions, but code controls turn order, information boundaries, voting, and
-phase transitions. That separation lets the same game run in a terminal, a live web app,
-or the ADK developer UI without asking a model to act as game master.
+On the engineering side, the models choose their actions while code controls turn order,
+information boundaries, voting, and phase transitions. No model has to act as game
+master, the rules can be tested without calling a model, and the same game runs in a
+terminal, the live web app, or the ADK developer UI. Because the workflow has a fixed
+structure, every game produces traces with the same phases, turns, model calls, and judge
+decisions, which makes games easier to compare and debug.
 
 ## Getting started
 
