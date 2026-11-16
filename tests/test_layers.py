@@ -19,19 +19,8 @@ LAYERS: dict[str, frozenset[str]] = {
     "telemetry": frozenset({"config", "utils", "engine", "models"}),
     "judge": frozenset({"config", "utils", "engine", "models", "telemetry"}),
     "words": frozenset({"config", "utils", "models"}),
-    "ports": frozenset({"config", "utils", "engine"}),
     "orchestration": frozenset(
-        {
-            "config",
-            "utils",
-            "engine",
-            "models",
-            "players",
-            "telemetry",
-            "judge",
-            "words",
-            "ports",
-        }
+        {"config", "utils", "engine", "models", "players", "telemetry", "judge", "words"}
     ),
     "agent": frozenset(
         {
@@ -43,7 +32,6 @@ LAYERS: dict[str, frozenset[str]] = {
             "telemetry",
             "judge",
             "words",
-            "ports",
             "orchestration",
         }
     ),
@@ -57,7 +45,6 @@ LAYERS: dict[str, frozenset[str]] = {
             "telemetry",
             "judge",
             "words",
-            "ports",
             "orchestration",
             "agent",
         }

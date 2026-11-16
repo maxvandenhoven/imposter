@@ -1,9 +1,12 @@
+from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+
+from imposter.config import PlayerConfig
 
 CATALOG_PATH = Path(__file__).with_name("catalog.yaml")
 """The built-in model catalog."""
@@ -146,3 +149,22 @@ class ModelCatalog:
 
         message = f"The model catalog has no model with id {model_id!r}."
         raise KeyError(message)
+
+    def player_configs(self, model_ids: Sequence[str]) -> list[PlayerConfig]:
+        """Build the seat configs of a lineup, named after the models in the catalog.
+
+        Args:
+            model_ids: The catalog ids of the models, one per seat.
+
+        Returns:
+            The seat configs, in the given order.
+
+        Raises:
+            KeyError: When a model id is not in the catalog.
+        """
+        entries = [self.entry(model_id) for model_id in model_ids]
+
+        return [
+            PlayerConfig(model_id=entry.id, model_display_name=entry.display_name)
+            for entry in entries
+        ]

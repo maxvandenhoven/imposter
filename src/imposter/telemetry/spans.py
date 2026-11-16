@@ -1,5 +1,5 @@
 import hashlib
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from google.adk.agents.invocation_context import InvocationContext
@@ -8,13 +8,16 @@ from opentelemetry import trace
 from opentelemetry.trace import Span, Status, StatusCode
 from pydantic import BaseModel
 
-from imposter.config import GamePhase
 from imposter.engine.events import GameAbortedEvent
-from imposter.engine.game import Game
+from imposter.engine.game import GAME_STATE_KEY, Game, GameSnapshot
 from imposter.telemetry.identity import REQUEST_USER
 
 TRACER = trace.get_tracer("imposter")
 """Opens the spans ADK has no span for: player turns and judge calls."""
+
+STOPPED_REASON = "the game run stopped early"
+"""The error status of a game whose run stopped before the game was over, for example
+because its client went away or a node failed."""
 
 RESPONSE_FIELD_CHARS = 200
 """The characters of each response field kept in a span event, so traces stay small."""
@@ -26,22 +29,16 @@ class GameTracePlugin(BasePlugin):
     ADK runs the run callbacks of plugins inside its root `invoke_workflow` span, the
     game level of the trace, which the workflow nodes cannot reach. Before the run the
     plugin notes the trace id, and after it, or when the run fails, it sets the game
-    attributes from the game in the store. The secret word is only on the span as a
-    hash, so trace lists do not spoil it.
+    attributes from the game in the state of the session. The secret word is only on
+    the span as a hash, so trace lists do not spoil it.
 
     Attributes:
-        find_game: Looks a game up by id, which is the ADK session id.
         trace_ids: The trace id of each game run so far, by game id.
     """
 
-    def __init__(self, *, find_game: Callable[[str], Game | None]) -> None:
-        """Initialize the plugin without traces.
-
-        Args:
-            find_game: Looks a game up by id, which is the ADK session id.
-        """
+    def __init__(self) -> None:
+        """Initialize the plugin without traces."""
         super().__init__(name="game_trace")
-        self.find_game = find_game
         self.trace_ids: dict[str, int] = {}
 
     async def before_run_callback(self, *, invocation_context: InvocationContext) -> None:
@@ -67,7 +64,7 @@ class GameTracePlugin(BasePlugin):
         Args:
             invocation_context: The ADK context of the run.
         """
-        self.record_game(invocation_context.session.id)
+        self.record_game(invocation_context)
 
     async def on_run_error_callback(
         self, *, invocation_context: InvocationContext, error: Exception
@@ -80,19 +77,23 @@ class GameTracePlugin(BasePlugin):
             invocation_context: The ADK context of the run.
             error: The error, unused.
         """
-        self.record_game(invocation_context.session.id)
+        self.record_game(invocation_context)
 
-    def record_game(self, game_id: str) -> None:
-        """Set the attributes of a game on the current span, and its status if aborted.
+    def record_game(self, invocation_context: InvocationContext) -> None:
+        """Set the attributes of the session's game on the current span.
+
+        A game that was aborted, or that is not over because the run stopped early,
+        sets the error status.
 
         Args:
-            game_id: The id of the game.
+            invocation_context: The ADK context of the run.
         """
-        game = self.find_game(game_id)
+        snapshot = invocation_context.session.state.get(GAME_STATE_KEY)
 
-        if game is None:
+        if snapshot is None:
             return
 
+        game = Game.load(GameSnapshot.model_validate(snapshot))
         span = trace.get_current_span()
         word_hash = hashlib.sha256(game.secret.word.encode()).hexdigest()
         span.set_attributes(
@@ -111,28 +112,16 @@ class GameTracePlugin(BasePlugin):
 
         if aborts:
             span.set_status(Status(StatusCode.ERROR, aborts[-1].reason))
-
-
-def mark_phase(*, phase: GamePhase, round_: int | None) -> None:
-    """Set the phase attributes on the current span, ADK's `invoke_node` span of a node.
-
-    Args:
-        phase: The phase the node plays.
-        round_: The round of the phase, if it has rounds.
-    """
-    span = trace.get_current_span()
-    span.set_attribute("imposter.phase.name", phase.value)
-
-    if round_ is not None:
-        span.set_attribute("imposter.phase.round", round_)
+        elif not game.is_over:
+            span.set_status(Status(StatusCode.ERROR, STOPPED_REASON))
 
 
 def mark_turn(*, game: Game, seat: int) -> Span:
     """Set the turn attributes on the current span, ADK's `invoke_node` span of a turn.
 
-    In the game workflow each turn runs in a turn node of its own (`PlayerTurnNode`),
-    and the player's agent runs as a child node of it, so the turn node's span groups
-    the attempts of the turn with its judge calls.
+    Each turn runs in a run of the `play_turn` node of its own, and the player's agent
+    runs as a child node of it, so the span groups the model calls of the turn with its
+    judge calls.
 
     Args:
         game: The game.
@@ -146,6 +135,7 @@ def mark_turn(*, game: Game, seat: int) -> Span:
     span.set_attributes(
         {
             "imposter.phase.name": game.phase.value,
+            "imposter.phase.round": game.round or 0,
             "imposter.player.seat": seat,
             "imposter.player.name": info.name,
             "imposter.player.role": info.role.value,
@@ -154,6 +144,45 @@ def mark_turn(*, game: Game, seat: int) -> Span:
     )
 
     return span
+
+
+def record_turn(
+    *,
+    span: Span,
+    attempts: int,
+    response: BaseModel | None,
+    problems: list[str],
+    truncated: bool,
+) -> None:
+    """Set the outcome of a turn on its span: retries, fallback and errors.
+
+    The tokens of each model call are already on ADK's `generate_content` spans below
+    the turn, so they are not repeated here.
+
+    Args:
+        span: The span of the turn.
+        attempts: How many times the player was asked.
+        response: The last structured response of the player, if any.
+        problems: What went wrong, empty when the response was accepted.
+        truncated: Whether the game cuts the statement or reasoning to the cap.
+    """
+    span.set_attributes(
+        {
+            "imposter.turn.attempts": attempts,
+            "imposter.turn.fallback": response is None or bool(problems),
+            "imposter.turn.truncated": truncated,
+        }
+    )
+
+    if response is not None:
+        attributes = {
+            f"imposter.response.{name}": str(value)[:RESPONSE_FIELD_CHARS]
+            for name, value in response.model_dump().items()
+        }
+        span.add_event(type(response).__name__, attributes=attributes)
+
+    if problems:
+        span.set_status(Status(StatusCode.ERROR, " | ".join(problems)))
 
 
 @contextmanager
@@ -173,17 +202,3 @@ def judge_span(*, kind: str) -> Generator[Span]:
         f"judge {kind}", attributes={"imposter.judge.kind": kind}
     ) as span:
         yield span
-
-
-def add_response_event(*, span: Span, response: BaseModel) -> None:
-    """Add a structured response to a span as a small event, each field cut short.
-
-    Args:
-        span: The span of the turn.
-        response: The structured response of the player.
-    """
-    attributes = {
-        f"imposter.response.{name}": str(value)[:RESPONSE_FIELD_CHARS]
-        for name, value in response.model_dump().items()
-    }
-    span.add_event(type(response).__name__, attributes=attributes)

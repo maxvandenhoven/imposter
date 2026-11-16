@@ -1,27 +1,33 @@
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass, field
 from typing import Any
 
-import pytest
-from conftest import run_turns
+from conftest import run_in_node
+from google.adk.agents.context import Context
+from google.adk.events import Event
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import errors, types
 from litellm.exceptions import MidStreamFallbackError
 from pydantic import Field
 
-from imposter.config import GameConfig, GamePhase, PlayerConfig, PlayerRole, SecretWord
+from imposter.config import GameConfig, PlayerConfig, PlayerRole, SecretWord
 from imposter.engine.game import Game
-from imposter.engine.responses import (
-    PHASE_RESPONSE_TYPES,
-    ClueResponse,
-    DiscussionResponse,
-    VoteResponse,
-)
+from imposter.engine.responses import ClueResponse, PhaseResponse
 from imposter.engine.views import PlayerView
-from imposter.models.catalog import ModelCatalogEntry, ModelPrice, ModelProvider, ModelVia
-from imposter.players.adk_player import ANSWER_ATTEMPTS, AdkPlayer
-from imposter.players.base import PlayerResponse, TurnUsage
+from imposter.models.catalog import (
+    ModelCatalog,
+    ModelCatalogEntry,
+    ModelPrice,
+    ModelProvider,
+    ModelVia,
+)
+from imposter.players.base import TurnUsage
+from imposter.players.llm_player import ANSWER_RETRY, LlmPlayer, LlmPlayerSeating
 
 WORD = "giraffe"
+
+FAST_RETRY = ANSWER_RETRY.model_copy(update={"initial_delay": 0.0, "jitter": 0.0})
+"""The retries of a turn without the waits between them."""
 
 
 class FakeLlm(BaseLlm):
@@ -95,25 +101,6 @@ def new_game() -> Game:
     return game
 
 
-def new_player(
-    *,
-    game: Game,
-    replies: list[Any],
-    structured: bool = True,
-    role: PlayerRole | None = None,
-) -> tuple[AdkPlayer, FakeLlm, PlayerView]:
-    """Build a player for the current seat, or the first seat of a role, and its view."""
-    seat = game.pending_seats[0]
-
-    if role is not None:
-        seat = next(s.seat for s in game.seats if s.role is role)
-
-    model = FakeLlm(replies=replies)
-    player = AdkPlayer(entry=entry(structured=structured), seat=seat, model=model)
-
-    return player, model, game.view_for(seat)
-
-
 def request_text(request: LlmRequest) -> str:
     """Join the text of every message in a request."""
     return "\n".join(
@@ -121,13 +108,68 @@ def request_text(request: LlmRequest) -> str:
     )
 
 
-async def take_turn(
-    player: AdkPlayer, view: PlayerView, retry_reason: str | None = None
-) -> PlayerResponse:
-    """Have a player take one turn in a workflow run."""
-    [response], _ = await run_turns(player, [(view, retry_reason)])
+@dataclass
+class Turn:
+    """What one turn of a player gave.
 
-    return response
+    Attributes:
+        response: The answer, `None` when the player failed.
+        failure: The error of a player that failed, with the node error unwrapped.
+        usages: The tokens of each model call of the turn.
+        events: The ADK events of the run.
+    """
+
+    response: PhaseResponse | None = None
+    failure: Exception | None = None
+    usages: list[TurnUsage] = field(default_factory=list)
+    events: list[Event] = field(default_factory=list)
+
+
+def new_player(
+    *,
+    game: Game,
+    replies: list[Any],
+    structured: bool = True,
+    role: PlayerRole | None = None,
+) -> tuple[LlmPlayer, FakeLlm, PlayerView]:
+    """Build a player for the current seat, or the first seat of a role, and its view."""
+    seat = game.pending_seats[0]
+
+    if role is not None:
+        seat = next(s.seat for s in game.seats if s.role is role)
+
+    model = FakeLlm(replies=replies)
+    player = LlmPlayer(
+        entry=entry(structured=structured), model=model, retry_config=FAST_RETRY
+    )
+
+    return player, model, game.view_for(seat)
+
+
+async def take_turn(
+    player: LlmPlayer,
+    view: PlayerView,
+    *,
+    retry_reason: str | None = None,
+    streaming: bool = False,
+) -> Turn:
+    """Have a player take one turn in a workflow node, the way the turn node does."""
+    turn = Turn()
+
+    async def body(ctx: Context) -> None:
+        try:
+            turn.response = await player.take_turn(
+                ctx=ctx,
+                view=view,
+                record_usage=turn.usages.append,
+                retry_reason=retry_reason,
+            )
+        except Exception as failure:
+            turn.failure = getattr(failure, "error", failure)
+
+    _, turn.events = await run_in_node(body, streaming=streaming)
+
+    return turn
 
 
 async def test_structured_output_turn_returns_parsed_output_and_usage() -> None:
@@ -136,14 +178,14 @@ async def test_structured_output_turn_returns_parsed_output_and_usage() -> None:
         game=game, replies=['{"clue": "neck", "private_reasoning": "long"}']
     )
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response == PlayerResponse(
-        output=ClueResponse(clue="neck", private_reasoning="long"),
-        usage=TurnUsage(
+    assert turn.response == ClueResponse(clue="neck", private_reasoning="long")
+    assert turn.usages == [
+        TurnUsage(
             model_id="fake-model", input_tokens=100, output_tokens=10, thinking_tokens=5
-        ),
-    )
+        )
+    ]
     request = model.requests[0]
     assert request.config.response_schema is ClueResponse
     assert "social deduction word game" in str(request.config.system_instruction)
@@ -158,19 +200,18 @@ async def test_streaming_turn_yields_partial_events_and_counts_usage_once() -> N
     reply = '{"clue": "neck", "private_reasoning": "long"}'
     player, _, view = new_player(game=game, replies=[reply])
 
-    [response], events = await run_turns(player, [(view, None)], streaming=True)
+    turn = await take_turn(player, view, streaming=True)
 
-    agent_name = f"player_{view.seat}_clue"
-    partials = [event for event in events if event.partial]
+    partials = [event for event in turn.events if event.partial]
     chunks = [
         part.text
         for event in partials
         if event.content and event.content.parts
         for part in event.content.parts
     ]
-    assert response.output == ClueResponse(clue="neck", private_reasoning="long")
-    assert response.usage is not None and response.usage.input_tokens == 100
-    assert {event.author for event in partials} == {agent_name}
+    assert turn.response == ClueResponse(clue="neck", private_reasoning="long")
+    assert [usage.input_tokens for usage in turn.usages] == [100]
+    assert {event.author for event in partials} == {f"player_{view.seat}_clue"}
     assert "".join(chunk or "" for chunk in chunks) == reply
 
 
@@ -178,9 +219,9 @@ async def test_turn_without_streaming_yields_no_partial_events() -> None:
     game = new_game()
     player, _, view = new_player(game=game, replies=['{"clue": "neck"}'])
 
-    _, events = await run_turns(player, [(view, None)])
+    turn = await take_turn(player, view)
 
-    assert not any(event.partial for event in events)
+    assert not any(event.partial for event in turn.events)
 
 
 async def test_instruction_is_rendered_from_the_view_of_the_seat() -> None:
@@ -203,18 +244,36 @@ async def test_instruction_is_rendered_from_the_view_of_the_seat() -> None:
     assert "You do not know the secret word." in imposter_prompt
 
 
+async def test_braces_in_the_instruction_are_not_filled_from_session_state() -> None:
+    game = new_game()
+    player, model, view = new_player(game=game, replies=['{"clue": "neck"}'])
+    braced = view.model_copy(update={"name": "{game}"})
+
+    turn = await take_turn(player, braced)
+
+    assert turn.failure is None
+    assert "You are {game}" in request_text(model.requests[0])
+
+
 async def test_turns_send_no_conversation_history() -> None:
     game = new_game()
     player, model, view = new_player(
         game=game, replies=['{"clue": "neck"}', '{"clue": "spots"}']
     )
+    responses: list[PhaseResponse] = []
 
-    [_, response], _ = await run_turns(
-        player, [(view, None), (view, "the clue was already given")]
-    )
+    async def two_attempts(ctx: Context) -> None:
+        for reason in (None, "the clue was already given"):
+            responses.append(
+                await player.take_turn(
+                    ctx=ctx, view=view, record_usage=print, retry_reason=reason
+                )
+            )
+
+    await run_in_node(two_attempts)
 
     first, second = model.requests
-    assert response.output == ClueResponse(clue="spots")
+    assert responses[1] == ClueResponse(clue="spots")
     assert len(second.contents) == len(first.contents)
     assert "neck" not in request_text(second)
     assert "rejected: the clue was already given" in request_text(second)
@@ -222,61 +281,58 @@ async def test_turns_send_no_conversation_history() -> None:
 
 async def test_json_in_prompt_turn_sends_no_schema_and_parses_fenced_json() -> None:
     game = new_game()
-    reply = '```json\n{"clue": "neck", "private_reasoning": "tall"}\n```'
+    reply = """```json\n{"clue": "neck", "private_reasoning": "tall"}\n```"""
     player, model, view = new_player(game=game, replies=[reply], structured=False)
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response.output == ClueResponse(clue="neck", private_reasoning="tall")
+    assert turn.response == ClueResponse(clue="neck", private_reasoning="tall")
     request = model.requests[0]
     assert request.config.response_schema is None
     assert request.config.response_mime_type is None
     assert "Answer with only a JSON object" in request_text(request)
 
 
-async def test_answer_that_misses_the_schema_is_asked_again_with_the_error() -> None:
+async def test_answer_that_misses_the_schema_is_asked_again_by_adk() -> None:
     game = new_game()
     player, model, view = new_player(
         game=game, replies=['{"hint": "neck"}', '{"clue": "neck"}'], structured=False
     )
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response.output == ClueResponse(clue="neck")
-    assert response.error is None
-    assert response.usage is not None and response.usage.input_tokens == 200
-    assert "did not match the JSON schema" in request_text(model.requests[1])
-    assert "clue" in request_text(model.requests[1])
+    assert turn.response == ClueResponse(clue="neck")
+    assert [usage.input_tokens for usage in turn.usages] == [100, 100]
+    assert request_text(model.requests[1]) == request_text(model.requests[0])
 
 
-async def test_last_answer_that_misses_the_schema_gives_up_with_an_error() -> None:
+async def test_last_answer_that_misses_the_schema_fails_the_turn() -> None:
     game = new_game()
-    player, _, view = new_player(
+    player, model, view = new_player(
         game=game,
         replies=['{"hint": "neck"}', "still no json", "nor this"],
         structured=False,
     )
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response.output is None
-    assert response.error is not None
-    assert response.error.startswith("no valid answer: ValidationError")
-    assert response.usage is not None and response.usage.output_tokens == 30
+    assert turn.response is None
+    assert type(turn.failure).__name__ == "ValidationError"
+    assert len(model.requests) == FAST_RETRY.max_attempts
+    assert sum(usage.output_tokens for usage in turn.usages) == 30
 
 
-async def test_model_errors_give_up_without_asking_again() -> None:
+async def test_model_errors_fail_the_turn_without_asking_again() -> None:
     game = new_game()
     error = errors.ClientError(
         429, {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "quota"}}
     )
     player, model, view = new_player(game=game, replies=[error])
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response.output is None
-    assert response.error is not None
-    assert response.error.startswith("no valid answer: RESOURCE_EXHAUSTED")
+    assert turn.response is None
+    assert "RESOURCE_EXHAUSTED" in str(turn.failure)
     assert len(model.requests) == 1
 
 
@@ -287,47 +343,52 @@ async def test_broken_streams_are_asked_again_up_to_the_attempt_limit() -> None:
     )
     player, model, view = new_player(game=game, replies=[broken, broken, broken])
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response.output is None
-    assert response.error is not None
-    assert response.error.startswith("no valid answer: MidStreamFallbackError")
-    assert len(model.requests) == ANSWER_ATTEMPTS
+    assert turn.response is None
+    assert isinstance(turn.failure, MidStreamFallbackError)
+    assert len(model.requests) == FAST_RETRY.max_attempts
 
 
-async def test_error_responses_give_up_with_an_error() -> None:
+async def test_error_responses_fail_the_turn_with_the_error() -> None:
     game = new_game()
     blocked = LlmResponse(error_code="SAFETY", error_message="Blocked")
-    player, _, view = new_player(game=game, replies=[blocked])
+    player, model, view = new_player(game=game, replies=[blocked])
 
-    response = await take_turn(player, view)
+    turn = await take_turn(player, view)
 
-    assert response.output is None
-    assert response.error == "no valid answer: SAFETY: Blocked"
-
-
-async def test_each_phase_has_an_agent_with_its_response_type() -> None:
-    player, _, _ = new_player(game=new_game(), replies=[])
-    agents = player.agents
-
-    assert agents.keys() == PHASE_RESPONSE_TYPES.keys()
-    assert agents[GamePhase.VOTE].output_schema is VoteResponse
-    assert agents[GamePhase.DISCUSSION].output_schema is DiscussionResponse
-    assert agents[GamePhase.CLUE].include_contents == "none"
+    assert turn.response is None
+    assert str(turn.failure) == "SAFETY: Blocked"
+    assert len(model.requests) == 1
 
 
-async def test_view_of_another_seat_is_rejected() -> None:
-    game = new_game()
-    player, _, view = new_player(game=game, replies=[])
-    other = game.view_for((view.seat + 1) % 3)
-
-    with pytest.raises(ValueError, match="cannot act on the view of seat"):
-        await player.take_turn(other)
-
-
-async def test_turn_outside_a_workflow_node_is_rejected() -> None:
+def test_agent_of_a_turn_is_a_plain_llm_agent_for_the_phase() -> None:
     game = new_game()
     player, _, view = new_player(game=game, replies=[])
 
-    with pytest.raises(ValueError, match="only in a workflow node"):
-        await player.take_turn(view)
+    agent = player.agent(view=view, record_usage=print)
+
+    assert agent.name == f"player_{view.seat}_clue"
+    assert agent.output_schema is ClueResponse
+    assert agent.include_contents == "none"
+    assert agent.retry_config == FAST_RETRY
+    assert agent.tools == []
+
+
+def test_seating_gives_each_seat_the_model_of_its_config() -> None:
+    catalog = ModelCatalog.load()
+    config = GameConfig(
+        players=catalog.player_configs(["gemini-flash", "gemini-flash", "gpt-oss"]),
+        temperature=0.3,
+        seed=1,
+    )
+    game = Game.create(config=config, secret=SecretWord(word=WORD))
+    seating = LlmPlayerSeating(catalog)
+
+    players = [seating.player_for(game=game, seat=seat.seat) for seat in game.seats]
+
+    assert [player.entry.id for player in players] == [
+        seat.player.model_id for seat in game.seats
+    ]
+    assert all(player.temperature == 0.3 for player in players)
+    assert len({id(player.model) for player in players}) == 2

@@ -1,9 +1,12 @@
+"""Fake players for tests: scripted or random, and a pure loop that plays them."""
+
 import random
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from google.adk.agents.context import Context
 
 from imposter.config import GamePhase, PlayerRole
+from imposter.engine.game import Game
 from imposter.engine.responses import (
     ClueResponse,
     DebriefResponse,
@@ -13,7 +16,7 @@ from imposter.engine.responses import (
     VoteResponse,
 )
 from imposter.engine.views import PlayerView, other_players
-from imposter.players.base import PlayerResponse, TurnUsage
+from imposter.players.base import PlayerProtocol, TurnUsage, UsageRecorder
 from imposter.utils.text import normalize_word
 
 RANDOM_VOCABULARY = (
@@ -50,19 +53,22 @@ RANDOM_VOCABULARY = (
 )
 """Words a `RandomPlayer` draws its clues and guesses from."""
 
-type ScriptStep = PhaseResponse | PlayerResponse | Exception
-"""One canned turn of a `ScriptedPlayer`: an output, a full response or an error."""
+type ScriptStep = PhaseResponse | Exception
+"""One canned turn of a `ScriptedPlayer`: a response, or an error to raise."""
+
+type PlayersFactory = Callable[[Game], Sequence[PlayerProtocol]]
+"""Builds the players of a game, one per seat in seat order."""
 
 
 class ScriptedPlayer:
-    """A player that replays canned turns, for tests.
+    """A player that replays canned turns.
 
-    Each call to `take_turn` consumes the next step of the script. An exception step is
-    raised instead of returned, to simulate a failing model.
+    Each turn consumes the next step of the script. An exception step is raised instead
+    of returned, to simulate a failing model.
 
     Attributes:
         script: The remaining canned turns.
-        usage: The usage reported with every output that is not a full response.
+        usage: The usage recorded with every turn, also a failing one.
         views: The views the player received, in order.
         retry_reasons: The retry reasons the player received, in order.
     """
@@ -70,36 +76,13 @@ class ScriptedPlayer:
     def __init__(
         self, *, script: Sequence[ScriptStep], usage: TurnUsage | None = None
     ) -> None:
-        """Initialize the player.
-
-        Args:
-            script: The canned turns, in order.
-            usage: The usage reported with every output that is not a full response.
-        """
         self.script = list(script)
         self.usage = usage
         self.views: list[PlayerView] = []
         self.retry_reasons: list[str | None] = []
 
-    async def take_turn(
-        self,
-        view: PlayerView,
-        retry_reason: str | None = None,
-        ctx: Context | None = None,
-    ) -> PlayerResponse:
-        """Replay the next canned turn.
-
-        Args:
-            view: Everything the seat may know.
-            retry_reason: Why the previous attempt in this turn was rejected, if any.
-            ctx: The context of the turn node, unused.
-
-        Returns:
-            The next canned response.
-
-        Raises:
-            LookupError: When the script is exhausted.
-        """
+    def respond(self, view: PlayerView, retry_reason: str | None = None) -> PhaseResponse:
+        """Replay the next canned turn."""
         self.views.append(view)
         self.retry_reasons.append(retry_reason)
 
@@ -114,14 +97,25 @@ class ScriptedPlayer:
         if isinstance(step, Exception):
             raise step
 
-        if isinstance(step, PlayerResponse):
-            return step
+        return step
 
-        return PlayerResponse(output=step, usage=self.usage)
+    async def take_turn(
+        self,
+        *,
+        ctx: Context,
+        view: PlayerView,
+        record_usage: UsageRecorder,
+        retry_reason: str | None = None,
+    ) -> PhaseResponse:
+        """Replay the next canned turn in a turn node."""
+        if self.usage is not None:
+            record_usage(self.usage)
+
+        return self.respond(view, retry_reason)
 
 
 class RandomPlayer:
-    """A player that acts at random, for tests and offline demos.
+    """A player that acts at random.
 
     Its private reasoning always contains a marker unique to the seat and turn, and for
     civilians the secret word, so leak tests can detect reasoning in other views. With a
@@ -131,49 +125,41 @@ class RandomPlayer:
     Attributes:
         rng: The random number generator, the only source of randomness.
         blunder_rate: The probability of an invalid output per turn.
-        usage: The usage reported with every turn.
+        usage: The usage recorded with every turn.
         views: The views the player received, in order.
     """
 
     def __init__(
         self, *, seed: int, blunder_rate: float = 0.0, usage: TurnUsage | None = None
     ) -> None:
-        """Initialize the player.
-
-        Args:
-            seed: The seed of the random number generator.
-            blunder_rate: The probability of an invalid output per turn.
-            usage: The usage reported with every turn.
-        """
         self.rng = random.Random(seed)
         self.blunder_rate = blunder_rate
         self.usage = usage
         self.views: list[PlayerView] = []
 
-    async def take_turn(
-        self,
-        view: PlayerView,
-        retry_reason: str | None = None,
-        ctx: Context | None = None,
-    ) -> PlayerResponse:
-        """Act at random in the phase of the view.
-
-        Args:
-            view: Everything the seat may know.
-            retry_reason: Why the previous attempt was rejected, ignored by this player.
-            ctx: The context of the turn node, unused.
-
-        Returns:
-            A random response for the phase.
-        """
+    def respond(self, view: PlayerView, retry_reason: str | None = None) -> PhaseResponse:
+        """Act at random in the phase of the view, ignoring the retry reason."""
         self.views.append(view)
-        output = self.output_for(
+
+        return self.output_for(
             view=view,
             blunder=self.rng.random() < self.blunder_rate,
             reasoning=self.reasoning_for(view=view, turn=len(self.views)),
         )
 
-        return PlayerResponse(output=output, usage=self.usage)
+    async def take_turn(
+        self,
+        *,
+        ctx: Context,
+        view: PlayerView,
+        record_usage: UsageRecorder,
+        retry_reason: str | None = None,
+    ) -> PhaseResponse:
+        """Act at random in a turn node."""
+        if self.usage is not None:
+            record_usage(self.usage)
+
+        return self.respond(view, retry_reason)
 
     def output_for(
         self, *, view: PlayerView, blunder: bool, reasoning: str
@@ -251,3 +237,58 @@ class RandomPlayer:
             return f"{marker} I know the word is {view.word}."
 
         return f"{marker} I do not know the word."
+
+
+class FakeSeating:
+    """Seats the fake players of a factory, built once per game.
+
+    Attributes:
+        players_for: Builds the players of a game.
+        players: The players of each game seated so far, by game id.
+    """
+
+    def __init__(self, players_for: PlayersFactory) -> None:
+        self.players_for = players_for
+        self.players: dict[str, Sequence[PlayerProtocol]] = {}
+
+    def player_for(self, *, game: Game, seat: int) -> PlayerProtocol:
+        """Get the fake player of a seat."""
+        if game.game_id not in self.players:
+            self.players[game.game_id] = self.players_for(game)
+
+        return self.players[game.game_id][seat]
+
+
+def random_players(game: Game) -> list[RandomPlayer]:
+    """Seat a random player that reports 100 tokens per turn for every seat."""
+    return [
+        RandomPlayer(
+            seed=seat.seat,
+            usage=TurnUsage(
+                model_id=seat.player.model_id, input_tokens=90, output_tokens=10
+            ),
+        )
+        for seat in game.seats
+    ]
+
+
+def play_pure_step(
+    *, game: Game, players: Sequence[ScriptedPlayer | RandomPlayer]
+) -> None:
+    """Play the next turn, or all turns of a parallel phase, on the engine alone."""
+    seats = game.pending_seats[:1] if game.is_sequential else game.pending_seats
+
+    for seat in seats:
+        game.start_turn(seat)
+
+    responses = [players[seat].respond(game.view_for(seat)) for seat in seats]
+
+    for seat, response in zip(seats, responses, strict=True):
+        rejection = game.rejection(seat=seat, response=response)
+        game.submit(seat=seat, response=response, rejection=rejection)
+
+
+def play_pure(*, game: Game, players: Sequence[ScriptedPlayer | RandomPlayer]) -> None:
+    """Play a game to the end on the engine alone: no ADK, no retries, no judge."""
+    while not game.is_over:
+        play_pure_step(game=game, players=players)

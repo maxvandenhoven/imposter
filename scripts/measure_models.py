@@ -1,6 +1,6 @@
 """Time one realistic player turn per catalog model on Vertex AI.
 
-Plays a game with random players up to a clue turn and up to the imposter's guess, renders
+Plays a game with filler answers up to a clue turn and up to the imposter's guess, renders
 the real prompts of those turns and sends them to each catalog model with the model object
 and generation settings the players use (`models/factory.py`). Prints per model and phase
 the time to the first streamed chunk, the total time, the output tokens and the thinking
@@ -22,16 +22,22 @@ from google.adk.models import BaseLlm, LlmRequest
 from google.genai import types
 
 from imposter.config import GameConfig, GamePhase, SecretWord
+from imposter.engine.events import ClueGivenEvent
 from imposter.engine.game import Game
+from imposter.engine.responses import (
+    ClueResponse,
+    DiscussionResponse,
+    PhaseResponse,
+    VoteResponse,
+)
 from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
 from imposter.models.factory import adk_model, generate_content_config
-from imposter.orchestration.runner import GameRunner
-from imposter.players.fake import RandomPlayer
 from imposter.players.prompt import PlayerPromptRenderer
 
 logger = logging.getLogger("measure_models")
 MEASURED_PHASES = (GamePhase.CLUE, GamePhase.GUESS)
 PLAYER_COUNT = 4
+FILLER_CLUES = ("tall", "bright", "coast", "stone", "night", "tower", "storm", "guide")
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,8 +57,29 @@ class TurnMeasurement:
     thinking_tokens: int
 
 
-async def prompts_by_phase() -> dict[GamePhase, tuple[str, str]]:
-    """Play random players up to a clue turn and the imposter's guess and render both.
+def filler_response(*, game: Game, seat: int) -> PhaseResponse:
+    """Give a plain valid answer for a seat, to move a game on without models.
+
+    Args:
+        game: The game, in the clue, discussion or vote phase.
+        seat: The seat that answers.
+
+    Returns:
+        A clue nobody gave yet, a neutral statement or a vote for the next seat.
+    """
+    match game.phase:
+        case GamePhase.CLUE:
+            given = len(game.events_of_type(ClueGivenEvent))
+            return ClueResponse(clue=FILLER_CLUES[given])
+        case GamePhase.DISCUSSION:
+            return DiscussionResponse(statement="I am not sure yet.")
+        case _:
+            target = game.seats[(seat + 1) % PLAYER_COUNT]
+            return VoteResponse(vote_for=target.name)
+
+
+def prompts_by_phase() -> dict[GamePhase, tuple[str, str]]:
+    """Play filler answers up to a clue turn and the imposter's guess and render both.
 
     Returns:
         The system instruction and the user message of each measured phase.
@@ -68,14 +95,15 @@ async def prompts_by_phase() -> dict[GamePhase, tuple[str, str]]:
         }
     )
     game = Game.create(config=config, secret=SecretWord(word="lighthouse"))
-    runner = GameRunner(players=[RandomPlayer(seed=seat) for seat in range(PLAYER_COUNT)])
     renderer = PlayerPromptRenderer()
     prompts = {}
     # The second seat has clues from the first one in its view.
     prompts[GamePhase.CLUE] = render(renderer=renderer, game=game, seat=1)
 
     while game.phase is not GamePhase.GUESS:
-        await runner.play_step(game)
+        for seat in game.pending_seats:
+            game.start_turn(seat)
+            game.submit(seat=seat, response=filler_response(game=game, seat=seat))
 
     game.start_turn(game.imposters[0])
     prompts[GamePhase.GUESS] = render(
@@ -147,7 +175,7 @@ async def run(*, model_ids: list[str] | None, runs: int) -> None:
         model_ids: The catalog ids to measure, all when empty.
         runs: The runs per model and phase.
     """
-    prompts = await prompts_by_phase()
+    prompts = prompts_by_phase()
     catalog = ModelCatalog.load()
     entries = [
         entry for entry in catalog.entries if not model_ids or entry.id in model_ids

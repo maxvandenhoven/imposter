@@ -78,6 +78,10 @@ ACTION_EVENT_TYPES = (
 )
 """The events that complete the turn of a seat."""
 
+GAME_STATE_KEY = "game"
+"""The key under which the snapshot of a game is kept in a key-value store, such as the
+state of the ADK session that plays the game."""
+
 
 class InvalidActionError(Exception):
     """Raised when an action is not allowed in the current state of a game."""
@@ -1052,6 +1056,23 @@ class Game:
             The possibly shortened reasoning and whether words were removed.
         """
         return truncate_words(reasoning, cap=self.config.reasoning_word_cap)
+
+    def is_truncated(self, response: PhaseResponse | None) -> bool:
+        """Tell whether submitting a response cuts its statement or reasoning to the cap.
+
+        Args:
+            response: The structured output of a seat, if any.
+
+        Returns:
+            Whether the statement or the private reasoning is over its cap.
+        """
+        reasoning = getattr(response, "private_reasoning", "")
+        statement = response.statement if isinstance(response, DiscussionResponse) else ""
+        _, statement_truncated = truncate_words(
+            statement, cap=self.config.statement_word_cap
+        )
+
+        return statement_truncated or self.truncate_reasoning(reasoning)[1]
 
     def finish_turn(self) -> None:
         """Advance to the next phase once every pending seat has acted."""

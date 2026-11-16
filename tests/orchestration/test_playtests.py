@@ -1,5 +1,7 @@
 """Scripted replays of notable real games, documented in `docs/plans/playtests.md`."""
 
+from fakes import ScriptedPlayer, play_pure
+
 from imposter.config import (
     GameConfig,
     GameOutcome,
@@ -17,8 +19,6 @@ from imposter.engine.events import (
 )
 from imposter.engine.game import Game
 from imposter.engine.responses import ClueResponse, DebriefResponse
-from imposter.orchestration.runner import GameRunner
-from imposter.players.fake import ScriptedPlayer
 from imposter.players.prompt import PlayerPromptRenderer
 
 
@@ -53,7 +53,7 @@ def test_lighthouse_game_has_the_seats_of_the_real_game() -> None:
     ]
 
 
-async def test_lighthouse_imposter_saying_the_word_as_a_clue_loses_at_once() -> None:
+def test_lighthouse_imposter_saying_the_word_as_a_clue_loses_at_once() -> None:
     game = lighthouse_game()
     reflection = DebriefResponse(reflection="Reflection.")
     players = [
@@ -74,7 +74,7 @@ async def test_lighthouse_imposter_saying_the_word_as_a_clue_loses_at_once() -> 
         ScriptedPlayer(script=[reflection]),
     ]
 
-    await GameRunner(players=players).play(game)
+    play_pure(game=game, players=players)
 
     said = game.events_of_type(SecretWordSaidEvent)
 

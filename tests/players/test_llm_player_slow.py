@@ -3,7 +3,8 @@
 import os
 
 import pytest
-from conftest import FakeGameSetup
+from conftest import fake_builder, play_workflow
+from fakes import ScriptedPlayer
 
 from imposter.config import GameConfig, GamePhase, PlayerConfig
 from imposter.engine.events import (
@@ -22,13 +23,9 @@ from imposter.engine.responses import (
     VoteResponse,
 )
 from imposter.models.catalog import ModelCatalog
-from imposter.orchestration.adk_runner import run_game
 from imposter.orchestration.setup import GameRequest
-from imposter.players.adk_player import AdkPlayer
 from imposter.players.base import PlayerProtocol
-from imposter.players.fake import ScriptedPlayer
-from imposter.ports.event_bus import InMemoryEventBus
-from imposter.ports.game_store import InMemoryGameStore
+from imposter.players.llm_player import LlmPlayer
 from imposter.words.options import WordMode, WordOptions
 
 pytestmark = [
@@ -55,7 +52,7 @@ async def test_real_model_gives_valid_responses_in_every_phase(model_id: str) ->
 
         for seat in game.seats:
             if seat.seat == imposter:
-                players.append(AdkPlayer(entry=entry, seat=seat.seat))
+                players.append(LlmPlayer(entry=entry))
                 continue
 
             clue = VAGUE_CLUES[civilians.index(seat.seat)]
@@ -78,12 +75,7 @@ async def test_real_model_gives_valid_responses_in_every_phase(model_id: str) ->
     request = GameRequest(
         config=config, words=WordOptions(mode=WordMode.TYPED, word="giraffe")
     )
-    game = await run_game(
-        request=request,
-        setup=FakeGameSetup(players_for=lineup),
-        bus=InMemoryEventBus(),
-        store=InMemoryGameStore(),
-    )
+    game = await play_workflow(fake_builder(players_for=lineup), request=request)
     imposter = game.imposters[0]
 
     def of_imposter[EventT](events: list[EventT]) -> list[EventT]:
@@ -92,7 +84,7 @@ async def test_real_model_gives_valid_responses_in_every_phase(model_id: str) ->
     model_errors = [
         event.message
         for event in game.events_of_type(PlayerErrorEvent)
-        if event.message.startswith(("no valid answer", "player failed"))
+        if event.message.startswith("player failed")
     ]
     assert model_errors == []
     assert game.phase is GamePhase.DONE

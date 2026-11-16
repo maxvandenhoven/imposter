@@ -4,17 +4,15 @@ Run with `UPDATE_SNAPSHOTS=1` to rewrite the snapshots after a deliberate prompt
 then review the diff of `tests/players/snapshots/`.
 """
 
-import asyncio
 import os
 from pathlib import Path
 
 import pytest
+from fakes import RandomPlayer, play_pure_step
 
 from imposter.config import GameConfig, GamePhase, PlayerConfig, PlayerRole, SecretWord
 from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
-from imposter.orchestration.runner import GameRunner
-from imposter.players.fake import RandomPlayer
 from imposter.players.prompt import PlayerPromptRenderer
 
 SNAPSHOT_DIR = Path(__file__).with_name("snapshots")
@@ -34,18 +32,15 @@ SNAPSHOT_CASES = [
 
 def collect_views(game: Game) -> dict[tuple[GamePhase, PlayerRole], PlayerView]:
     """Play a game with random players and keep the last view of each phase and role."""
-    runner = GameRunner(players=[RandomPlayer(seed=seat.seat) for seat in game.seats])
+    players = [RandomPlayer(seed=seat.seat) for seat in game.seats]
     views: dict[tuple[GamePhase, PlayerRole], PlayerView] = {}
 
-    async def play() -> None:
-        while not game.is_over:
-            for seat in game.pending_seats:
-                view = game.view_for(seat)
-                views[(view.phase, view.role)] = view
+    while not game.is_over:
+        for seat in game.pending_seats:
+            view = game.view_for(seat)
+            views[(view.phase, view.role)] = view
 
-            await runner.play_step(game)
-
-    asyncio.run(play())
+        play_pure_step(game=game, players=players)
 
     return views
 

@@ -1,19 +1,16 @@
 from google.adk.workflow import Workflow
 
-from imposter.agent import root_agent
-from imposter.config import GamePhase
-from imposter.orchestration.runner_workflow import GamePhaseNode
+from imposter.agent import app, builder, root_agent, trace_plugin
+from imposter.orchestration.play import APP_NAME
 
 
 def test_root_agent_is_the_game_workflow_with_a_default_game() -> None:
     assert isinstance(root_agent, Workflow)
-    assert root_agent.graph is not None
+    assert builder.default_request is not None
+    assert len(builder.default_request.config.players) >= 3
 
-    nodes = [node for node in root_agent.graph.nodes if isinstance(node, GamePhaseNode)]
 
-    assert {node.phase for node in nodes} == set(GamePhase)
-
-    request = nodes[0].sessions.default_request
-
-    assert request is not None
-    assert len(request.config.players) >= 3
+def test_app_serves_the_workflow_with_the_trace_plugin() -> None:
+    assert app.name == APP_NAME
+    assert app.root_agent is root_agent
+    assert app.plugins == [trace_plugin]

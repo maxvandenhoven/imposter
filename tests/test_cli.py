@@ -2,12 +2,12 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import FakeGameSetup
+from conftest import fake_builder
 from typer.testing import CliRunner
 
 from imposter import __version__, cli
 from imposter.cli import app
-from imposter.orchestration.setup import GameSetup
+from imposter.orchestration.workflow import GameWorkflowBuilder
 from imposter.telemetry.setup import TelemetryExporter
 
 
@@ -15,10 +15,12 @@ from imposter.telemetry.setup import TelemetryExporter
 def fake_setup(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make `imposter play` seat random players and export no traces."""
 
-    def load(cls: type[GameSetup], seed: int | None = None) -> GameSetup:
-        return FakeGameSetup()
+    def load(
+        cls: type[GameWorkflowBuilder], seed: int | None = None
+    ) -> GameWorkflowBuilder:
+        return fake_builder()
 
-    monkeypatch.setattr(GameSetup, "load", classmethod(load))
+    monkeypatch.setattr(GameWorkflowBuilder, "load", classmethod(load))
     monkeypatch.setenv("IMPOSTER_TELEMETRY", "none")
 
 
