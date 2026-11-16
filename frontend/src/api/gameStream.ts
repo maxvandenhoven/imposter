@@ -65,7 +65,8 @@ function isRunErrorLine(data: unknown): data is RunErrorLine {
  *
  * Engine events are passed on in `seq` order: one that arrives early waits for the ones
  * before it, and a repeated one is dropped. Partial answers are kept per seat and start
- * over when a new node path appears, which is a new attempt of the turn. A failed run
+ * over when a new node path appears or the attempt before ended, with its full answer
+ * or an error: ADK retries a failed attempt under the same node path. A failed run
  * sends an `errorCode` event from the game runner and then an error line, which repeats
  * the error, so the error line is only reported when no error event came before it.
  * Error events of players are failed model attempts that the game handles itself: a
@@ -113,8 +114,15 @@ export class GameStreamSorter {
 
     const player = PLAYER_AUTHOR.exec(author);
 
-    if (event.partial === true && player !== null) {
+    if (player === null) {
+      return;
+    }
+
+    if (event.partial === true) {
       this.pushPartial(event, Number(player[1]), player[2] ?? "");
+    } else {
+      // The attempt ended, so the next partial event of the seat starts a new answer.
+      this.answers.delete(Number(player[1]));
     }
   }
 

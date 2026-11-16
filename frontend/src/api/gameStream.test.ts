@@ -118,6 +118,26 @@ describe("playGame", () => {
     expect(answers.at(-1)?.path).toMatch(/player_0_clue@2$/);
   });
 
+  it("starts an answer over when ADK retries a failed attempt on the same path", async () => {
+    const { answers } = await playStream([
+      adkPartial({ seat: 0, text: '{"hint": "light' }),
+      {
+        author: "player_0_clue",
+        invocationId: "e-1",
+        errorCode: "ValidationError",
+        errorMessage: "Field required.",
+      },
+      adkPartial({ seat: 0, text: '{"clue": "be' }),
+      adkPartial({ seat: 0, text: 'acon"}' }),
+    ]);
+
+    expect(answers.map((answer) => answer.text)).toEqual([
+      '{"hint": "light',
+      '{"clue": "be',
+      '{"clue": "beacon"}',
+    ]);
+  });
+
   it("reports a failed run once, from its error event", async () => {
     const { errors } = await playStream([
       {

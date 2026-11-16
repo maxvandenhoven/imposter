@@ -145,6 +145,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/apps/{app_name}/users/{user_id}/sessions/{session_id}/rewind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rewind Session
+         * @description Rewinds a session to before the specified invocation.
+         *
+         *     Args:
+         *         app_name: The name of the application.
+         *         user_id: The ID of the user.
+         *         session_id: The ID of the session to rewind.
+         *         req: The rewind request identifying the invocation to rewind to.
+         *
+         *     Returns:
+         *         The rewound session.
+         *
+         *     Raises:
+         *         HTTPException: If the session or invocation is not found, or if the
+         *             session was modified concurrently.
+         */
+        post: operations["rewind_session_apps__app_name__users__user_id__sessions__session_id__rewind_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/apps/{app_name}/users/{user_id}/sessions/{session_id}/artifacts/{artifact_name}/versions/{version_id}/metadata": {
         parameters: {
             query?: never;
@@ -622,7 +655,9 @@ export interface components {
          *        contents_count are set for prefix matching
          *
          *     Token counts (cached and total) are available in the LlmResponse.usage_metadata
-         *     and should be accessed from there to avoid duplication.
+         *     and should be accessed from there to avoid duplication. Cache-creation (write)
+         *     token counts, when reported by the provider, are available on
+         *     LlmResponse.cache_creation_token_count.
          *
          *     Attributes:
          *         cache_name: The full resource name of the cached content (e.g.,
@@ -905,6 +940,10 @@ export interface components {
          *
          *     It is used to store the content of the conversation, as well as the actions
          *     taken by the agents like function calls, etc.
+         *
+         *     When a function-call event invokes tools that declare a non-empty
+         *     ``BaseTool.title``, ``custom_metadata[TOOL_DISPLAY_NAMES_METADATA_KEY]``
+         *     carries ``{function_call_name: title}``.
          */
         "Event-Input": {
             /** Modelversion */
@@ -929,6 +968,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             usageMetadata?: components["schemas"]["GenerateContentResponseUsageMetadata"] | null;
+            /** Cachecreationtokencount */
+            cacheCreationTokenCount?: number | null;
             liveSessionResumptionUpdate?: components["schemas"]["LiveServerSessionResumptionUpdate"] | null;
             /** Livesessionid */
             liveSessionId?: string | null;
@@ -979,6 +1020,10 @@ export interface components {
          *
          *     It is used to store the content of the conversation, as well as the actions
          *     taken by the agents like function calls, etc.
+         *
+         *     When a function-call event invokes tools that declare a non-empty
+         *     ``BaseTool.title``, ``custom_metadata[TOOL_DISPLAY_NAMES_METADATA_KEY]``
+         *     carries ``{function_call_name: title}``.
          */
         "Event-Output": {
             /** Modelversion */
@@ -1003,6 +1048,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             usageMetadata?: components["schemas"]["GenerateContentResponseUsageMetadata"] | null;
+            /** Cachecreationtokencount */
+            cacheCreationTokenCount?: number | null;
             liveSessionResumptionUpdate?: components["schemas"]["LiveServerSessionResumptionUpdate"] | null;
             /** Livesessionid */
             liveSessionId?: string | null;
@@ -2583,6 +2630,14 @@ export interface components {
              *           Google search.
              */
             googleSearchDynamicRetrievalScore?: number | null;
+        };
+        /**
+         * RewindSessionRequest
+         * @description Request to rewind a session to before a given invocation.
+         */
+        RewindSessionRequest: {
+            /** Rewindbeforeinvocationid */
+            rewindBeforeInvocationId: string;
         };
         /**
          * RunAgentRequest
@@ -4627,6 +4682,43 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["CreateSessionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Session"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rewind_session_apps__app_name__users__user_id__sessions__session_id__rewind_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                app_name: string;
+                user_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewindSessionRequest"];
             };
         };
         responses: {
