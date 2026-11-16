@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="960" height="500" role="img" aria-label="The game as a fixed graph of phases, where code owns the rules and the players&#x27; agents only answer inside a turn">
+<title>The game as a fixed graph of phases, where code owns the rules and the players&#x27; agents only answer inside a turn</title>
+<defs><marker id="a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F2430"/></marker><marker id="a-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B3261E"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker></defs>
+<rect width="960" height="500" rx="14" fill="#FBFAF7" stroke="#E6E2D9"/>
+<text x="40" y="42" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="start" font-weight="700">The workflow follows a fixed graph of phases</text>
+<rect x="40" y="96" width="96" height="44" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="88.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">setup</text>
+<rect x="151" y="96" width="96" height="44" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="199.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">clue</text>
+<line x1="137" y1="118" x2="150" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="262" y="96" width="96" height="44" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="310.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">discussion</text>
+<line x1="248" y1="118" x2="261" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="373" y="96" width="96" height="44" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="421.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">vote</text>
+<line x1="359" y1="118" x2="372" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="484" y="96" width="96" height="44" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="532.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">resolution</text>
+<line x1="470" y1="118" x2="483" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="595" y="96" width="96" height="44" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="643.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">guess</text>
+<line x1="581" y1="118" x2="594" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="706" y="96" width="96" height="44" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="754.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">outcome</text>
+<line x1="692" y1="118" x2="705" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="817" y="96" width="96" height="44" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="865.0" y="123.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#1F2430" text-anchor="middle" font-weight="600">debrief</text>
+<line x1="803" y1="118" x2="816" y2="118" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<path d="M217.0,96 C233.0,62 165.0,62 181.0,94" fill="none" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<text x="199.0" y="64" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">next round</text>
+<path d="M328.0,96 C344.0,62 276.0,62 292.0,94" fill="none" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<text x="310.0" y="64" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">next round</text>
+<path d="M199.0,140 C199.0,188 754.0,188 754.0,143" fill="none" stroke="#B3261E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-bad)"/>
+<path d="M310.0,140 C320.0,174 714.0,180 746.0,143" fill="none" stroke="#B3261E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-bad)"/>
+<text x="476.5" y="194" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#B3261E" text-anchor="middle" font-weight="400">someone said the secret word</text>
+<text x="40" y="250" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="start" font-weight="700">Inside one turn</text>
+<rect x="40" y="268" width="880" height="150" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="60" y="293" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#2F5D8A" text-anchor="start" font-weight="700">Game engine, plain Python</text>
+<text x="60" y="313" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="start" font-weight="400">event log, whose turn it is, legal moves, vote tally, outcome</text>
+<rect x="70" y="340" width="190" height="54" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="165.0" y="363.0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#1F2430" text-anchor="middle" font-weight="600">game.view_for(seat)</text>
+<text x="165.0" y="382.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">only what this seat may see</text>
+<rect x="385" y="330" width="190" height="74" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="480.0" y="363.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Player agent</text>
+<text x="480.0" y="382.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">one model call, no history</text>
+<rect x="700" y="340" width="190" height="54" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="795.0" y="363.0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#1F2430" text-anchor="middle" font-weight="600">game.submit_clue(...)</text>
+<text x="795.0" y="382.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">checked, then appended</text>
+<line x1="262" y1="367" x2="383" y2="367" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<text x="322.5" y="358" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">PlayerView</text>
+<line x1="577" y1="367" x2="698" y2="367" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<text x="637.5" y="358" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">ClueResponse</text>
+<rect x="40" y="450" width="16" height="16" rx="4" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="64" y="463" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">deterministic code</text>
+<rect x="203.6" y="450" width="16" height="16" rx="4" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="227.6" y="463" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">calls a model</text>
+<rect x="331.2" y="450" width="16" height="16" rx="4" fill="#FBE3E1" stroke="#B3261E" stroke-width="1.5"/>
+<text x="355.2" y="463" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">early end of the game</text>
+</svg>

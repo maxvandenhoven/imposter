@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" width="960" height="470" role="img" aria-label="Four players around the table in the lighthouse game, with what each knows and the clue each gave in round one">
+<title>Four players around the table in the lighthouse game, with what each knows and the clue each gave in round one</title>
+<defs><marker id="a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F2430"/></marker><marker id="a-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B3261E"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker></defs>
+<rect width="960" height="470" rx="14" fill="#FBFAF7" stroke="#E6E2D9"/>
+<text x="40" y="42" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="start" font-weight="700">Who knows what</text>
+<rect x="40" y="62" width="205" height="150" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="142" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="middle" font-weight="700">Alice</text>
+<text x="142" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">GPT-OSS 120B</text>
+<rect x="97" y="124" width="90" height="24" rx="12" fill="#E1F2E8" stroke="#2E7D4F" stroke-width="1"/>
+<text x="142" y="141" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#2E7D4F" text-anchor="middle" font-weight="600">civilian</text>
+<text x="142" y="172" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">secret word</text>
+<text x="142" y="195" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#1F2430" text-anchor="middle" font-weight="700">lighthouse</text>
+<line x1="142" y1="216" x2="142" y2="252" stroke="#667085" stroke-width="1.6" marker-end="url(#a-muted)"/>
+<rect x="62" y="256" width="160" height="46" rx="23" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="142" y="285" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#1F2430" text-anchor="middle" font-weight="600">“beacon”</text>
+<rect x="265" y="62" width="205" height="150" rx="10" fill="#FFFFFF" stroke="#B3261E" stroke-width="2"/>
+<text x="367" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="middle" font-weight="700">Bob</text>
+<text x="367" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">Claude Haiku</text>
+<rect x="322" y="124" width="90" height="24" rx="12" fill="#FBE3E1" stroke="#B3261E" stroke-width="1"/>
+<text x="367" y="141" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#B3261E" text-anchor="middle" font-weight="600">imposter</text>
+<text x="367" y="172" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">secret word</text>
+<text x="367" y="195" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#B3261E" text-anchor="middle" font-weight="700">?</text>
+<line x1="367" y1="216" x2="367" y2="252" stroke="#667085" stroke-width="1.6" marker-end="url(#a-muted)"/>
+<rect x="287" y="256" width="160" height="46" rx="23" fill="#FBE3E1" stroke="#B3261E" stroke-width="1.5"/>
+<text x="367" y="285" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#B3261E" text-anchor="middle" font-weight="600">“lighthouse”</text>
+<rect x="490" y="62" width="205" height="150" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="592" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="middle" font-weight="700">Charlie</text>
+<text x="592" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">Gemini Flash-Lite</text>
+<rect x="547" y="124" width="90" height="24" rx="12" fill="#E1F2E8" stroke="#2E7D4F" stroke-width="1"/>
+<text x="592" y="141" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#2E7D4F" text-anchor="middle" font-weight="600">civilian</text>
+<text x="592" y="172" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">secret word</text>
+<text x="592" y="195" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#1F2430" text-anchor="middle" font-weight="700">lighthouse</text>
+<line x1="592" y1="216" x2="592" y2="252" stroke="#667085" stroke-width="1.6" marker-end="url(#a-muted)"/>
+<rect x="512" y="256" width="160" height="46" rx="23" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="592" y="285" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#1F2430" text-anchor="middle" font-weight="600">“coastal”</text>
+<rect x="715" y="62" width="205" height="150" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="817" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="middle" font-weight="700">Dave</text>
+<text x="817" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">Gemini Flash</text>
+<rect x="772" y="124" width="90" height="24" rx="12" fill="#E1F2E8" stroke="#2E7D4F" stroke-width="1"/>
+<text x="817" y="141" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#2E7D4F" text-anchor="middle" font-weight="600">civilian</text>
+<text x="817" y="172" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">secret word</text>
+<text x="817" y="195" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#1F2430" text-anchor="middle" font-weight="700">lighthouse</text>
+<line x1="817" y1="216" x2="817" y2="252" stroke="#667085" stroke-width="1.6" marker-end="url(#a-muted)"/>
+<rect x="737" y="256" width="160" height="46" rx="23" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="817" y="285" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#1F2430" text-anchor="middle" font-weight="600">“keeper”</text>
+<text x="40" y="284" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#1F2430" text-anchor="middle" font-weight="400"></text>
+<text x="367" y="324" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#B3261E" text-anchor="middle" font-weight="400">said the secret word as a clue</text>
+<text x="40" y="372" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="start" font-weight="700">One game</text>
+<rect x="40" y="390" width="160" height="56" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="120.0" y="414.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Clues</text>
+<text x="120.0" y="433.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">one word each, 2 rounds</text>
+<rect x="220" y="390" width="160" height="56" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="300.0" y="414.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Discussion</text>
+<text x="300.0" y="433.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">statements, 2 rounds</text>
+<line x1="202" y1="418" x2="218" y2="418" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="400" y="390" width="160" height="56" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="480.0" y="414.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Secret vote</text>
+<text x="480.0" y="433.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">most votes is caught</text>
+<line x1="382" y1="418" x2="398" y2="418" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="580" y="390" width="160" height="56" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="660.0" y="414.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Imposter&#x27;s guess</text>
+<text x="660.0" y="433.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">one try at the word</text>
+<line x1="562" y1="418" x2="578" y2="418" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="760" y="390" width="160" height="56" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="840.0" y="414.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Outcome</text>
+<text x="840.0" y="433.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">who won</text>
+<line x1="742" y1="418" x2="758" y2="418" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+</svg>

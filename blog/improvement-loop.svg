@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img" aria-label="The loop from played games to traces, failure measures, new prompt candidates and a check on held-out examples">
+<title>The loop from played games to traces, failure measures, new prompt candidates and a check on held-out examples</title>
+<defs><marker id="a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F2430"/></marker><marker id="a-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B3261E"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker></defs>
+<rect width="960" height="400" rx="14" fill="#FBFAF7" stroke="#E6E2D9"/>
+<text x="40" y="42" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="start" font-weight="700">From watching games to comparing prompts</text>
+<rect x="70" y="78" width="200" height="70" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="170.0" y="109.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Play games</text>
+<text x="170.0" y="128.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">many seeds, words, lineups</text>
+<rect x="380" y="78" width="200" height="70" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="480.0" y="109.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Traces and event logs</text>
+<text x="480.0" y="128.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">every turn recorded</text>
+<rect x="690" y="78" width="200" height="70" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="790.0" y="109.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Failure measures</text>
+<text x="790.0" y="128.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">counted per model and role</text>
+<line x1="272" y1="113.0" x2="378" y2="113.0" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<line x1="582" y1="113.0" x2="688" y2="113.0" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<rect x="70" y="250" width="200" height="70" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="170.0" y="281.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Keep or discard</text>
+<text x="170.0" y="300.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">the prompt that held up</text>
+<rect x="380" y="250" width="200" height="70" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="480.0" y="281.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Held-out check</text>
+<text x="480.0" y="300.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">situations kept aside</text>
+<rect x="690" y="250" width="200" height="70" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="790.0" y="281.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Prompt candidates</text>
+<text x="790.0" y="300.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">GEPA reflects on the feedback</text>
+<line x1="688" y1="285.0" x2="582" y2="285.0" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<line x1="378" y1="285.0" x2="272" y2="285.0" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<line x1="790" y1="150" x2="790" y2="248" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<text x="698" y="203.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">scores and written feedback</text>
+<line x1="170" y1="248" x2="170" y2="150" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<text x="262" y="203.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">full games as the final test</text>
+<text x="480" y="195.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#B3261E" text-anchor="middle" font-weight="400">said the secret word</text>
+<text x="480" y="213.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#B3261E" text-anchor="middle" font-weight="400">valid clue rejected · over the word limit</text>
+<rect x="40" y="354" width="16" height="16" rx="4" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="64" y="367" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">deterministic code</text>
+<rect x="203.6" y="354" width="16" height="16" rx="4" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="227.6" y="367" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">calls a model</text>
+</svg>

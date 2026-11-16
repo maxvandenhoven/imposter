@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" role="img" aria-label="The four checks a clue passes before it reaches the game, with an example that each one stops">
+<title>The four checks a clue passes before it reaches the game, with an example that each one stops</title>
+<defs><marker id="a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1F2430"/></marker><marker id="a-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B3261E"/></marker><marker id="a-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker></defs>
+<rect width="960" height="430" rx="14" fill="#FBFAF7" stroke="#E6E2D9"/>
+<text x="40" y="42" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#1F2430" text-anchor="start" font-weight="700">What a clue passes before it counts</text>
+<rect x="40" y="70" width="200" height="60" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="140.0" y="96.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Schema</text>
+<text x="140.0" y="115.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">Pydantic model</text>
+<line x1="140.0" y1="133" x2="140.0" y2="166" stroke="#B3261E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-bad)"/>
+<rect x="40" y="170" width="200" height="112" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="140.0" y="192" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">stops</text>
+<text x="140.0" y="217" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" fill="#B3261E" text-anchor="middle" font-weight="600">“Here is my clue: beacon!”</text>
+<text x="140.0" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">not the JSON object asked for</text>
+<text x="140.0" y="266" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#1F2430" text-anchor="middle" font-weight="400">ask again with the error</text>
+<rect x="266" y="70" width="200" height="60" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="366.0" y="96.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Game rules</text>
+<text x="366.0" y="115.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">engine</text>
+<line x1="241" y1="100" x2="265" y2="100" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<line x1="366.0" y1="133" x2="366.0" y2="166" stroke="#B3261E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-bad)"/>
+<rect x="266" y="170" width="200" height="112" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="366.0" y="192" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">stops</text>
+<text x="366.0" y="217" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" fill="#B3261E" text-anchor="middle" font-weight="600">“sea tower”</text>
+<text x="366.0" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">two words, or a repeated clue</text>
+<text x="366.0" y="266" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#1F2430" text-anchor="middle" font-weight="400">one retry with the reason</text>
+<rect x="492" y="70" width="200" height="60" rx="10" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="592.0" y="96.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Code checks</text>
+<text x="592.0" y="115.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">string comparison</text>
+<line x1="467" y1="100" x2="491" y2="100" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<line x1="592.0" y1="133" x2="592.0" y2="166" stroke="#B3261E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-bad)"/>
+<rect x="492" y="170" width="200" height="112" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="592.0" y="192" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">stops</text>
+<text x="592.0" y="217" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" fill="#B3261E" text-anchor="middle" font-weight="600">“nostalgic”</text>
+<text x="592.0" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">shares its stem with “nostalgia”</text>
+<text x="592.0" y="266" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#1F2430" text-anchor="middle" font-weight="400">one retry, then a pass</text>
+<rect x="718" y="70" width="200" height="60" rx="10" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="818.0" y="96.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#1F2430" text-anchor="middle" font-weight="600">Judge</text>
+<text x="818.0" y="115.0" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">small model</text>
+<line x1="693" y1="100" x2="717" y2="100" stroke="#1F2430" stroke-width="1.6" marker-end="url(#a-ink)"/>
+<line x1="818.0" y1="133" x2="818.0" y2="166" stroke="#B3261E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-bad)"/>
+<rect x="718" y="170" width="200" height="112" rx="10" fill="#FFFFFF" stroke="#C9CED6" stroke-width="1.5"/>
+<text x="818.0" y="192" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#667085" text-anchor="middle" font-weight="400">stops</text>
+<text x="818.0" y="217" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" fill="#B3261E" text-anchor="middle" font-weight="600">“phare”</text>
+<text x="818.0" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#667085" text-anchor="middle" font-weight="400">a translation or synonym</text>
+<text x="818.0" y="266" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#1F2430" text-anchor="middle" font-weight="400">one retry, then a pass</text>
+<rect x="40" y="312" width="880" height="62" rx="10" fill="#FBE3E1" stroke="#B3261E" stroke-width="1.5"/>
+<text x="480" y="337" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#B3261E" text-anchor="middle" font-weight="600">“lighthouse” passes the schema and no retry can take it back</text>
+<text x="480" y="358" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" fill="#1F2430" text-anchor="middle" font-weight="400">A clue that says the secret word is a move in the game: it ends the game and the speaker&#x27;s side loses.</text>
+<rect x="40" y="394" width="16" height="16" rx="4" fill="#E4EDF6" stroke="#2F5D8A" stroke-width="1.5"/>
+<text x="64" y="407" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">deterministic code</text>
+<rect x="203.6" y="394" width="16" height="16" rx="4" fill="#FBEAD3" stroke="#B4610F" stroke-width="1.5"/>
+<text x="227.6" y="407" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">calls a model</text>
+<rect x="331.2" y="394" width="16" height="16" rx="4" fill="#FBE3E1" stroke="#B3261E" stroke-width="1.5"/>
+<text x="355.2" y="407" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" fill="#667085" text-anchor="start" font-weight="400">rejected or game over</text>
+</svg>
