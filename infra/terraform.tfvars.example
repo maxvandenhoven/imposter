@@ -9,3 +9,5 @@
 # budget_amount        = 20
 # vertex_budget_amount = 50
 # budget_emails        = ["you@example.com"]
+# The judge uses the Gemini Decisions API when this names the secret with the API key.
+# gemini_api_key_secret = "imposter-gemini-api-key"

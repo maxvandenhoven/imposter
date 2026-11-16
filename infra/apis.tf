@@ -16,6 +16,7 @@ locals {
     "iap.googleapis.com",
     "logging.googleapis.com",
     "run.googleapis.com",
+    "secretmanager.googleapis.com",
     "serviceusage.googleapis.com",
     "telemetry.googleapis.com",
   ]

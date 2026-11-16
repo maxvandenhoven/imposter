@@ -1,20 +1,49 @@
 # Imposter
 
-LLM agents from different model families (Gemini, Claude, open models on Vertex AI) play
-the social deduction game [Imposter](https://imposter.app/) against each other. A demo for
-exploring Google's Agent Development Kit (ADK), deployment on GCP (Cloud Run, IAP,
-Terraform) and tracing (OpenTelemetry, Cloud Trace).
+LLM agents from different model families (Gemini, Claude and open models on Vertex AI)
+play the social deduction game [Imposter](https://imposter.app/) against each other.
+Every civilian knows a secret word and the imposter does not. The agents give one-word
+clues, discuss, vote in secret, and the imposter gets one guess at the word. You watch
+the game live in a web app or in the terminal, with every agent's private reasoning next
+to what it says in public.
 
-## Play a game
+## Background
 
-With `.env` set up (see below), `make play` runs a game in the terminal between a mixed
-lineup of models and prints the outcome, the debrief and the token cost. Options go in
-`ARGS`, for example `make play ARGS="--god --word lighthouse -p gemini-flash -p
-claude-haiku -p gpt-oss"`, where `--god` also shows the secret word, the roles and every
-private reasoning. `uv run imposter play --help` lists every option. `make adk-web`
-starts the ADK developer UI, in which every new session plays a game.
+The project is a demo and teaching material for building agents with Google's Agent
+Development Kit (ADK). It was built to learn three things with one small, watchable
+example: how to define agents and deterministic workflows in ADK, how to deploy them on
+GCP (Cloud Run, IAP, Terraform), and how to trace them (OpenTelemetry, Cloud Trace). A
+game is a good fit because it needs what real agent systems need. Rules must hold
+whatever a model answers, each agent may know only part of the state, several models run
+side by side, and calls fail and must be retried without stopping the whole run.
 
-## Web app
+The app tries to show ADK itself and adds little around it. The game is a graph workflow
+of five plain functions, the players are plain `LlmAgent`s with an output schema, the
+game lives in the session state, and ADK does the streaming, the validation, the retries
+and the tracing.
+
+## Run it
+
+You need Python 3.13, `uv`, Node.js 24 and a GCP project in which the models answer on
+Vertex AI. [`docs/guides/gcp-setup.md`](docs/guides/gcp-setup.md) sets up the project,
+and [`docs/guides/development.md`](docs/guides/development.md) has every command.
+
+```
+make sync                                  # install the Python and web dependencies
+cp .env.example .env                       # then set GOOGLE_CLOUD_PROJECT in .env
+gcloud auth application-default login
+make play                                  # a game in the terminal
+make dev                                   # the web app on localhost:5173
+```
+
+`make play` runs a game between a mixed lineup of models and prints the outcome, the
+debrief and the token cost. Options go in `ARGS`, for example
+`make play ARGS="--god --word lighthouse -p gemini-flash -p claude-haiku -p gpt-oss"`,
+where `--god` also shows the secret word, the roles and every private reasoning.
+`uv run imposter play --help` lists every option. `make adk-web` starts the ADK
+developer UI, in which every new session plays a game.
+
+## The web app
 
 `make dev` starts the game API on port 8000 and the web app on
 [localhost:5173](http://localhost:5173), which reloads as its code changes. On the setup
@@ -65,82 +94,81 @@ at `/`, so the built app and the API share one origin on port 8000. Its TypeScri
 of the API, the game request and the game events are generated from the app's OpenAPI
 schema with `make api-client`.
 
-## Container
+## How a game runs
 
-The `Dockerfile` builds the image that runs the app: a Node stage builds the web app, a
-uv stage installs the package, and a slim Python image serves both with uvicorn on
-`$PORT` (8080 by default). `make docker` builds the image and runs it on
-[localhost:8080](http://localhost:8080) with `.env` and the gcloud application default
-credentials mounted, so a real game plays in the container.
+A pure game engine owns the rules and the event log, and decides every phase change. An
+ADK graph workflow plays the game with five functions as its nodes, in a loop.
+
+```
+START → setup → next_turns ──turn──→ play_turn → apply_turns ─┐
+                   ▲   └──over──→ finish                       │
+                   └───────────────────────────────────────────┘
+```
+
+`setup` chooses the word and creates the game. `next_turns` starts the next turn, or all
+turns at once for the votes and the debrief. `play_turn` asks one player per started
+turn, and ADK runs it in parallel for a parallel phase. `apply_turns` applies the answers
+to the game, and `finish` ends the run when the engine says the game is over.
+
+A player is a plain ADK `LlmAgent` that runs inside the same run, so its answer streams
+to the browser and its model call is part of the game's trace. The agent gets nothing but
+the prompt rendered from what its seat may see: no conversation history and nothing from
+the session state, which holds the secret word. ADK validates each answer against the
+schema of the phase and retries the agent when the answer does not match.
+
+A judge decides what code cannot, such as whether a guess is a synonym of the word. It
+asks yes or no questions through ADK's classifier interface. With an API key in
+`GEMINI_API_KEY` the questions go to the Gemini Decisions API, and without it to Gemini
+Flash-Lite on Vertex AI.
+
+Every game is one trace in Cloud Trace, with a span for the game, each step, each turn
+and each model call. `make play` prints the link when the game ends.
+[`docs/architecture.md`](docs/architecture.md) explains all of this and the reasons
+behind it.
+
+## Map of the code
+
+| Path | What is there |
+|---|---|
+| `src/imposter/engine/` | The pure rules: the `Game` class, events, views and responses |
+| `src/imposter/orchestration/` | The ADK game workflow and the app and runner around it |
+| `src/imposter/players/` | `LlmPlayer`, the prompt renderer and the prompt templates |
+| `src/imposter/judge/` | The judge, the Gemini Decisions API adapter and the code checks |
+| `src/imposter/models/` | The model catalog and the ADK model factory |
+| `src/imposter/words/` | Word categories, the picker and the generator |
+| `src/imposter/telemetry/` | Tracing setup and span helpers |
+| `src/imposter/api/`, `agent.py`, `cli.py` | ADK's API server with two extra routes, the ADK app and the command line |
+| `frontend/` | The React web app |
+| `infra/` | Terraform for the GCP resources |
+| `tests/` | The tests, which mirror `src/imposter/` |
+
+## Documentation
+
+| Page | What it covers |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | How the app is put together, the workflow, the players, the judge, design decisions and future work |
+| [`docs/game-rules.md`](docs/game-rules.md) | The game as a precise state machine: options, phases, limits, events and views |
+| [`docs/api.md`](docs/api.md) | The HTTP API, the event stream and the settings |
+| [`docs/frontend.md`](docs/frontend.md) | The web app: stack, screens, playback, export and import |
+| [`docs/observability.md`](docs/observability.md) | The trace of a game: spans, attributes, content capture |
+| [`docs/infrastructure.md`](docs/infrastructure.md) | What exists in GCP, why, how it connects and what it costs |
+| [`docs/code-style.md`](docs/code-style.md) | The style rules and what enforces each of them |
+| [`docs/guides/development.md`](docs/guides/development.md) | Running, testing and changing the app locally |
+| [`docs/guides/models.md`](docs/guides/models.md) | The model catalog and how to add a model |
+| [`docs/guides/gcp-setup.md`](docs/guides/gcp-setup.md) | Setting up the GCP project and deploying |
 
 ## Deploying
 
-After the one-time setup in [`docs/setup.md`](docs/setup.md), `make up` creates the
-infrastructure with Terraform, builds the image in Cloud Build and deploys it to Cloud Run
-in `europe-west4`. The service sits behind IAP, which only lets in the principals in `iap_members`, and
-`make smoke` prints a checklist for trying it. `make deploy` ships a
-new version, `make down` removes everything Terraform manages and `make nuke` also removes
-the state bucket. [`docs/infrastructure.md`](docs/infrastructure.md) lists the resources,
-their costs and how to roll back.
+After the one-time setup in [`docs/guides/gcp-setup.md`](docs/guides/gcp-setup.md),
+`make up` creates the infrastructure with Terraform, builds the image in Cloud Build and
+deploys it to Cloud Run in `europe-west4`, behind IAP. `make deploy` ships a new version,
+`make down` removes everything Terraform manages and `make nuke` also removes the state
+bucket. `make docker` builds the same image locally and runs it on
+[localhost:8080](http://localhost:8080).
 
-## Game API
+## Working with coding agents
 
-The backend is ADK's own API server for the game app, plus a `/catalog` route that lists
-the models, the word categories and the default lineup, and a `/traces/{game_id}` route
-with the Cloud Trace link of a game. A game is an ADK session: the client creates a
-session with the game options in its state, then plays it with `POST /run_sse`, which
-streams the game while it runs. Every game event comes as an ADK event with the event in
-its custom metadata, a "turn started" event says whose turn it is before the model
-answers, and with `"streaming": true` every answer streams token by token as it is
-written. The game runs as long as that request is open and is aborted when the client goes
-away. [`docs/plans/web-ui.md`](docs/plans/web-ui.md) describes the stream in detail.
-
-## How a game runs
-
-A pure game engine owns the rules and the event log, and decides every phase change. The
-game is played by an ADK graph workflow with one node per phase (setup, clue,
-discussion, vote, resolution, guess, outcome, debrief, done and aborted). The edges are
-generated from the engine's table of phase transitions, so the graph shows every way a
-game can go: the clue and discussion rounds are loop edges, a player who says the secret
-word jumps straight to the outcome, and any phase in which players act can be aborted.
-Each node plays its phase through the players, one turn at a time or all seats at once
-for the votes and the debrief, publishes each game event as it happens and routes to the
-phase that the engine moved to. Every turn runs in a turn node of its own, and the
-player's agent runs as a child node of the turn, inside the same run.
-
-In the ADK developer UI (`make adk-web`), the graph shows the path a game took and
-highlights the phase of the selected event.
-
-![The phase graph of a finished game in the ADK developer UI](docs/images/adk-web-phase-graph.png)
-
-## Tracing
-
-Every game is one trace in Cloud Trace. ADK traces the workflow and every node, so the
-trace has a root span for the game and a span per phase and round. ADK also traces every
-model call, with its token usage, and below it every HTTP attempt of the call is a span
-with its status code, so retries after a timeout or a rate limit are visible. The app
-puts the turn attributes on ADK's span of each turn node and adds a span per judge
-decision, and the model calls of the players nest under their turn. The root span carries the lineup and the outcome, and the
-secret word only as a hash, so a list of traces does not spoil it. `make play` prints
-the Trace Explorer link of the game when it ends.
-
-The prompts and completions are logged by ADK itself, with no code of ours: three
-environment variables (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY`,
-`ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false` and
-`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`) make ADK write one Cloud
-Logging entry per model call, with the prompt, the answer and the tokens, and the trace
-and span id of the call. The app sets them as defaults. In Logs Explorer, the query
-`logName:"gen_ai.client.inference.operation.details" trace="<trace id>"` lists the
-entries of one game.
-
-Traces go to Cloud Trace when `GOOGLE_CLOUD_PROJECT` is set. `IMPOSTER_TELEMETRY` (or the
-`--telemetry` option) chooses `cloud`, `console` to print the spans in the terminal, or
-`none`.
-
-## Design and setup
-
-The design notes and decisions behind the app are in [`docs/plans/`](docs/plans/README.md).
-
-To set up the app's infrastructure in the GCP sandbox project, follow [`docs/setup.md`](docs/setup.md).
-[`docs/infrastructure.md`](docs/infrastructure.md) documents what is created in GCP, why,
-and how it connects.
+[`CLAUDE.md`](CLAUDE.md) is the entry point for coding agents: the commands, where to
+find things and the rules that tools do not enforce. `.claude/` has two hooks, which
+format a file after every edit and run `make check` when the agent stops. The repository
+has no license file.

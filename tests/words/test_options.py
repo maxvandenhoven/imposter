@@ -1,9 +1,10 @@
 import json
 
 import pytest
-from conftest import ReplayLlm
+from conftest import ReplayLlm, run_in_node
 from pydantic import ValidationError
 
+from imposter.config import SecretWord
 from imposter.models.catalog import ModelCatalogEntry
 from imposter.words.generator import WordGenerator
 from imposter.words.options import SecretWordResolver, WordMode, WordOptions
@@ -17,6 +18,17 @@ def resolver(*, entry: ModelCatalogEntry, llm: ReplayLlm) -> SecretWordResolver:
     )
 
 
+async def resolve(
+    words: SecretWordResolver, *, options: WordOptions, with_hint: bool
+) -> SecretWord:
+    """Resolve the word options in a workflow node, the way the setup node does."""
+    secret, _ = await run_in_node(
+        lambda ctx: words.resolve(ctx=ctx, options=options, with_hint=with_hint)
+    )
+
+    return secret
+
+
 async def test_typed_word_keeps_its_category_and_gets_a_hint(
     flash_lite: ModelCatalogEntry, replay_llm: ReplayLlm
 ) -> None:
@@ -24,7 +36,7 @@ async def test_typed_word_keeps_its_category_and_gets_a_hint(
     words = resolver(entry=flash_lite, llm=replay_llm)
     options = WordOptions(mode=WordMode.TYPED, word=" Nostalgia ", category="emotions")
 
-    secret = await words.resolve(options=options, with_hint=True)
+    secret = await resolve(words, options=options, with_hint=True)
 
     assert (secret.word, secret.category, secret.hint) == (
         "Nostalgia",
@@ -40,7 +52,7 @@ async def test_random_word_comes_from_the_category_without_a_model_call(
     words = resolver(entry=flash_lite, llm=replay_llm)
     options = WordOptions(category="sounds")
 
-    secret = await words.resolve(options=options, with_hint=False)
+    secret = await resolve(words, options=options, with_hint=False)
 
     assert secret.word in words.picker.category("sounds").words
     assert (secret.category, secret.hint) == ("sounds", None)
@@ -55,8 +67,8 @@ async def test_generated_word_returns_word_category_and_hint(
     ]
     words = resolver(entry=flash_lite, llm=replay_llm)
 
-    secret = await words.resolve(
-        options=WordOptions(mode=WordMode.GENERATED), with_hint=True
+    secret = await resolve(
+        words, options=WordOptions(mode=WordMode.GENERATED), with_hint=True
     )
 
     assert (secret.word, secret.category, secret.hint) == (
@@ -75,14 +87,14 @@ async def test_hint_that_gives_the_word_away_is_rejected(
     options = WordOptions(mode=WordMode.TYPED, word="echo")
 
     with pytest.raises(ValueError, match="gives the secret word away"):
-        await words.resolve(options=options, with_hint=True)
+        await resolve(words, options=options, with_hint=True)
 
 
 async def test_hints_need_a_generator() -> None:
     words = SecretWordResolver(picker=WordPicker.load(seed=5), generator=None)
 
     with pytest.raises(ValueError, match="need a word generator"):
-        await words.resolve(options=WordOptions(), with_hint=True)
+        await resolve(words, options=WordOptions(), with_hint=True)
 
 
 @pytest.mark.parametrize(

@@ -35,12 +35,10 @@ from imposter.engine.events import (
     VoteCastEvent,
     VotesRevealedEvent,
 )
-from imposter.engine.game import Game
 from imposter.models.catalog import ModelCatalog
-from imposter.orchestration.adk_runner import run_game
-from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest, GameSetup
-from imposter.ports.event_bus import InMemoryEventBus
-from imposter.ports.game_store import InMemoryGameStore
+from imposter.orchestration.play import game_app, play_game
+from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest
+from imposter.orchestration.workflow import GameWorkflowBuilder
 from imposter.telemetry.cost import estimated_cost
 from imposter.telemetry.setup import (
     TELEMETRY_ENV,
@@ -241,51 +239,33 @@ class GameEventPrinter:
         self.console.print(table)
 
 
-async def play_game(
+async def print_game(
     *,
     request: GameRequest,
-    setup: GameSetup,
+    builder: GameWorkflowBuilder,
     printer: GameEventPrinter,
     project: str | None = None,
-) -> Game:
-    """Play a game, print its events as they arrive on the bus and link its trace.
+) -> None:
+    """Play a game, print its events as they happen and link its trace.
 
     Args:
         request: The options and how to choose the word.
-        setup: Creates the game and seats its players.
+        builder: Builds the game workflow.
         printer: Prints the events.
         project: The Google Cloud project the trace goes to, if it is exported there.
-
-    Returns:
-        The game, done or aborted.
     """
-    bus = InMemoryEventBus()
-    store = InMemoryGameStore()
-    plugin = GameTracePlugin(find_game=store.get)
+    plugin = GameTracePlugin()
     game_id = uuid.uuid4().hex
+    game = game_app(workflow=builder.build(), plugins=[plugin])
 
-    async def print_events() -> None:
-        async for event in bus.subscribe(game_id=game_id):
-            printer.print_event(event)
+    async for event in play_game(app=game, request=request, game_id=game_id):
+        printer.print_event(event)
 
-    game, _ = await asyncio.gather(
-        run_game(
-            request=request,
-            setup=setup,
-            bus=bus,
-            store=store,
-            game_id=game_id,
-            trace_plugin=plugin,
-        ),
-        print_events(),
-    )
     printer.print_totals()
 
     if project and game_id in plugin.trace_ids:
         url = trace_url(project=project, trace_id=plugin.trace_ids[game_id])
         printer.console.print(f"Trace: {url}", soft_wrap=True)
-
-    return game
 
 
 @app.callback(help="LLM agents playing the social deduction game Imposter.")
@@ -373,12 +353,13 @@ def play(
     Raises:
         BadParameter: When the options do not make a valid game.
     """
-    setup = GameSetup.load(seed=seed)
+    builder = GameWorkflowBuilder.load(seed=seed)
+    catalog = ModelCatalog.load()
     mode = word_mode or (WordMode.TYPED if word else WordMode.RANDOM)
 
     try:
         config = GameConfig(
-            players=setup.player_configs(players or DEFAULT_MODEL_IDS),
+            players=catalog.player_configs(players or DEFAULT_MODEL_IDS),
             imposter_count=imposters,
             identity_mode=identity_mode,
             public_category=public_category,
@@ -396,8 +377,10 @@ def play(
         raise typer.BadParameter(str(error)) from error
 
     project = setup_telemetry(telemetry or exporter_from_environment())
-    printer = GameEventPrinter(console=Console(), catalog=setup.catalog, god=god)
-    asyncio.run(play_game(request=request, setup=setup, printer=printer, project=project))
+    printer = GameEventPrinter(console=Console(), catalog=catalog, god=god)
+    asyncio.run(
+        print_game(request=request, builder=builder, printer=printer, project=project)
+    )
 
 
 @app.command(help="Serve the game API: ADK's API server plus the catalog route.")

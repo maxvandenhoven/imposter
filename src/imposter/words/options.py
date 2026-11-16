@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import Self
 
+from google.adk.agents.context import Context
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from imposter.config import SecretWord
@@ -76,10 +77,13 @@ class SecretWordResolver:
         self.picker = picker
         self.generator = generator
 
-    async def resolve(self, *, options: WordOptions, with_hint: bool) -> SecretWord:
+    async def resolve(
+        self, *, ctx: Context, options: WordOptions, with_hint: bool
+    ) -> SecretWord:
         """Choose the secret word of a new game.
 
         Args:
+            ctx: The context of the node that asks, which runs the generator's agents.
             options: The word options of the setup screen.
             with_hint: Whether the game gives imposters a hint.
 
@@ -99,12 +103,16 @@ class SecretWordResolver:
             case WordMode.RANDOM:
                 word, category = self.picker.pick(options.category)
             case WordMode.GENERATED:
-                generated = await self.require_generator().generate(self.picker.recent)
+                generated = await self.require_generator().generate(
+                    ctx=ctx, avoid=self.picker.recent
+                )
                 word, category, hint = generated.word, generated.category, generated.hint
                 self.picker.remember(word)
 
         if with_hint and hint is None:
-            hint = await self.require_generator().hint(word=word, category=category)
+            hint = await self.require_generator().hint(
+                ctx=ctx, word=word, category=category
+            )
 
         if hint is not None and mentions_word(hint, word):
             message = f"The generated hint {hint!r} gives the secret word away."

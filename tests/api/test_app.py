@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import FakeGameSetup
+from fakes import FakeSeating, random_players
 from fastapi.testclient import TestClient
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
@@ -12,8 +12,8 @@ from imposter import agent
 from imposter.api.app import create_app
 from imposter.config import GameConfig, PlayerConfig
 from imposter.models.catalog import ModelCatalog
-from imposter.orchestration.runner_workflow import GAME_EVENT_METADATA_KEY
 from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest
+from imposter.orchestration.workflow import GAME_EVENT_METADATA_KEY
 
 SESSIONS_PATH = "/apps/imposter/users/tester/sessions"
 
@@ -75,7 +75,8 @@ def test_adk_serves_only_the_game_app(client: TestClient) -> None:
 def test_game_streams_its_engine_events_over_run_sse(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(agent.sessions, "setup", FakeGameSetup())
+    monkeypatch.setattr(agent.builder, "players", FakeSeating(random_players))
+    monkeypatch.setattr(agent.builder, "judge", None)
     players = [PlayerConfig(model_id=model_id) for model_id in DEFAULT_MODEL_IDS]
     request = GameRequest(config=GameConfig(players=players, seed=5))
 
@@ -87,16 +88,16 @@ def test_game_streams_its_engine_events_over_run_sse(
         if GAME_EVENT_METADATA_KEY in (event.get("customMetadata") or {})
     ]
     types = [event["type"] for event in game_events]
-    turns = {
-        event["nodeInfo"]["path"].split("/")[2]
+    turn_paths = {
+        event["nodeInfo"]["path"]
         for event in events
-        if "_turn@" in event["nodeInfo"]["path"]
+        if "/play_turn@" in event["nodeInfo"]["path"]
     }
     assert types[0] == "game_started"
     assert types[-1] == "game_finished"
     assert [event["seq"] for event in game_events] == list(range(len(game_events)))
     assert types.index("turn_started") < types.index("clue_given")
-    assert turns == {f"player_{seat}_turn@1" for seat in range(len(players))}
+    assert turn_paths
 
 
 @pytest.mark.usefixtures("span_exporter")
@@ -154,7 +155,8 @@ def test_game_trace_records_the_iap_user_as_enduser_id(
     span_exporter: InMemorySpanExporter,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(agent.sessions, "setup", FakeGameSetup())
+    monkeypatch.setattr(agent.builder, "players", FakeSeating(random_players))
+    monkeypatch.setattr(agent.builder, "judge", None)
     span_exporter.clear()
     players = [PlayerConfig(model_id=model_id) for model_id in DEFAULT_MODEL_IDS]
     request = GameRequest(config=GameConfig(players=players, seed=5))

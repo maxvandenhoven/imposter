@@ -97,7 +97,7 @@ export function moveSeat({
 }
 
 /**
- * The setup form with the defaults of `game-rules.md` and the catalog's lineup, with one
+ * The setup form with the defaults of `docs/game-rules.md` and the catalog's lineup, with one
  * imposter on a random seat.
  *
  * `random` returns numbers in `[0, 1)`, like `Math.random`, which tests replace.

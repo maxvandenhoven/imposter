@@ -24,7 +24,8 @@ from imposter.engine.events import (
     StatementMadeEvent,
     VotesRevealedEvent,
 )
-from imposter.engine.game import Game, InvalidActionError
+from imposter.engine.game import Game, GameSnapshot, InvalidActionError
+from imposter.engine.responses import ClueResponse, DebriefResponse
 from imposter.engine.views import other_players
 
 WORD = "giraffe"
@@ -642,3 +643,53 @@ class TestViews:
             f"voted for {game.seats[0].name}"
         ]
         assert "abstained" in [entry.action for entry in game.view_for(0).scratchpad]
+
+
+def test_snapshot_loads_back_into_the_same_game() -> None:
+    game = new_game()
+    give_clue(game, seat=0, clue="tall", reasoning="because")
+    snapshot = GameSnapshot.model_validate(game.snapshot().model_dump(mode="json"))
+
+    loaded = Game.load(snapshot)
+
+    assert loaded.events == game.events
+    assert loaded.seats == game.seats
+    assert (loaded.phase, loaded.round) == (game.phase, game.round)
+    assert loaded.pending_seats == game.pending_seats
+    assert loaded.view_for(1) == game.view_for(1)
+
+
+def test_submit_applies_the_response_of_the_phase() -> None:
+    game = new_game()
+    game.start_turn(0)
+
+    game.submit(seat=0, response=ClueResponse(clue="tall", private_reasoning="why"))
+
+    [clue] = game.events_of_type(ClueGivenEvent)
+    assert (clue.clue, clue.private_reasoning) == ("tall", "why")
+
+
+def test_submit_falls_back_on_a_missing_or_rejected_response() -> None:
+    game = new_game()
+    game.start_turn(0)
+    response = ClueResponse(clue="two words", private_reasoning="why")
+    rejection = game.rejection(seat=0, response=response)
+    assert rejection is not None
+
+    game.submit(seat=0, response=response, rejection=rejection)
+    game.start_turn(1)
+    game.submit(seat=1, response=None)
+
+    first, second = game.events_of_type(ClueGivenEvent)
+    assert (first.clue, first.private_reasoning) == (None, "why")
+    assert first.rejection_reason == rejection.reason
+    assert second.clue is None
+
+
+def test_response_of_another_phase_is_rejected() -> None:
+    game = new_game()
+
+    rejection = game.rejection(seat=0, response=DebriefResponse(reflection="Done."))
+
+    assert rejection is not None
+    assert "clue phase" in rejection.reason

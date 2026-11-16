@@ -2,7 +2,7 @@
 
 This page describes the infrastructure the app creates in GCP, explains why each part
 exists and shows how the parts connect. The steps to set it up are in
-[`setup.md`](setup.md). Whenever the Terraform in `infra/` changes, the tables below
+[`guides/gcp-setup.md`](guides/gcp-setup.md). Whenever the Terraform in `infra/` changes, the tables below
 change with it, so that this page always describes what actually exists.
 
 ## Where it lives
@@ -52,7 +52,7 @@ flowchart LR
    browser over SSE. A game runs for as long as that request is open, which is why the
    request timeout is 3600 seconds.
 3. For each turn, the app calls **Vertex AI** as the service account `imposter-run`, which
-   holds `roles/aiplatform.user`. No API keys are involved, because the Google client
+   holds `roles/aiplatform.user`. These calls need no API keys, because the Google client
    libraries get the service account credentials from the Cloud Run metadata server.
    Gemini is called natively, and Claude and the open models are called through LiteLLM.
    All calls go to `global` unless the model catalog sets a regional location for a model.
@@ -120,10 +120,11 @@ at all. They are set up by `make tf-setup` or by hand.
 | Resource | Created by | Why it exists |
 |---|---|---|
 | The APIs `serviceusage`, `cloudresourcemanager` and `storage` | `make tf-setup`, with `gcloud services enable` | Terraform bills its API calls to the project through `user_project_override`, which only works when the Service Usage API is already enabled in the project. Terraform cannot enable that API for itself. The first two APIs are also listed in `infra/apis.tf`. |
-| The GCS bucket `<project id>-imposter-tfstate` in `europe-west4`, labelled `app=imposter` | `make tf-setup`, with `gcloud` | The bucket holds the Terraform state under the prefix `imposter`, so the state survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create the bucket itself. Versioning keeps every earlier state for recovery, and uniform access and public access prevention keep the bucket private. |
+| The GCS bucket `<project id>-imposter-tfstate` in `europe-west4`, labeled `app=imposter` | `make tf-setup`, with `gcloud` | The bucket holds the Terraform state under the prefix `imposter`, so the state survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create the bucket itself. Versioning keeps every earlier state for recovery, and uniform access and public access prevention keep the bucket private. |
 | Model enablement for Claude and the open models | The owner, in the Model Garden console | Partner and open models need their terms accepted once per project, and there is no API for doing that. |
 | The IAP principals in `iap_members` | The owner, in `infra/terraform.tfvars` | The owner decides who may open the app, as a `user:` or a `group:` of the organization. Cloud Run IAP uses a Google-managed OAuth client, so no consent screen or OAuth client has to be created by hand. IAP needs the project to belong to an organization, which should be checked on the first deploy. |
 | Quota increases | The owner, on the Quotas page | The default per-model quotas can be too low for a game with eight players. |
+| The secret with the API key of the Gemini Developer API (optional) | The owner, with `gcloud secrets create` | The judge needs the key for the Gemini Decisions API. The owner creates the key in Google AI Studio and stores it in a secret, so the key itself never enters the Terraform state. Terraform only grants access to the secret and passes it to Cloud Run. |
 
 ## Managed by Terraform (`infra/`)
 
@@ -143,9 +144,10 @@ depend on them.
 | `artifactregistry.googleapis.com` | Artifact Registry stores the Docker images of the app. | Deployment |
 | `cloudbuild.googleapis.com` | Cloud Build builds the image in GCP for `make build`, so no local Docker is needed. | Deployment |
 | `run.googleapis.com` | Cloud Run hosts the service that serves the API, the UI and the SSE stream. | Hosting |
+| `secretmanager.googleapis.com` | Secret Manager holds the API key of the Gemini Developer API, when the judge uses the Gemini Decisions API. | Model calls |
 | `billingbudgets.googleapis.com` | The budget sends email alerts when spending passes its thresholds. | Cost control |
 | `iap.googleapis.com` | Identity-Aware Proxy puts the org Google login in front of Cloud Run. | Access control |
-| `cloudtrace.googleapis.com` | Cloud Trace stores one trace per game, with spans for the game, its phases and its turns. | Tracing |
+| `cloudtrace.googleapis.com` | Cloud Trace stores one trace per game, with spans for the game, the steps of its turn loop and its turns. | Tracing |
 | `telemetry.googleapis.com` | The telemetry API is the OTLP endpoint that receives the OpenTelemetry traces. | Tracing |
 | `logging.googleapis.com` | Cloud Logging stores the prompts and completions as log events that link to their trace. | Tracing |
 
@@ -162,6 +164,7 @@ depend on them.
 | Resource | Why it exists |
 |---|---|
 | The service account `imposter-run` with `roles/aiplatform.user`, `roles/cloudtrace.agent`, `roles/logging.logWriter` and `roles/telemetry.tracesWriter` | It is the least-privilege identity of the Cloud Run service, and it has no owner or editor roles. It can call Vertex AI and export traces and logs, and nothing else. |
+| `roles/secretmanager.secretAccessor` for `imposter-run` on the secret named in the variable `gemini_api_key_secret` | The Gemini Decisions API is part of the Gemini Developer API, not of Vertex AI, so the judge calls it with an API key instead of the service account. The runtime identity may read only this one secret, and Cloud Run passes its latest version to the app as `GEMINI_API_KEY`. While the variable is empty, nothing is created and the judge asks Gemini Flash-Lite on Vertex AI. |
 | The service account `imposter-build` with `roles/logging.logWriter` on the project, `roles/artifactregistry.writer` on the repository and `roles/storage.objectViewer` on the build bucket | Cloud Build runs as this account instead of the broad default one, so a build can only write logs, push images and read the uploaded source. |
 | The bucket `<project id>-imposter-build` in `europe-west4` | `make build` uploads the source here for Cloud Build, and objects expire after seven days. |
 | The IAP service agent (`infra/iap.tf`) with `roles/run.invoker` on the service | IAP calls Cloud Run with its own service agent after it has checked the login, so only that agent may invoke the service. Nobody else can reach Cloud Run directly. |
@@ -237,7 +240,7 @@ and `max_instance_count = 1` with request-based billing on Cloud Run.
 
 ## Setting up and removing the app
 
-`make up` does the whole setup after the manual prerequisites in [`setup.md`](setup.md):
+`make up` does the whole setup after the manual prerequisites in [`guides/gcp-setup.md`](guides/gcp-setup.md):
 it runs `make tf-setup` and then `make deploy`, and prints the service URL. The
 service URL answers to the principals in `iap_members`, and `make smoke` prints a checklist
 for trying it.

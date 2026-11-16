@@ -68,6 +68,21 @@ resource "google_cloud_run_v2_service" "imposter" {
         name  = "OTEL_SEMCONV_STABILITY_OPT_IN"
         value = "gen_ai_latest_experimental"
       }
+      # With the key the judge uses the Gemini Decisions API, without it Vertex AI.
+      dynamic "env" {
+        for_each = google_secret_manager_secret_iam_member.run_gemini_api_key
+
+        content {
+          name = "GEMINI_API_KEY"
+
+          value_source {
+            secret_key_ref {
+              secret  = env.value.secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
     }
   }
 

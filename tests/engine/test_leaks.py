@@ -1,9 +1,9 @@
-"""Property tests for the information hiding invariants of `game-rules.md` §Views."""
+"""Property tests for the information hiding invariants in `docs/game-rules.md`."""
 
-import asyncio
 import re
 from dataclasses import dataclass
 
+from fakes import RandomPlayer, play_pure
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -18,9 +18,7 @@ from imposter.config import (
 from imposter.engine.events import EventVisibility, OutcomeEvent, public_projection
 from imposter.engine.game import Game
 from imposter.engine.views import PlayerView
-from imposter.orchestration.runner import GameRunner
 from imposter.players.base import TurnUsage
-from imposter.players.fake import RandomPlayer
 from imposter.players.prompt import PlayerPromptRenderer
 
 SECRET_WORDS = ("giraffe", "volcano", "trumpet", "lantern", "glacier", "pretzel")
@@ -77,7 +75,7 @@ def played_games(draw: st.DrawFn) -> PlayedGame:
         RandomPlayer(seed=seed + seat.seat, blunder_rate=blunder_rate, usage=usage)
         for seat in game.seats
     ]
-    asyncio.run(GameRunner(players=players).play(game))
+    play_pure(game=game, players=players)
 
     return PlayedGame(
         game=game, views=[view for player in players for view in player.views]

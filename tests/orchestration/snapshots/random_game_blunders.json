@@ -1,0 +1,466 @@
+[
+ {
+  "game_id": "golden-blunders",
+  "seq": 0,
+  "phase": "setup",
+  "round": null,
+  "visibility": "public",
+  "type": "game_started",
+  "identity_mode": "names",
+  "seats": [
+   {
+    "seat": 0,
+    "name": "Alice"
+   },
+   {
+    "seat": 1,
+    "name": "Bob"
+   },
+   {
+    "seat": 2,
+    "name": "Charlie"
+   },
+   {
+    "seat": 3,
+    "name": "Dave"
+   },
+   {
+    "seat": 4,
+    "name": "Eve"
+   }
+  ],
+  "imposter_count": 1,
+  "clue_rounds": 2,
+  "discussion_rounds": 2,
+  "public_category": null,
+  "word": "giraffe",
+  "category": "animals",
+  "hint": null,
+  "seat_models": [
+   "model-0",
+   "model-0",
+   "model-2",
+   "model-1",
+   "model-1"
+  ],
+  "imposters": [
+   2
+  ]
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 1,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "phase_started"
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 2,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 0
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 3,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 0,
+  "model_id": "model-0",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 100
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 4,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "clue_given",
+  "seat": 0,
+  "clue": "giant",
+  "rejection_reason": null,
+  "private_reasoning": "reasoning-seat0-turn1 I know the word is giraffe.",
+  "reasoning_truncated": false
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 5,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 1
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 6,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 1,
+  "model_id": "model-0",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 200
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 7,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "clue_given",
+  "seat": 1,
+  "clue": "loud",
+  "rejection_reason": null,
+  "private_reasoning": "reasoning-seat1-turn1 I know the word is giraffe.",
+  "reasoning_truncated": false
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 8,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 2
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 9,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 2,
+  "model_id": "model-2",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 300
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 10,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 2,
+  "model_id": "model-2",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 400
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 11,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "player_error",
+  "seat": 2,
+  "message": "invalid action, falling back: the clue must be exactly one word"
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 12,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "clue_given",
+  "seat": 2,
+  "clue": null,
+  "rejection_reason": "the clue must be exactly one word",
+  "private_reasoning": "reasoning-seat2-turn2 I do not know the word.",
+  "reasoning_truncated": false
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 13,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 3
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 14,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 3,
+  "model_id": "model-1",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 500
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 15,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "clue_given",
+  "seat": 3,
+  "clue": "soft",
+  "rejection_reason": null,
+  "private_reasoning": "reasoning-seat3-turn1 I know the word is giraffe.",
+  "reasoning_truncated": false
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 16,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 4
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 17,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 4,
+  "model_id": "model-1",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 600
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 18,
+  "phase": "clue",
+  "round": 1,
+  "visibility": "public",
+  "type": "secret_word_said",
+  "seat": 4,
+  "text": "giraffe",
+  "private_reasoning": "reasoning-seat4-turn1 I know the word is giraffe.",
+  "reasoning_truncated": false
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 19,
+  "phase": "outcome",
+  "round": null,
+  "visibility": "public",
+  "type": "phase_started"
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 20,
+  "phase": "outcome",
+  "round": null,
+  "visibility": "public",
+  "type": "outcome",
+  "outcome": "civilian_said_word",
+  "word": "giraffe",
+  "imposters": [
+   2
+  ],
+  "caught": [],
+  "word_said_by": 4
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 21,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "phase_started"
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 22,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 0
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 23,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 1
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 24,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 2
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 25,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 3
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 26,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "turn_started",
+  "seat": 4
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 27,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 0,
+  "model_id": "model-0",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 700
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 28,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "reflection",
+  "seat": 0,
+  "reflection": "I played at random."
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 29,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 1,
+  "model_id": "model-0",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 800
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 30,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "reflection",
+  "seat": 1,
+  "reflection": "I played at random."
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 31,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 2,
+  "model_id": "model-2",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 900
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 32,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "reflection",
+  "seat": 2,
+  "reflection": "I played at random."
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 33,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 3,
+  "model_id": "model-1",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 1000
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 34,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "reflection",
+  "seat": 3,
+  "reflection": "I played at random."
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 35,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "system",
+  "type": "usage",
+  "seat": 4,
+  "model_id": "model-1",
+  "input_tokens": 90,
+  "output_tokens": 10,
+  "thinking_tokens": 0,
+  "total_tokens": 1100
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 36,
+  "phase": "debrief",
+  "round": null,
+  "visibility": "public",
+  "type": "reflection",
+  "seat": 4,
+  "reflection": "I played at random."
+ },
+ {
+  "game_id": "golden-blunders",
+  "seq": 37,
+  "phase": "done",
+  "round": null,
+  "visibility": "public",
+  "type": "game_finished",
+  "outcome": "civilian_said_word"
+ }
+]

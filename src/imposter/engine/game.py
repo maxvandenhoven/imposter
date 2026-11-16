@@ -1,6 +1,6 @@
 import random
 import uuid
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, cast
 
 from pydantic import BaseModel, ConfigDict
 
@@ -16,6 +16,7 @@ from imposter.engine.events import (
     BaseGameEvent,
     ClueGivenEvent,
     GameAbortedEvent,
+    GameEvent,
     GameFinishedEvent,
     GameStartedEvent,
     GuessMadeEvent,
@@ -31,6 +32,14 @@ from imposter.engine.events import (
     UsageEvent,
     VoteCastEvent,
     VotesRevealedEvent,
+)
+from imposter.engine.responses import (
+    ClueResponse,
+    DebriefResponse,
+    DiscussionResponse,
+    GuessResponse,
+    PhaseResponse,
+    VoteResponse,
 )
 from imposter.engine.views import (
     GameReveal,
@@ -69,6 +78,10 @@ ACTION_EVENT_TYPES = (
 )
 """The events that complete the turn of a seat."""
 
+GAME_STATE_KEY = "game"
+"""The key under which the snapshot of a game is kept in a key-value store, such as the
+state of the ADK session that plays the game."""
+
 
 class InvalidActionError(Exception):
     """Raised when an action is not allowed in the current state of a game."""
@@ -105,6 +118,26 @@ class ActionRejection(BaseModel):
 
     reason: str
     retryable: bool = True
+
+
+class GameSnapshot(BaseModel):
+    """A whole game as data: its setup and its event log, for example in session state.
+
+    Attributes:
+        game_id: The id of the game.
+        config: The options of the game.
+        secret: The secret word, category and hint.
+        seats: Who sits at each seat, in seat order.
+        events: The events so far, in order.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    game_id: str
+    config: GameConfig
+    secret: SecretWord
+    seats: list[Seat]
+    events: list[GameEvent]
 
 
 class Game:
@@ -222,6 +255,39 @@ class Game:
         game.advance()
 
         return game
+
+    @classmethod
+    def load(cls, snapshot: GameSnapshot) -> Self:
+        """Rebuild a game from a snapshot, with every query derived from its events.
+
+        Args:
+            snapshot: The setup and the event log of the game.
+
+        Returns:
+            The game, in the state the snapshot was taken in.
+        """
+        return cls(
+            game_id=snapshot.game_id,
+            config=snapshot.config,
+            secret=snapshot.secret,
+            seats=snapshot.seats,
+            events=list(snapshot.events),
+        )
+
+    def snapshot(self) -> GameSnapshot:
+        """Take a snapshot of the game: its setup and its event log.
+
+        Returns:
+            The snapshot, which `load` turns back into the same game.
+        """
+        return GameSnapshot(
+            game_id=self.game_id,
+            config=self.config,
+            secret=self.secret,
+            seats=list(self.seats),
+            # Every event is created from one of the classes of the `GameEvent` union.
+            events=cast("list[GameEvent]", self._events),
+        )
 
     @property
     def events(self) -> tuple[BaseGameEvent, ...]:
@@ -645,6 +711,96 @@ class Game:
         self.emit(ReflectionEvent, seat=seat, reflection=reflection.strip())
         self.finish_turn()
 
+    def rejection(self, *, seat: int, response: PhaseResponse) -> ActionRejection | None:
+        """Check a response against the rules of the current phase.
+
+        Args:
+            seat: The seat that gave the response.
+            response: The structured output of the seat.
+
+        Returns:
+            Why the response is invalid, or `None` when the rules allow it.
+        """
+        match self.phase, response:
+            case GamePhase.CLUE, ClueResponse(clue=clue):
+                return self.clue_rejection(seat=seat, clue=clue)
+            case GamePhase.VOTE, VoteResponse(vote_for=vote_for):
+                return self.vote_rejection(voter=seat, vote_for=vote_for)
+            case (
+                (GamePhase.DISCUSSION, DiscussionResponse())
+                | (GamePhase.GUESS, GuessResponse())
+                | (GamePhase.DEBRIEF, DebriefResponse())
+            ):
+                return None
+            case phase, _:
+                return ActionRejection(
+                    reason=f"expected a response for the {phase} phase"
+                )
+
+    def submit(
+        self,
+        *,
+        seat: int,
+        response: PhaseResponse | None,
+        rejection: ActionRejection | None = None,
+        judge_verdict: bool | None = None,
+    ) -> None:
+        """Submit the response of a seat as its action in the current phase.
+
+        A missing or rejected response becomes the fallback action of the phase: a pass,
+        silence, an abstention, no guess or no reflection. The private reasoning of a
+        rejected response is kept.
+
+        Args:
+            seat: The seat whose turn it is.
+            response: The structured output of the seat, `None` when it gave none.
+            rejection: Why the response is rejected, `None` when it is accepted.
+            judge_verdict: The verdict of the judge on an inexact guess, if one was asked.
+
+        Raises:
+            InvalidActionError: When it is not the seat's turn.
+        """
+        reasoning = getattr(response, "private_reasoning", "")
+        accepted = response if rejection is None else None
+
+        match self.phase, accepted:
+            case GamePhase.CLUE, ClueResponse(clue=clue):
+                self.submit_clue(seat=seat, clue=clue, private_reasoning=reasoning)
+            case GamePhase.CLUE, _:
+                self.submit_clue(
+                    seat=seat,
+                    clue=None,
+                    private_reasoning=reasoning,
+                    rejection_reason=rejection.reason if rejection else None,
+                )
+            case GamePhase.DISCUSSION, DiscussionResponse(statement=statement):
+                self.submit_statement(
+                    seat=seat, statement=statement, private_reasoning=reasoning
+                )
+            case GamePhase.DISCUSSION, _:
+                self.submit_statement(
+                    seat=seat, statement="", private_reasoning=reasoning
+                )
+            case GamePhase.VOTE, VoteResponse(vote_for=vote_for):
+                self.submit_vote(
+                    voter=seat, vote_for=vote_for, private_reasoning=reasoning
+                )
+            case GamePhase.VOTE, _:
+                self.submit_vote(voter=seat, vote_for=None, private_reasoning=reasoning)
+            case GamePhase.GUESS, GuessResponse(guess=guess):
+                self.submit_guess(
+                    seat=seat,
+                    guess=guess,
+                    private_reasoning=reasoning,
+                    judge_verdict=judge_verdict,
+                )
+            case GamePhase.GUESS, _:
+                self.submit_guess(seat=seat, guess="", private_reasoning=reasoning)
+            case GamePhase.DEBRIEF, DebriefResponse(reflection=reflection):
+                self.submit_reflection(seat=seat, reflection=reflection)
+            case _:
+                self.submit_reflection(seat=seat, reflection="")
+
     def end_by_secret_word(self, *, seat: int, text: str, private_reasoning: str) -> None:
         """End the game because a seat said the secret word, which loses it for its side.
 
@@ -731,7 +887,7 @@ class Game:
         self.emit(GameAbortedEvent, phase=GamePhase.ABORTED, round=None, reason=reason)
 
     def view_for(self, seat: int) -> PlayerView:
-        """Build what one seat may see, as listed in `game-rules.md` §Views.
+        """Build what one seat may see, as `docs/game-rules.md` lists under views.
 
         Civilians see the word, imposters see the hint when enabled, and everyone sees
         the public transcript and only their own scratchpad. Votes appear only after
@@ -900,6 +1056,23 @@ class Game:
             The possibly shortened reasoning and whether words were removed.
         """
         return truncate_words(reasoning, cap=self.config.reasoning_word_cap)
+
+    def is_truncated(self, response: PhaseResponse | None) -> bool:
+        """Tell whether submitting a response cuts its statement or reasoning to the cap.
+
+        Args:
+            response: The structured output of a seat, if any.
+
+        Returns:
+            Whether the statement or the private reasoning is over its cap.
+        """
+        reasoning = getattr(response, "private_reasoning", "")
+        statement = response.statement if isinstance(response, DiscussionResponse) else ""
+        _, statement_truncated = truncate_words(
+            statement, cap=self.config.statement_word_cap
+        )
+
+        return statement_truncated or self.truncate_reasoning(reasoning)[1]
 
     def finish_turn(self) -> None:
         """Advance to the next phase once every pending seat has acted."""
