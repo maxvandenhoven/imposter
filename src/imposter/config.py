@@ -7,7 +7,7 @@ MIN_PLAYERS = 3
 """The smallest number of seats in a game."""
 
 MAX_PLAYERS = 8
-"""The largest number of seats in a game, a cost guardrail (README D29)."""
+"""The largest number of seats in a game, a cost guardrail."""
 
 
 class IdentityMode(StrEnum):
@@ -62,7 +62,7 @@ class PlayerConfig(BaseModel):
         model_id: The catalog id of the model playing this seat.
         model_display_name: The display name of the model, used as the player name in
             `models` identity mode. Falls back to `model_id` when not given.
-        persona: An optional persona id, reserved for future work (README D23).
+        persona: An optional persona id, reserved for future work.
         imposter: Whether this player must be an imposter. Players without it are
             picked at random for the imposter seats that remain.
     """
@@ -76,7 +76,7 @@ class PlayerConfig(BaseModel):
 
 
 class GameConfig(BaseModel):
-    """The game options chosen on the setup screen, with the defaults of `game-rules.md`.
+    """The game options of the setup screen, with the defaults of `docs/game-rules.md`.
 
     How the secret word is chosen is not part of the config: the caller resolves it into
     a `SecretWord` before the game is created.

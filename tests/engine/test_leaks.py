@@ -1,4 +1,4 @@
-"""Property tests for the information hiding invariants of `game-rules.md` §Views."""
+"""Property tests for the information hiding invariants in `docs/game-rules.md`."""
 
 import re
 from dataclasses import dataclass

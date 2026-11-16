@@ -887,7 +887,7 @@ class Game:
         self.emit(GameAbortedEvent, phase=GamePhase.ABORTED, round=None, reason=reason)
 
     def view_for(self, seat: int) -> PlayerView:
-        """Build what one seat may see, as listed in `game-rules.md` §Views.
+        """Build what one seat may see, as `docs/game-rules.md` lists under views.
 
         Civilians see the word, imposters see the hint when enabled, and everyone sees
         the public transcript and only their own scratchpad. Votes appear only after

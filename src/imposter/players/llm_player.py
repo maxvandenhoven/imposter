@@ -33,7 +33,7 @@ class ModelResponseError(Exception):
 
 
 class LlmPlayer:
-    """A player backed by a model through a plain ADK `LlmAgent` (README D7, D9).
+    """A player backed by a model through a plain ADK `LlmAgent`.
 
     Every turn builds one agent and runs it as a child node of the turn node
     (`ctx.run_node`), so the agent's events, including the partial events of a streaming

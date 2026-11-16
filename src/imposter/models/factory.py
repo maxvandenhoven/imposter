@@ -9,7 +9,7 @@ from imposter.config import GamePhase
 from imposter.models.catalog import ModelCatalogEntry, ModelThinking, ModelVia
 
 MODEL_CALL_TIMEOUT_SECONDS = 60
-"""The time limit of one model call (README D28)."""
+"""The time limit of one model call."""
 
 LITELLM_CALL_TIMEOUT_SECONDS = 10
 """The time limit of one call to a model through LiteLLM. For a streamed answer it limits
@@ -18,7 +18,7 @@ answer in 0.5 to 2 s but often stall for 20 to 40 s, and a retry is usually fast
 again, so a short limit with retries beats waiting out a stall."""
 
 MODEL_CALL_RETRIES = 2
-"""The retries of a model call on a timeout, rate limit or server error (README D28)."""
+"""The retries of a model call on a timeout, rate limit or server error."""
 
 RETRY_STATUS_CODES = [408, 429, 500, 502, 503, 504]
 """The HTTP status codes on which a Gemini call is retried."""
@@ -30,7 +30,7 @@ PHASE_MAX_OUTPUT_TOKENS: dict[GamePhase, int] = {
     GamePhase.GUESS: 400,
     GamePhase.DEBRIEF: 800,
 }
-"""The answer tokens per phase, a cost guardrail (README D29): room for the JSON with a
+"""The answer tokens per phase, a cost guardrail: room for the JSON with a
 clue or vote and the private reasoning, more for statements and reflections."""
 
 THINKING_TOKENS: dict[ModelThinking, int] = {
@@ -59,7 +59,7 @@ REASONING_EFFORTS: dict[ModelThinking, str] = {
 
 
 def adk_model(entry: ModelCatalogEntry) -> BaseLlm:
-    """Build the ADK model object of a catalog entry, always on Vertex AI (README D5).
+    """Build the ADK model object of a catalog entry, always on Vertex AI.
 
     The client of the model owns the timeout and the retries with exponential backoff
     on rate limits and server errors. The project comes from `GOOGLE_CLOUD_PROJECT` and

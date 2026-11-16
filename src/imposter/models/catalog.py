@@ -32,7 +32,7 @@ class ModelVia(StrEnum):
 
 
 class ModelThinking(StrEnum):
-    """How much native thinking a model does, off by default (README D26)."""
+    """How much native thinking a model does, off by default."""
 
     OFF = "off"
     LOW = "low"

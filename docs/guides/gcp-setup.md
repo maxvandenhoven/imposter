@@ -1,4 +1,4 @@
-# Setting up GCP in the sandbox project
+# Setting up GCP and deploying
 
 This guide takes you from an existing sandbox project to a project in which Terraform
 manages the app's infrastructure and Gemini, Claude and open models answer on Vertex AI.
@@ -21,22 +21,22 @@ have the following:
 Steps 1 to 3, 7 and 9 need you at the keyboard, because they involve browser logins and
 clicks in the console. The other steps run `make` targets.
 
-[`infrastructure.md`](infrastructure.md) lists every resource with the reason it exists
+[`../infrastructure.md`](../infrastructure.md) lists every resource with the reason it exists
 and shows how the pieces connect.
 
 ## Terms used here
 
 | Term | Meaning |
 |---|---|
-| **Organisation** | The organisation is the company root node in GCP. Policies set on it apply to everything below it. |
-| **Folder** | A folder groups projects under the organisation. The sandbox is a folder, and its policies may restrict regions or services. |
+| **Organization** | The organization is the company root node in GCP. Policies set on it apply to everything below it. |
+| **Folder** | A folder groups projects under the organization. The sandbox is a folder, and its policies may restrict regions or services. |
 | **Project** | A project holds resources, enabled APIs, IAM permissions and quotas. It is identified by a globally unique *project ID*, which its creator chooses and which can never be reused, and by a *project number*, which GCP assigns. |
 | **Billing account** | A billing account pays for the projects linked to it. A project without one cannot call paid APIs such as Vertex AI. |
 | **Labels** | Labels are key-value pairs on resources, such as `app=imposter`. GCP has no resource groups like Azure, and the project is the smallest container. Labels are therefore how you find the app's resources and costs in a shared project. |
 | **API (service)** | Each GCP product has an API that must be *enabled* in a project before the project can use it. Vertex AI, for example, uses `aiplatform.googleapis.com`. |
 | **ADC** | *Application Default Credentials* are where client libraries and Terraform look for credentials. On your laptop they are a file written by `gcloud auth application-default login`, and on Cloud Run they are the service account of the service. |
 | **Quota project** | The quota project is the project whose quota and billing an API call counts against when you call with your user credentials. |
-| **Model Garden** | Model Garden is the Vertex AI catalogue of models. Partner models such as Claude and the open models that Google serves (MaaS, *model as a service*) must be enabled there once per project, which accepts their terms. |
+| **Model Garden** | Model Garden is the Vertex AI catalog of models. Partner models such as Claude and the open models that Google serves (MaaS, *model as a service*) must be enabled there once per project, which accepts their terms. |
 | **Terraform state** | The state is a JSON file in which Terraform records what it created. If you lose it, Terraform no longer knows that it manages those resources. |
 
 ## 1. Install the tools
@@ -167,7 +167,7 @@ be enabled once per project in the console:
    - Open models: **DeepSeek V3.2**, **Qwen3 235B**, **gpt-oss 120B** and **Llama 4
      Maverick**. Pick the *API service* or *managed* variant (MaaS), not a variant that
      you deploy yourself.
-3. If a model shows no Enable button or shows an error, the organisation or the sandbox
+3. If a model shows no Enable button or shows an error, the organization or the sandbox
    may block it through an org policy or by not allowing its terms. Write the model down,
    and it will be dropped from the lineup.
 

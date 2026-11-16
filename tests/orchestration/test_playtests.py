@@ -1,4 +1,4 @@
-"""Scripted replays of notable real games, documented in `docs/plans/playtests.md`."""
+"""Scripted replays of notable real games, which shaped rules in `docs/game-rules.md`."""
 
 from fakes import ScriptedPlayer, play_pure
 

@@ -54,8 +54,8 @@ DERIVATIVE_CLUE_QUESTION = Binary(
 class Judge:
     """Decides what the code rules of the engine cannot: synonyms and derivatives.
 
-    The cheap code checks run first, so only cases they cannot decide reach a model
-    (README D25). The model sits behind ADK's classifier interface (`BaseClassifier`):
+    The cheap code checks run first, so only cases they cannot decide reach a model.
+    The model sits behind ADK's classifier interface (`BaseClassifier`):
     it gets the facts as input and one yes or no question (`Binary`), and answers
     with the probability of a yes instead of text. Any classifier works: the Gemini
     Decisions API, a model built for such questions, or `LlmClassifier`, which asks a

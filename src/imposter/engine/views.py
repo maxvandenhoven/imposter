@@ -133,8 +133,8 @@ class ScratchpadEntry(BaseModel):
 class PlayerView(BaseModel):
     """Everything one seat may know at a point in the game, and nothing else.
 
-    Built by `Game.view_for`. The leak tests check the invariants of `game-rules.md`
-    §Views on these objects.
+    Built by `Game.view_for`. The leak tests check the invariants that
+    `docs/game-rules.md` lists under views on these objects.
 
     Attributes:
         game_id: The game.

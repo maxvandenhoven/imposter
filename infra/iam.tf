@@ -26,7 +26,7 @@ resource "google_project_iam_member" "run" {
 
 # The Gemini Decisions API is not part of Vertex AI, so the judge calls it with an API key
 # instead of the service account. The key lives in a secret that is created by hand
-# (`docs/setup.md`), and the runtime identity may read only that secret.
+# (`docs/guides/gcp-setup.md`), and the runtime identity may read only that secret.
 resource "google_secret_manager_secret_iam_member" "run_gemini_api_key" {
   count = var.gemini_api_key_secret == "" ? 0 : 1
 

@@ -1,17 +1,19 @@
 # Observability
 
-Goal: one game is one readable trace in Cloud Trace, filterable by model, role, phase and
-identity mode, with full prompts and completions one click away in Cloud Logging.
+This page is the reference for tracing and logging. One game is one readable trace in
+Cloud Trace, which can be filtered by model, role, phase and identity mode, with the
+full prompts and completions one click away in Cloud Logging. The code is in
+`src/imposter/telemetry/`.
 
 ## Setup
 
 - ADK emits OpenTelemetry spans out of the box (`invoke_workflow`, `invoke_node`,
-  `invoke_agent`, `generate_content` and tools, see §Span hierarchy). Export follows the
+  `invoke_agent`, `generate_content` and tools, see [Span hierarchy](#span-hierarchy)). Export follows the
   programmatic GCP setup of ADK's tracing guide (https://adk.dev/observability/traces/):
   `telemetry/setup.py` (`setup_telemetry`) hands `get_gcp_exporters(...)` with tracing
   and logging enabled to `maybe_set_otel_providers`, which exports over OTLP to
-  `telemetry.googleapis.com` with ADC. The guide enables tracing only, and we add the
-  logging exporter because ADK's prompt and completion events are logs. As in the guide,
+  `telemetry.googleapis.com` with ADC. The guide enables tracing only, and the app adds
+  the logging exporter because ADK's prompt and completion events are logs. As in the guide,
   the resource comes from `OTEL_SERVICE_NAME` (`imposter`) and
   `OTEL_RESOURCE_ATTRIBUTES`, which must carry `gcp.project_id`: without it the
   telemetry API rejects the spans (400). Cloud Monitoring metrics are left off.
@@ -43,9 +45,9 @@ identity mode, with full prompts and completions one click away in Cloud Logging
 ## Span hierarchy
 
 The game runs as an ADK graph `Workflow` of function nodes
-(`agents-and-orchestration.md` §Game workflow), so ADK emits the game, step and turn
-levels of the trace itself. We add attributes to those spans and open spans of our own
-only for judge decisions and for calls to the Gemini Decisions API, which ADK has no
+([`architecture.md`](architecture.md#game-workflow)), so ADK emits the game, step and
+turn levels of the trace itself. The app adds attributes to those spans and opens spans
+of its own only for judge decisions and for calls to the Gemini Decisions API, which ADK has no
 span for. The hierarchy is pinned with fake players and a player on a fake model in
 `tests/telemetry/test_spans.py`:
 
@@ -87,7 +89,7 @@ What ADK sets, as of ADK 2.14:
   `gen_ai.request.max_tokens`, `gen_ai.agent.name`, `gen_ai.usage.input_tokens` and
   `gen_ai.usage.output_tokens`, also for LiteLLM models (Claude, `gpt-oss`).
 
-How our attributes and spans get there (`telemetry/spans.py`):
+How the app's attributes and spans get there (`telemetry/spans.py`):
 
 - **Game.** A node cannot reach the root span, but ADK runs the run callbacks of plugins
   inside it. `GameTracePlugin`, an ADK `BasePlugin` registered on the `App` (in the CLI
@@ -115,60 +117,60 @@ How our attributes and spans get there (`telemetry/spans.py`):
 Trace Explorer filters use `imposter.*` attributes rather than span names, because the
 ADK names repeat.
 
-Attributes (prefix `imposter.` for our own, OTel semantic conventions where they exist):
+The app's own attributes have the prefix `imposter.`, and the others follow the
+OpenTelemetry semantic conventions where they exist.
 
 | Span | Attributes |
 |---|---|
-| game (`invoke_workflow game_runner`) | `imposter.game.id`, `enduser.id` (IAP email, when present, WP 13), `imposter.game.identity_mode`, `imposter.game.player_count`, `imposter.game.imposter_count`, `imposter.game.lineup` (models by seat), `imposter.game.category`, `imposter.game.word_sha256` (not the word in clear on the root, so traces lists do not spoil it), `imposter.game.outcome` (empty when aborted) |
+| game (`invoke_workflow game_runner`) | `imposter.game.id`, `enduser.id` (IAP email, when present), `imposter.game.identity_mode`, `imposter.game.player_count`, `imposter.game.imposter_count`, `imposter.game.lineup` (models by seat), `imposter.game.category`, `imposter.game.word_sha256` (not the word in clear on the root, so a list of traces does not spoil it), `imposter.game.outcome` (empty when aborted) |
 | turn (`invoke_node play_turn`, the run of one seat) | `imposter.phase.name`, `imposter.phase.round` (0 for phases without rounds), `imposter.player.seat`, `imposter.player.name`, `imposter.player.role`, `gen_ai.request.model` (catalog id), `imposter.turn.attempts`, `imposter.turn.fallback` (bool), `imposter.turn.truncated` (bool) |
 | `judge {kind}` | `imposter.judge.kind` (`guess`/`clue`), `imposter.judge.verdict`, `imposter.judge.confidence`, `imposter.judge.rationale` (with the probability of a model verdict), `gen_ai.request.model` (`code` for the code checks) |
 | `decisions {model}` (client span) | `gen_ai.operation.name` (`decisions`), `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `server.address`, `http.response.status_code`, `imposter.decisions.question_count` |
 
 Errors set span status `ERROR`: a turn with a player error or an invalid action (with the
 exception recorded when the player raised), a failed call to the Decisions API, and the
-root span of a game that was aborted or whose run stopped before the game was over. ADK records errors that escape a node on its own spans.
+root span of a game that was aborted or whose run stopped before the game was over. ADK
+records errors that escape a node on its own spans.
 
 ## Content capture
 
-Content capture is **on** (demo data, nothing sensitive):
+Content capture is on, because the games are demo data with nothing sensitive in them.
 
 - `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY`: prompts and completions
   as Cloud Logging events, linked to the span by trace and span ID.
 - `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false`: keep large content out of span attributes
   (Cloud Trace attribute size limits).
 - `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`.
-- Our own structured responses (clue, statement, vote, private reasoning) are added as
+- The players' structured responses (clue, statement, vote, private reasoning) are added as
   a span event on the turn span, named after the response type, with every field cut
   to 200 characters, so a trace is readable without opening logs.
 - `setup_telemetry` (and `agent.py` for `adk web`) sets the three variables above as
   defaults, so values already in the environment win. The deployed service can set them
   in Terraform instead.
 
-GCS completion upload (`OTEL_INSTRUMENTATION_GENAI_COMPLETION_HOOK=upload`) and BigQuery
-Agent Analytics are future work.
+Completions are not uploaded to GCS and there is no BigQuery export.
 
 ## Cost
 
-Traces carry no cost or token totals of ours. Token usage is on ADK's `generate_content`
+Traces carry no cost or token totals of the app's own. Token usage is on ADK's `generate_content`
 span of every model call, which is enough to see what a turn or a game used.
 `telemetry/cost.py` computes cost from token usage and catalog prices for the CLI's
-totals table, from the engine's `usage` events (from which the UI can show a running
-total). Judge and word generator tokens are not counted there yet.
+totals table, from the engine's `usage` events, from which the web app shows a running
+total. The tokens of the judge and the word generator are not counted there.
 
 ## Logging
 
-Python `logging`, no `print`. The CLI keeps plain logs. App logs on Cloud Run (JSON with
-`logging.googleapis.com/trace` and `logging.googleapis.com/spanId`, so they link to
-traces) belong to the deployment work (WP 12). ADK's own prompt and completion logs
-already carry the trace and span id.
+The code logs with Python `logging` and never prints. The CLI and the deployed app keep
+plain logs, so app logs on Cloud Run do not link to traces. ADK's own prompt and
+completion logs carry the trace and span id.
 
 ## IAP identity
 
 The API reads `X-Goog-Authenticated-User-Email` (format `accounts.google.com:user@org`),
 strips the prefix and sets `enduser.id` on the root span. Locally the header is absent and
 an optional `IMPOSTER_DEV_USER` setting is used instead. The header is trusted only because
-IAP is the only ingress path (see `infrastructure.md`); validating the signed
-`X-Goog-IAP-JWT-Assertion` header was left out in WP 13. A middleware stores the user in
+IAP is the only ingress path ([`infrastructure.md`](infrastructure.md)). The signed
+`X-Goog-IAP-JWT-Assertion` header is not validated. A middleware stores the user in
 a context variable for the length of the request, and the trace plugin sets `enduser.id`
 on the root span when the run starts.
 
@@ -187,3 +189,12 @@ on the root span when the run starts.
   `generate_content` span of the call:
   `logName:"gen_ai.client.inference.operation.details" trace="<trace id>"`.
 - Cloud Trace keeps traces 30 days, which serves as a free game archive.
+
+## What goes wrong
+
+| Symptom | Cause and fix |
+|---|---|
+| The telemetry API rejects the spans with status 400 | `OTEL_RESOURCE_ATTRIBUTES` does not carry `gcp.project_id`. `setup_telemetry` sets it from `GOOGLE_CLOUD_PROJECT`, so set that variable. |
+| A game has no trace link | The exporter is `none` or `console`. Set `IMPOSTER_TELEMETRY=cloud` and `GOOGLE_CLOUD_PROJECT`. |
+| Trace Explorer shows no log entries next to a span | ADK writes the bare trace id into the `trace` field of its logs. Use the Logs Explorer query above. |
+| A judge decision has no `decisions` span below it | The code checks decided it, or `GEMINI_API_KEY` is not set and Gemini Flash-Lite judged. |

@@ -73,8 +73,8 @@ class GameWorkflowBuilder:
     all turns of a parallel phase, `play_turn` asks one player per started turn and
     `apply_turns` applies the answers, until `next_turns` finds the game over and
     routes to `finish`. The engine decides everything: which seats act,
-    what each seat may see, whether an answer is valid and when the game is over
-    (README D6). The nodes only move data between the engine, the players and ADK.
+    what each seat may see, whether an answer is valid and when the game is over. The
+    nodes only move data between the engine, the players and ADK.
 
     The game lives in session state as a snapshot (`GAME_STATE_KEY`). Each node loads
     it, and the nodes that change it save it back and yield an ADK event per new engine

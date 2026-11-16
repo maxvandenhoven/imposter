@@ -2,7 +2,7 @@
 
 This page describes the infrastructure the app creates in GCP, explains why each part
 exists and shows how the parts connect. The steps to set it up are in
-[`setup.md`](setup.md). Whenever the Terraform in `infra/` changes, the tables below
+[`guides/gcp-setup.md`](guides/gcp-setup.md). Whenever the Terraform in `infra/` changes, the tables below
 change with it, so that this page always describes what actually exists.
 
 ## Where it lives
@@ -120,7 +120,7 @@ at all. They are set up by `make tf-setup` or by hand.
 | Resource | Created by | Why it exists |
 |---|---|---|
 | The APIs `serviceusage`, `cloudresourcemanager` and `storage` | `make tf-setup`, with `gcloud services enable` | Terraform bills its API calls to the project through `user_project_override`, which only works when the Service Usage API is already enabled in the project. Terraform cannot enable that API for itself. The first two APIs are also listed in `infra/apis.tf`. |
-| The GCS bucket `<project id>-imposter-tfstate` in `europe-west4`, labelled `app=imposter` | `make tf-setup`, with `gcloud` | The bucket holds the Terraform state under the prefix `imposter`, so the state survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create the bucket itself. Versioning keeps every earlier state for recovery, and uniform access and public access prevention keep the bucket private. |
+| The GCS bucket `<project id>-imposter-tfstate` in `europe-west4`, labeled `app=imposter` | `make tf-setup`, with `gcloud` | The bucket holds the Terraform state under the prefix `imposter`, so the state survives a lost laptop and can be shared. Terraform needs the bucket before it can run, so it cannot create the bucket itself. Versioning keeps every earlier state for recovery, and uniform access and public access prevention keep the bucket private. |
 | Model enablement for Claude and the open models | The owner, in the Model Garden console | Partner and open models need their terms accepted once per project, and there is no API for doing that. |
 | The IAP principals in `iap_members` | The owner, in `infra/terraform.tfvars` | The owner decides who may open the app, as a `user:` or a `group:` of the organization. Cloud Run IAP uses a Google-managed OAuth client, so no consent screen or OAuth client has to be created by hand. IAP needs the project to belong to an organization, which should be checked on the first deploy. |
 | Quota increases | The owner, on the Quotas page | The default per-model quotas can be too low for a game with eight players. |
@@ -240,7 +240,7 @@ and `max_instance_count = 1` with request-based billing on Cloud Run.
 
 ## Setting up and removing the app
 
-`make up` does the whole setup after the manual prerequisites in [`setup.md`](setup.md):
+`make up` does the whole setup after the manual prerequisites in [`guides/gcp-setup.md`](guides/gcp-setup.md):
 it runs `make tf-setup` and then `make deploy`, and prints the service URL. The
 service URL answers to the principals in `iap_members`, and `make smoke` prints a checklist
 for trying it.
