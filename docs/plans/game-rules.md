@@ -118,9 +118,9 @@ prompts:
 - **Guess**: free text, judged by exact match after normalisation (lowercase, strip,
   simple singular/plural) and otherwise by the judge (synonym or equivalent).
 
-The engine never calls the judge itself, to stay pure: the turn loop in
-`GameRunner` in `orchestration/runner.py` consults it and passes the verdict in, for example
-`game.submit_guess(..., judge_verdict=True)`.
+The engine never calls the judge itself, to stay pure: the `play_turn` node of the game
+workflow (`orchestration/workflow.py`) consults it and passes the verdict in, for example
+`game.submit(..., judge_verdict=True)`.
 
 ## Multiple imposters
 

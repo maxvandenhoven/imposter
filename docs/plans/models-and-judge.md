@@ -160,10 +160,14 @@ traces can be filtered to compare behaviour.
 
 ## Judge
 
+The judge decides what the code rules cannot: whether an inexact guess names the secret
+word, and whether a clue is a trivial derivative of it (`judge/judge.py`).
+
 ```python
-class JudgeProtocol(Protocol):
-    async def is_same_word(self, guess: str, word: str) -> JudgeVerdict: ...
-    async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict: ...
+class Judge:
+    def __init__(self, classifier: BaseClassifier, *, threshold: float = 0.5): ...
+    async def is_same_word(self, *, guess: str, word: str) -> JudgeVerdict: ...
+    async def is_valid_clue(self, *, clue: str, word: str) -> JudgeVerdict: ...
 
 class JudgeVerdict(BaseModel):
     verdict: bool
@@ -173,15 +177,35 @@ class JudgeVerdict(BaseModel):
 ```
 
 - `judge/checks.py`: cheap code checks first (normalisation, exact match, substring /
-  shared stem for clues). Only undecided cases reach the LLM.
-- `judge/llm_judge.py`: `LlmJudge`, implementing `JudgeProtocol` with Gemini Flash-Lite and
-  structured output. Temperature 0.
-- `GameRunner` takes one `judge: JudgeProtocol` for both clues and guesses. The game
-  setting `model_clue_check` (on by default) decides whether clues reach the model.
-  When it is off, or no judge is set, only the code checks judge clues. When the
-  model fails, the judge falls back to the lenient verdict (clue valid, guess wrong).
-- Verdicts are on events (the `guess_made` event, and the rejection reason on the clue event)
-  and span attributes.
+  shared stem for clues). Only undecided cases reach a model.
+- The model sits behind ADK's classifier interface (`google.adk.labs.classifiers`,
+  experimental). A classifier gets an input and typed questions and answers with
+  probabilities instead of text. The judge sends the facts as JSON (`secret_word` with
+  `guess` or `clue`) and one `Binary` question, and the verdict is whether the
+  probability of a yes reaches the threshold. For a clue the question is whether it is a
+  trivial derivative, so a yes makes the clue invalid.
+- `judge/decisions.py`: `GeminiDecisionsClassifier` puts the Gemini Decisions API
+  (`gemini-decision-1`) behind that interface. The API answers typed questions with
+  calibrated probabilities in one fast call, which is what a yes or no judge needs. It
+  is on the Gemini Developer API, not on Vertex AI, so it needs an API key
+  (`GEMINI_API_KEY`), the one exception to README D5. The adapter calls the REST
+  endpoint with `httpx`, as ADK's own adapters for other decision APIs do, because the
+  SDK support is in `google-genai` 3.2 and later while ADK 2.14 requires
+  `google-genai<3`. It sends `Binary` questions as the API's `noul` questions, retries
+  when the API is busy and traces each call (`observability.md`). The adapter can go
+  when ADK ships its own.
+- Without the key, `Judge.load()` uses ADK's `LlmClassifier` on Gemini Flash-Lite on
+  Vertex AI at temperature 0, which asks the same questions with structured output. So
+  the game runs with Google Cloud credentials alone, and both paths share one `Judge`.
+- The game setting `model_clue_check` (on by default) decides whether clues reach the
+  model. When it is off, or no judge is set, only the code checks judge clues. When the
+  classifier fails or declines to answer, the judge falls back to the lenient verdict
+  (clue valid, guess wrong).
+- Verdicts are on events (the `guess_made` event, and the rejection reason on the clue
+  event) and span attributes.
+- The wire format of the Decisions API was taken from the `google-genai` 3.4 source.
+  `tests/judge/test_decisions_slow.py` checks it against the real API when the key is
+  set.
 - The Laya typed-decision model was considered: in Model Garden it is a self-deployed
-  model (dedicated endpoint, billed per hour), which conflicts with scaling to zero. A
-  `LayaJudge` on Cloud Run CPU is listed in `future-work.md`.
+  model (dedicated endpoint, billed per hour), which conflicts with scaling to zero. It
+  would be one more `BaseClassifier` (`future-work.md`).

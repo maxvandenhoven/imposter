@@ -597,6 +597,18 @@ async def test_session_that_has_a_game_does_not_start_another() -> None:
     assert state[GAME_STATE_KEY] == game.snapshot().model_dump(mode="json")
 
 
+async def test_session_whose_run_stopped_during_a_turn_plays_on() -> None:
+    game = new_game(clue_rounds=1, discussion_rounds=0)
+    players = scripted_players(game)
+    game.start_turn(0)
+
+    played = await play(game, players=players)
+
+    assert played.phase is GamePhase.DONE
+    assert played.events[: len(game.events)] == game.events
+    assert errors(played) == []
+
+
 async def test_workflow_uses_the_default_request_without_one_in_state() -> None:
     builder = fake_builder(default_request=new_request(clue_rounds=1))
 

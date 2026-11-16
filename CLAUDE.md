@@ -14,24 +14,25 @@ topic files and code the task points to.
 One Python package `imposter` with a single `pyproject.toml` and `uv.lock` at the repo
 root. Code is layered, and each layer imports only from the layers below it:
 `config` and `utils` ← `engine` ← `players` ← `orchestration` ← `api`, with `models`
-(used by `players` and above) and `words`, `judge` and `ports` used by `orchestration` and
-`api`. `tests/test_layers.py` checks the layers that exist.
+(used by `players` and above) and `words` and `judge` used by `orchestration` and `api`.
+`tests/test_layers.py` checks the layers that exist.
 
 - `src/imposter/config.py` — the game options and the shared enums (`GameConfig`,
   `PlayerConfig`, `SecretWord`, `GamePhase`, ...), used across the package
 - `src/imposter/utils/` — small functions on plain values, used across the package (word
   handling, vote tally, seat names, phase flow)
 - `src/imposter/engine/` — pure game rules: the `Game` class (event log, queries,
-  actions, player views), events and views (no ADK or LLM dependency)
-- `src/imposter/players/` — `PlayerProtocol`, ADK player, fake players, prompt renderer
-  and Jinja2 prompt templates (`prompts/*.md`)
+  actions, player views, snapshot), events, views and the per-phase responses (no ADK
+  or LLM dependency)
+- `src/imposter/players/` — `PlayerProtocol`, `LlmPlayer` (one plain `LlmAgent` per
+  turn), prompt renderer and Jinja2 prompt templates (`prompts/*.md`)
 - `src/imposter/models/` — model catalog (YAML) and ADK model factory
 - `src/imposter/words/` — word categories, picker and generator
-- `src/imposter/judge/` — `JudgeProtocol` port, LLM judge and cheap code checks
-- `src/imposter/orchestration/` — `GameRunner` (asks players, applies turns), the game
-  workflow (an ADK graph `Workflow` with a node per phase and a child node per turn) and
-  the ADK `Runner` wiring
-- `src/imposter/ports/` — game store and event bus protocols with in-memory adapters
+- `src/imposter/judge/` — the `Judge` on an ADK classifier, the Gemini Decisions API
+  adapter and cheap code checks
+- `src/imposter/orchestration/` — the game workflow (an ADK graph `Workflow` of function
+  nodes: setup, next turns, play turn as a parallel worker, apply turns, finish), with
+  the game as a snapshot in session state, and the ADK `App` and `Runner` wiring
 - `src/imposter/telemetry/` — OpenTelemetry setup, span helpers, cost estimates
 - `src/imposter/api/` — the API app: ADK's API server for the game app, plus the catalog
   route
@@ -43,7 +44,8 @@ root. Code is layered, and each layer imports only from the layers below it:
 - `Dockerfile` — the image: a Node stage builds the frontend, a uv stage installs the
   package, a slim Python runtime serves both with uvicorn on `$PORT`
 - `src/imposter/cli.py` — `imposter` command line entry point (Typer)
-- `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for `src/imposter/engine/`
+- `tests/` — mirrors `src/imposter/`, for example `tests/engine/` for
+  `src/imposter/engine/`. `tests/fakes.py` has the scripted and random fake players
 - `scripts/tooling/` — development tooling such as the comment and docstring checkers
   (tests in `tests/tooling/`)
 - `infra/` — Terraform (one flat root) for the app's resources in the existing sandbox
@@ -128,7 +130,7 @@ See `docs/plans/tooling.md` for the full rules and how each one is enforced.
 - Pytest fixtures always state their scope explicitly, for example `scope="function"`.
 - Keep it simple, and use objects where state or shared logic lives. Behaviour that reads
   or changes an object's state is a method on that object, for example
-  `game.submit_clue(...)`, `game.view_for(seat)` and `runner.play(game)`. Objects change in
+  `game.submit_clue(...)`, `game.view_for(seat)` and `builder.build()`. Objects change in
   place: no copy-and-reassign updates. Plain functions only for logic on plain values
   without an owning object (`utils/text.py`, `utils/tally.py`, `utils/phases.py`).
   Data types (pydantic models for configs, events, views and responses) and enums carry
@@ -139,10 +141,10 @@ See `docs/plans/tooling.md` for the full rules and how each one is enforced.
   bare generic word (`Event`, `View`, `Verdict`). Related types share a pattern, for
   example the per-phase responses `ClueResponse`, `DiscussionResponse`, `VoteResponse`.
 - Name abstract types by their kind: base classes start with `Base` (`BaseGameEvent`),
-  protocols end with `Protocol` (`PlayerProtocol`), ADK agents end with `Agent`
-  (`StructuredTaskAgent`) and workflow nodes with `Node` (`GamePhaseNode`). Functions
-  are named after what they return or do (`pending_seats`, `start_turn`), not `get_` or
-  `do_`.
+  protocols end with `Protocol` (`PlayerProtocol`), and subclasses of ADK types end
+  with the kind they are: `Agent`, `Node`, `Classifier` (`GeminiDecisionsClassifier`),
+  `Plugin` (`GameTracePlugin`). Functions are named after what they return or do
+  (`pending_seats`, `start_turn`), not `get_` or `do_`.
 - Prefer public over private. Do not prefix functions, methods, attributes or constants
   with `_` unless hiding them clearly matters (state that must only change through
   methods, or a subclass hook that callers must not use). Document public attributes in

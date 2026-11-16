@@ -98,44 +98,42 @@ away. [`docs/plans/web-ui.md`](docs/plans/web-ui.md) describes the stream in det
 ## How a game runs
 
 A pure game engine owns the rules and the event log, and decides every phase change. The
-game is played by an ADK graph workflow with one node per phase (setup, clue,
-discussion, vote, resolution, guess, outcome, debrief, done and aborted). The edges are
-generated from the engine's table of phase transitions, so the graph shows every way a
-game can go: the clue and discussion rounds are loop edges, a player who says the secret
-word jumps straight to the outcome, and any phase in which players act can be aborted.
-Each node plays its phase through the players, one turn at a time or all seats at once
-for the votes and the debrief, publishes each game event as it happens and routes to the
-phase that the engine moved to. Every turn runs in a turn node of its own, and the
-player's agent runs as a child node of the turn, inside the same run.
+game is played by an ADK graph workflow that uses only ADK's own building blocks. Five
+plain functions are its nodes, in a loop: `setup` chooses the word and creates the game,
+`next_turns` starts the next turn, or all turns at once for the votes and the debrief,
+`play_turn` asks one player per started turn, `apply_turns` applies the answers to the
+game, and `finish` ends the run when the engine says the game is over. `play_turn` is a
+parallel worker, so ADK runs the turns of a parallel phase at the same time.
 
-In the ADK developer UI (`make adk-web`), the graph shows the path a game took and
-highlights the phase of the selected event.
+The game itself lives in the state of its ADK session, as a snapshot of the setup and the
+event log, and every engine event is also an ADK event in the stream. A player is a plain
+ADK `LlmAgent` that runs inside the same run as a child of its turn, so its answer
+streams to the browser and its model call is part of the game's trace. The agent gets
+nothing but the prompt rendered from what its seat may see: no conversation history and
+nothing from the session state, which holds the secret word. ADK validates each answer
+against the schema of the phase and retries the agent when the answer does not match.
 
-![The phase graph of a finished game in the ADK developer UI](docs/images/adk-web-phase-graph.png)
+A judge decides what code cannot: whether a guess is a synonym of the word, and whether a
+clue is a trivial derivative of it. It asks yes or no questions through ADK's classifier
+interface and reads the answer as a probability. With an API key for the Gemini Developer
+API in `GEMINI_API_KEY`, the questions go to the Gemini Decisions API, a model made for
+such decisions. Without the key they go to Gemini Flash-Lite on Vertex AI.
+
+In the ADK developer UI (`make adk-web`), the graph shows the loop and highlights the
+node of the selected event.
 
 ## Tracing
 
 Every game is one trace in Cloud Trace. ADK traces the workflow and every node, so the
-trace has a root span for the game and a span per phase and round. ADK also traces every
-model call, with its token usage, and below it every HTTP attempt of the call is a span
-with its status code, so retries after a timeout or a rate limit are visible. The app
-puts the turn attributes on ADK's span of each turn node and adds a span per judge
-decision, and the model calls of the players nest under their turn. The root span carries the lineup and the outcome, and the
-secret word only as a hash, so a list of traces does not spoil it. `make play` prints
-the Trace Explorer link of the game when it ends.
-
-The prompts and completions are logged by ADK itself, with no code of ours: three
-environment variables (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY`,
-`ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false` and
-`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`) make ADK write one Cloud
-Logging entry per model call, with the prompt, the answer and the tokens, and the trace
-and span id of the call. The app sets them as defaults. In Logs Explorer, the query
-`logName:"gen_ai.client.inference.operation.details" trace="<trace id>"` lists the
-entries of one game.
-
-Traces go to Cloud Trace when `GOOGLE_CLOUD_PROJECT` is set. `IMPOSTER_TELEMETRY` (or the
-`--telemetry` option) chooses `cloud`, `console` to print the spans in the terminal, or
-`none`.
+trace has a root span for the game, a span per step of the loop and a span per turn. ADK
+also traces every model call, with its token usage, and below it every HTTP attempt of
+the call is a span with its status code, so retries after a timeout or a rate limit are
+visible. The app puts the phase, the round and the player on ADK's span of each turn and
+adds a span per judge decision, with a span for the call to the Gemini Decisions API
+below it, and the model calls of the players nest under their turn. The root span
+carries the lineup and the outcome, and the secret word only as a hash, so a list of
+traces does not spoil it. `make play` prints the Trace Explorer link of the game when
+it ends.
 
 ## Design and setup
 

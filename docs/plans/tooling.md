@@ -31,7 +31,7 @@ Same rules as hive (see its `docs/plans/tooling.md` and `CLAUDE.md`), summarised
 | Pytest fixtures state their scope explicitly | review |
 | Simple code with objects where state or shared logic lives: behaviour is a method on the object whose state it reads or changes, objects change in place, plain functions only for logic on plain values. Data models and enums hold no behaviour. I/O at the edges | review |
 | Specific, domain-prefixed names (`GameEvent`, `PlayerView`, `JudgeVerdict`) | review |
-| Base classes start with `Base`, protocols end with `Protocol`, ADK agents end with `Agent`, workflow nodes end with `Node` | review |
+| Base classes start with `Base`, protocols end with `Protocol`, subclasses of ADK types end with their kind (`Agent`, `Node`, `Classifier`, `Plugin`) | review |
 | Public by default; underscore only when hiding matters | review |
 | Blank lines around compound statements and before a multi-step `return` | review |
 | Keyword arguments for own calls with 2+ arguments | review |

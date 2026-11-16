@@ -56,8 +56,9 @@ guesses and outcome copy.
 The Laya typed-decision model (421M parameters, Apache-2.0, yes/no and choice outputs with
 probabilities) is only available as a self-deployed model in Model Garden. Alternative:
 package it in a second Cloud Run service on CPU (2–4 GiB), scaling to zero, called with
-service-to-service IAM auth, behind a `LayaJudge` adapter. Compare its verdicts with the
-Gemini judge on the same games.
+service-to-service IAM auth, behind a `LayaClassifier` (an ADK `BaseClassifier`, like
+`GeminiDecisionsClassifier`), which the `Judge` takes as it is. Compare its verdicts
+with the Gemini judges on the same games.
 
 ## ADK eval framework
 

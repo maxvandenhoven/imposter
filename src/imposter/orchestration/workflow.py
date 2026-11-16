@@ -174,7 +174,8 @@ class GameWorkflowBuilder:
         """Choose the secret word and create the game of the session.
 
         The session id is the game id. A session that already has a game keeps it, so
-        running a finished session again plays nothing.
+        running a finished session again plays nothing, and running a session whose run
+        stopped early plays its game on from the last saved step.
 
         Args:
             ctx: The workflow context of this node run.
@@ -227,8 +228,10 @@ class GameWorkflowBuilder:
         published = len(game.events)
         seats = game.pending_seats[:1] if game.is_sequential else game.pending_seats
 
+        # A turn is already started when an earlier run of the session stopped during it.
         for seat in seats:
-            game.start_turn(seat)
+            if seat not in game.started_seats:
+                game.start_turn(seat)
 
         yield from save_game(ctx=ctx, game=game, published=published)
         yield Event(output=seats, actions=EventActions(route=TURN_ROUTE))

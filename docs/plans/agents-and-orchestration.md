@@ -6,10 +6,11 @@
   `litellm` for non-Gemini models.
 - Vertex AI mode via environment: `GOOGLE_GENAI_USE_VERTEXAI=TRUE`,
   `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global`. Credentials are ADC locally and
-  the Cloud Run service account when deployed. No API keys.
+  the Cloud Run service account when deployed. The one API key is the optional one of
+  the judge's Gemini Decisions API (`models-and-judge.md` §Judge).
 - `src/imposter/agent.py` exposes a `root_agent` (the game workflow with a default
-  request) so `adk web src` (`make adk-web`) lists the `imposter` app, draws the phase
-  graph and plays one game per new session. `adk web` takes the directory that contains the agent packages, so it
+  request) so `adk web src` (`make adk-web`) lists the `imposter` app, draws the turn
+  loop and plays one game per new session. `adk web` takes the directory that contains the agent packages, so it
   is `src`, not `src/imposter`.
 - Before writing code, read the ADK cheatsheet (the `google-agents-cli-adk-code` skill) and
   check exact signatures in the installed package. The custom layout here replaces
@@ -20,149 +21,72 @@
 
 The engine is pure: it decides what is legal and what each seat may see, but never calls
 a model. The players call models but know nothing of the rules beyond their own view.
-`GameRunner` connects the two, one turn at a time:
+The game workflow connects the two with ADK primitives only: function nodes, a parallel
+worker, session state and plain `LlmAgent`s (README D32).
 
 ```
- game ──view_for──▶ PlayerView ──take_turn──▶ PlayerResponse
-  ▲                                                 │
-  │                         runner.ask: checks, retry, judge (async, I/O)
-  │                                                 ▼
-  └─────── runner.apply: game.submit_* ◀─────── TurnResult
+ state["game"] ──load──▶ Game ──view_for──▶ PlayerView ──take_turn──▶ response
+       ▲                                                                  │
+       │                              play_turn: rules, retry, judge (async, I/O)
+       │                                                                  ▼
+       └──save── Game ◀── game.submit ◀── apply_turns ◀────────────── TurnResult
 ```
 
-## GameRunner (`orchestration/runner.py`)
+## Game workflow (`orchestration/workflow.py`)
 
-`GameRunner` holds the players (one per seat) and the optional clue and guess judges. The
-turn logic is written once there and used by everything that runs a game: tests, the CLI
-and the game workflow.
-
-- `runner.ask(game=..., seat=...) -> TurnResult` is the only step that does I/O. It builds
-  the seat's view, calls `take_turn`, runs the code checks and the clue judge, retries
-  once with the rejection reason, and asks the guess judge about inexact guesses. It does
-  not change the game.
-- `runner.apply(game=..., result=...)` changes the game in place. It records usage (which
-  may abort the game when the token budget runs out) and player errors, then submits the
-  accepted output or the phase fallback (`pass` clue, empty statement, abstain vote,
-  empty guess, empty reflection).
-- `runner.play_step(game)` plays the next turn, or all turns of a parallel phase, and
-  `runner.play(game)` repeats it until the game is over. In parallel phases (votes and
-  debrief) every pending seat is asked at once with `asyncio.gather`, against the same
-  game, and the answers are applied in seat order, so the event log does not depend on
-  which model answered first.
-
-## Game workflow (`orchestration/runner_workflow.py`)
-
-A game is played by an ADK 2.x graph `Workflow` whose nodes are the game phases and whose
-edges are every phase change the engine can make (README D32). `game_workflow(sessions=...)`
-builds it from `PHASE_TRANSITIONS` in `utils/phases.py`, the single transition table that
-`next_phase` and the secret word exit also read, so the graph cannot drift from the
-engine. Every edge is routed by the name of the phase it enters, and rounds are loop
-edges, so the graph is static and shows every config:
+`GameWorkflowBuilder` holds what the nodes need (the word resolver, the player seating,
+the judge and an optional default request) and builds a `Workflow` of five function
+nodes. Each node is a method of the builder, wrapped with `node(...)`:
 
 ```
-START → setup → clue ─┬─ clue          (next round)
-                      ├─ discussion
-                      ├─ vote          (discussion_rounds = 0)
-                      └─ outcome       (secret word said)
-         discussion ─┬─ discussion     (next round)
-                     ├─ vote
-                     └─ outcome        (secret word said)
-         vote → resolution → guess → outcome → debrief → done
-         clue, discussion, vote, guess, debrief ── aborted   (token budget, cancellation)
+START → setup → next_turns ──turn──→ play_turn → apply_turns ─┐
+                   ▲   └──over──→ finish                       │
+                   └───────────────────────────────────────────┘
 ```
 
-Each node is a `GamePhaseNode` (a subclass of ADK's `Node`). A node run plays one
-segment, all events of one phase and round, step by step until the game leaves that
-phase and round. A step starts the next turn, or every turn of a parallel phase, and
-publishes the `turn_started` events at once, so a client knows whose turn it is while
-the model answers. It then runs each turn in a `PlayerTurnNode` of its own, a dynamic
-child node (`await ctx.run_node(...)`), and applies the answers in seat order. Every
-event goes to the `EventBusProtocol` port and is yielded as an ADK event as soon as it is
-published: the event as JSON in `custom_metadata["game_event"]`, for clients, and as
-text, which `adk web` shows. Finally the node routes to the phase of the next event with
-`Event(route=...)`. The
-node never decides a transition itself (README D6): it follows the event log, and raises
-when it is reached in a phase other than its own. Phases in which nobody acts
-(resolution and outcome) are played by the engine as soon as the phase before them ends,
-so their nodes only publish. The setup node creates the game from the `GameRequest` in
-session state (or the default request, as in `adk web`), and the terminal nodes publish
-the last events and close the bus. A second run in a session whose game was already
-played yields a single message and plays nothing.
+| Node | What it does |
+|---|---|
+| `setup` | It reads the `GameRequest` from session state, chooses the secret word (running the word generator's agent as a child node when asked), creates the game and saves it. A session that already has a game keeps it. |
+| `next_turns` | It asks the engine who acts next: one seat in sequential phases, every pending seat in parallel phases. It starts those turns and outputs the seats, routed to `play_turn`. When the game is over it routes to `finish`. |
+| `play_turn` | It is a `parallel_worker`, so ADK runs it once per seat of the list, at the same time. It asks the seat's player, checks the answer against the rules and the judge, and asks once more with the reason when the answer is rejected. It only reads the game. |
+| `apply_turns` | It gets the results in seat order and applies them: usage first (which may abort the game over the token budget), then player errors, then `game.submit`, which applies the answer or the fallback of the phase. |
+| `finish` | It ends the run with a line on how the game ended, which `adk web` shows. |
 
-```
-setup node:  game = setup.create_game(request from state, game_id = session id)
-every node:  try:
-                 check that the next unpublished event is in this node's phase
-                 until the game leaves this phase and round:
-                     start the turns of the step, publish and yield their events
-                     run a PlayerTurnNode per turn (in parallel for votes and debrief)
-                     apply the answers in seat order
-                 publish and yield the rest of this phase and round
-             except anything, including cancellation:
-                 abort the game if it is not over, publish the rest, close the bus
-                 raise
-             route to the next phase
-```
+Why it looks like this:
 
-**Turn nodes.** A `PlayerTurnNode` (`player_{seat}_turn`) runs `GameRunner.ask` with its
-own context and outputs the `TurnResult`, which the phase node applies. The player runs
-the agent of its phase as a child node of the turn (`ctx.run_node`, see §Player
-interface), so the agent's events are part of the game run: a streaming run streams the
-tokens of every answer to the client as partial events, and the trace has the turn
-level with the agent below it (`observability.md`). ADK requires `rerun_on_resume=True`
-on nodes that run child nodes, so both node classes set it. The game never pauses for
-input, so nothing is ever resumed.
+- **The engine decides.** No node decides a transition (README D6). `next_turns` only
+  asks `game.pending_seats` and `game.is_sequential`, and phases without players
+  (resolution, outcome) are played by the engine when the phase before them ends. One
+  loop therefore plays every phase and every config.
+- **The game lives in session state.** `Game` is event sourced: `game.snapshot()` is its
+  setup plus its event log, and `Game.load` rebuilds it. Every node loads the game from
+  `ctx.state["game"]`, and the nodes that change it save it back. There are no live
+  objects outside ADK, so there is no registry, no cleanup, and a persistent session
+  service would persist games without new code. The cost is that every save puts the
+  whole log in the `state_delta` of an event, about 0.4 MB over a game of four and
+  1.2 MB over a game of eight with fake players.
+- **Asking and applying are separate nodes.** `play_turn` does the I/O and returns a
+  `TurnResult`, and `apply_turns` changes the game. The turns of a parallel phase run
+  against the same game, and ADK returns their results in input order, so the event log
+  does not depend on which model answered first.
+- **Engine events are ADK events.** A node that changes the game yields one ADK event
+  per new engine event, with the event as JSON in `custom_metadata["game_event"]` and as
+  text in the content. The frontend, the CLI (`orchestration/play.py`) and the tests
+  all read them from there.
+- **Models never see state.** The state holds the secret word and every private
+  reasoning, and it reaches the browser, which gets every engine event anyway and hides
+  secrets in audience mode. A player's agent gets none of it: its instruction is
+  rendered from `game.view_for(seat)` only, it has `include_contents='none'`, and the
+  instruction is a provider function, so ADK fills no `{key}` placeholders from state.
+  A workflow test plays a game on recording models and checks every request.
 
-Cancellation is handled in the node: when the task of the run is cancelled (for example
-when the client of `/run_sse` disconnects), the game ends with a `game_aborted` event on
-the bus and subscribers see the end of the stream. The aborted run cannot yield ADK
-events anymore, so the game's ADK session ends with the last event before the
-cancellation. `run_game` finishes the game again in a `finally` block, which
-does nothing when the node already did.
-
-**Live objects.** ADK keeps node outputs and session state as JSON, but a `Game`, its
-players and the bus are live objects. `GameSessions` keeps them per ADK session
-(`GameSession`: the game, its `GameRunner` and how many events were published), and the
-nodes look them up by session id. Nodes pass nothing to each other: the route is the
-only output. This deviates from the Workflow API's replay and resumability model, which
-would rebuild the game from state. A game cannot resume mid-way anyway, because players
-are model calls and the engine has no resume from an event log yet.
-
-**Per-seat fan-out.** Votes and debrief fan out over seats with `asyncio.gather` over
-the turn nodes of the step, which are dynamic child nodes rather than nodes of the
-graph: players stay behind `PlayerProtocol`, and one graph node per seat and phase would
-clutter the graph. `GameRunner.play_step` does the same without the workflow, for
-players that need no node context, such as the fakes.
-
-`orchestration/setup.py` holds `GameRequest` (the `GameConfig` plus the `WordOptions`)
-and `GameSetup`, which chooses the secret word, creates the `Game` and seats an
-`AdkPlayer` for every seat with the judge. Tests use a subclass that seats fake players.
-
-The workflow holds no game rules: legality, tallying and outcome live in the `Game`, and
-the turn logic in the `GameRunner`. It adds only what ADK, telemetry and the event bus
-need. The names say what each part is: the `Game` is the game itself, the `GameRunner`
-runs it, and the game workflow runs the `GameRunner` inside ADK, one node per phase.
-
-`orchestration/adk_runner.py` wires ADK's own `Runner` with an `App` around the game
-workflow and an `InMemorySessionService` (behind ADK's `BaseSessionService`, swappable
-later), and creates one session per game (`session_id = game_id`). The `GameRequest` is
-passed in the initial state under `game:request`. `run_game(request=..., setup=...,
-bus=..., store=...)` is the coroutine the CLI uses: subscribe to the bus with the game
-id to follow the game while it runs. The API does not use it: ADK's API server runs the
-app of `agent.py` with its own `Runner` (`web-ui.md` §API).
-
-**In `adk web`.** The dev UI draws the graph with ADK's workflow visualizer, with route
-names on the edges, and highlights the path of a game and the node of the selected event.
-Routing nodes carry a "no default" mark, because no edge has a `__DEFAULT__` route: every
-transition is explicit. ADK's older `/dev/apps/{app}/graph` endpoint (`agent_graph.py`)
-fails for workflows in ADK 2.13 because it reads a `_graph` attribute that `Workflow` no
-longer has. The UI does not use it.
-
-**The first version.** Before the workflow, a custom `BaseAgent` (`GameRunnerAgent`)
-played the whole game in one `_run_async_impl` loop. It was deleted once seeded games
-played through the workflow matched it event for event, including the secret word exit,
-the budget abort and cancellation. The workflow tests now compare its games with
-`GameRunner.play` directly, with fake players.
+**Earlier versions.** The first version was a custom `BaseAgent` with one imperative
+loop. The second was a graph with a custom `Node` subclass per phase, generated from the
+engine's transition table, with the live `Game`, a `GameRunner` and an event bus kept in
+a registry by session id. It drew the phases in `adk web` and gave a span per phase, but
+needed about 1,400 lines of orchestration and player code around ADK. The loop of
+function nodes plays the same seeded games event for event
+(`tests/orchestration/snapshots/`).
 
 ## Player interface
 
@@ -170,65 +94,51 @@ the budget abort and cancellation. The workflow tests now compare its games with
 class PlayerProtocol(Protocol):
     async def take_turn(
         self,
+        *,
+        ctx: Context,
         view: PlayerView,
+        record_usage: UsageRecorder,
         retry_reason: str | None = None,
-        ctx: Context | None = None,
-    ) -> PlayerResponse: ...
+    ) -> PhaseResponse: ...
 ```
 
-- The view carries the phase, round and limits, so the only extra inputs are the reason a
-  previous attempt in the same turn was rejected and the ADK context of the turn node.
-  The context is `None` outside the game workflow (`GameRunner.play`), which only the
-  fake players support.
-- `PlayerResponse` wraps one of the structured responses below as `output`, plus `usage`
-  (`TurnUsage`: input, output and thinking tokens, model id) and an optional `error`. A
-  player that gives up returns `output=None` with an error, and the runner applies the
-  phase fallback, so the fallbacks live in one place.
-- `PHASE_RESPONSE_TYPES` maps each phase to its response type, for structured output.
-- Implementations: `AdkPlayer` (real), `ScriptedPlayer` (tests: returns canned responses),
-  `RandomPlayer` (tests and offline demos). A future `A2aPlayer` calls a remote agent over
-  the A2A protocol (`future-work.md`).
+- The view carries the phase, round and limits, so the only extra inputs are the ADK
+  context of the turn node, a callback that takes the tokens of each model call, and
+  the reason a previous attempt in the same turn was rejected.
+- A player returns one of the structured responses below, or raises. `play_turn` turns
+  an error into a `player_error` event, and `game.submit` applies the fallback, so the
+  fallbacks live in one place.
+- `PHASE_RESPONSE_TYPES` (`engine/responses.py`) maps each phase to its response type.
+- `PlayerSeatingProtocol.player_for(game=..., seat=...)` decides who plays a seat.
+  `LlmPlayerSeating` seats an `LlmPlayer` with the model of the seat's config. The tests
+  seat `ScriptedPlayer` and `RandomPlayer` (`tests/fakes.py`). A future `A2aPlayer`
+  calls a remote agent over the A2A protocol (`future-work.md`).
 
-## AdkPlayer
+## LlmPlayer (`players/llm_player.py`)
 
-- One `LlmAgent` per seat and phase, created from the model catalog entry
-  (`models/factory.py`), because `output_schema` and `max_output_tokens` differ per phase.
-  All agents of a seat share one ADK model object. `include_contents='none'` so no
-  conversation history is shared between players or turns.
-- The instruction is an instruction provider (a callable on ADK's readonly context) that
-  renders the prompt for this seat from the `PlayerView` of the current turn, which the
-  player keeps while the turn runs (a seat takes one turn at a time). The view is not
-  put in session state: the game session would then stream every view, secret word
-  included, in the `state_delta` of its events. The engine stays the only owner of game
-  state.
+- A turn builds one plain `LlmAgent`, named `player_{seat}_{phase}`, and runs it as a
+  child node: `await ctx.run_node(agent, node_input=task)`. Running inside the game
+  invocation is what makes streaming work: the agent's partial events go to the client
+  of the game run as they come, and ADK puts the agent's spans below the turn.
+- `include_contents='none'`, so no conversation history is shared between players or
+  turns. The instruction is the prompt rendered from the `PlayerView` of the turn, and
+  the task of the phase is the user message.
 - A short fixed `static_instruction` (`prompts/system.md`) is the system instruction,
   which makes ADK send the rendered instruction as user content. Claude Sonnet refuses
   the game instruction as a system prompt but plays fine with it as a user message.
-- Output: every agent has the response type as `output_schema`, so ADK validates the
-  answer, and `ctx.run_node` returns the parsed result. Models whose
-  catalog entry has `supports_structured_output: false` get the schema removed from the
-  request by a `before_model_callback` and are asked for JSON in the task instead. On a
-  validation error the player asks once more with the error message (ADK has no
-  re-prompt for schema errors). An `after_model_callback` records the tokens of every
-  call, including calls whose answer was invalid. In a streaming run it also sees each
-  partial response, which may carry the usage so far, so only the final response counts.
-  The same callback keeps a response that came with an error (such as a safety block),
-  because `ctx.run_node` then returns no answer and no error. A second failure produces
-  the
-  phase fallback (`pass` clue, empty statement, abstain vote, empty guess) and a
-  `player_error` event. Claude Sonnet and `gpt-oss` use JSON in the prompt (see
-  `models-and-judge.md`).
-- The agent runs as a child node of the turn node, `await ctx.run_node(agent,
-  node_input=task)`, with a fresh user message per turn (the task). A failed run raises
-  an error that wraps the cause (a schema `ValidationError`, or a model error with its
-  status), which the player turns into its error. Running inside the game invocation is
-  what makes streaming work: the agent's partial events go to the client of the game run
-  as they come, and ADK puts the agent's spans below the turn. An earlier version ran
-  each player's agents in a `Runner` of its own, to keep ADK's context out of
-  `PlayerProtocol`. Its events never reached the game run, so the tokens of an answer
-  could not be streamed without a side channel of our own. Its spans nested under the
-  phase through the asyncio context, but a turn span of ours could not hold the agent
-  spans of a child node, because ADK takes their parent from the node context.
+- The response type of the phase is the agent's `output_schema`, so ADK validates the
+  answer and `ctx.run_node` returns it. Models whose catalog entry has
+  `supports_structured_output: false` get the schema removed from the request by a
+  `before_model_callback` and are asked for JSON in the task instead (Claude Sonnet and
+  `gpt-oss`, see `models-and-judge.md`).
+- ADK retries the agent: its `retry_config` allows three model calls when the answer
+  misses the schema or the stream broke off midway. The retry sends the same request,
+  without the error text. Other errors are final.
+- An `after_model_callback` passes the tokens of every call to `record_usage`,
+  including calls whose answer was invalid. In a streaming run it also sees each partial
+  response, so only the final response counts. It raises on a response that came with an
+  error (such as a safety block), because ADK would otherwise end the agent without an
+  answer and without an error.
 
 ### Structured responses
 
@@ -261,7 +171,7 @@ memory of their own between turns.
 - `phase_clue.md`, `phase_discussion.md`, `phase_vote.md`, `phase_guess.md`,
   `phase_debrief.md`: the task and limits (word caps). They include `response.md`, which
   adds the retry reason and the JSON schema when native structured output is not used.
-- `system.md`: the fixed system instruction (see AdkPlayer).
+- `system.md`: the fixed system instruction (see LlmPlayer).
 - `persona.md` slot (empty in v1, see `future-work.md`).
 
 `players/prompt.py` (`PlayerPromptRenderer`) renders them: the instruction is `rules.md`,
@@ -274,41 +184,28 @@ the word.
 
 ## Concurrency, failures, limits
 
-- Clues, discussion and guesses are sequential; votes and debrief run with
-  `asyncio.gather`.
+- Clues, discussion and guesses are sequential. Votes and debrief are parallel: ADK's
+  parallel worker runs one `play_turn` per seat.
 - Every LLM call: 60 s timeout, up to 2 retries with exponential backoff and jitter on 429
   and 5xx. The model clients do this (`models/factory.py`): `Gemini(retry_options=...)`
   with an HTTP timeout, and `LiteLlm(num_retries=..., timeout=...)`. Below ADK the status
-  code is still known, so only transient errors are retried. After the last failure: phase fallback and a `player_error` event; the turn
-  span gets error status. The game continues.
+  code is still known, so only transient errors are retried.
+- Above that there are two more retries. ADK reruns the agent when the answer misses
+  the schema or the stream broke (`RetryConfig` on the agent), and `play_turn` asks once
+  more with the reason when the rules or the judge reject a valid answer.
+- After the last failure: phase fallback and a `player_error` event. The turn span gets
+  error status. The game continues.
 - `max_output_tokens` per phase (clue small, discussion and debrief larger) from config.
 - Per-game token budget (default 200k, input + output + thinking). When exceeded, the
   engine moves to `ABORTED` with a `game_aborted` event and the reason.
-- Cancellation: when the client of `/run_sse` disconnects, ADK cancels the run and the
-  game is marked aborted (see `web-ui.md`).
+- Cancellation: when the client of `/run_sse` disconnects, ADK cancels the run. The game
+  in state is then simply not over, and the root span gets error status (see
+  `web-ui.md`).
 
-## Ports
+## Sessions and persistence
 
-`ports/` contains protocols and in-memory adapters, so persistence can be added without
-touching the engine or orchestration:
-
-- `GameStoreProtocol`: `save(game)`, `get(game_id) -> Game | None`,
-  `list_recent(limit)`. Adapter `InMemoryGameStore`, a dict. A `Game` changes in place, so
-  the in-memory store saves it once at creation. A persistent adapter would save it after
-  every step, or store the event log instead.
-- `EventBusProtocol`: `publish(game_id=..., event=...)`, `subscribe(game_id=...,
-  from_seq=0) -> AsyncIterator[GameEvent]` which first replays buffered events then tails
-  new ones, `close(game_id)`. Adapter `InMemoryEventBus`, a per-game buffer plus an
-  `asyncio.Event` that is set and replaced on every change. `publish` and `close` are
-  synchronous, so a workflow node can call them in its `except` block after a
-  cancellation.
-- ADK `BaseSessionService`: `InMemorySessionService` now; `DatabaseSessionService` or
-  Vertex AI sessions later. Through the API, the ADK session of a game is also its
-  record: every non-partial event of the run, so a client can load a finished game with
-  `GET /apps/imposter/users/{user_id}/sessions/{session_id}`.
-
-The CLI follows a game through the event bus. The API does not use the bus: clients get
-the same engine events from the ADK event stream of the run.
-
-Future adapters (`future-work.md`): a Firestore game store and event log, and a Pub/Sub
-event bus for multiple instances.
+Everything a game needs between nodes is in its ADK session: the request and the game
+snapshot in state, and every non-partial event of the run. A client can load a finished
+game with `GET /apps/imposter/users/{user_id}/sessions/{session_id}`. The session
+service is `InMemorySessionService` now. `DatabaseSessionService` or Vertex AI sessions
+would persist games without a change to the workflow (`future-work.md`).

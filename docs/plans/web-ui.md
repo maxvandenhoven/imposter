@@ -22,9 +22,11 @@ ADK's other routes (artifacts, memory, `/list-apps`, `/run`) are there too and u
 
 **Lifecycle.** The game runs inside the `/run_sse` request: it starts when the request
 comes in and ends with the stream. When the client goes away, ADK cancels the run and
-the game is aborted. This keeps CPU allocated under request-based billing (README D14).
-There is no reconnect to a running game: a second run of the session plays nothing and
-says the game was already played. A finished game can be loaded from its session.
+the game stops where it is. This keeps CPU allocated under request-based billing (README
+D14). There is no reconnect to a running game. The game is a snapshot in the state of
+its session, so a second run of a finished session plays nothing, and a second run of a
+session whose run stopped early plays the game on from the last saved step (the
+frontend does not use this yet). A finished game can be loaded from its session.
 Invalid options fail when the run starts, with an error event (`errorCode`,
 `errorMessage`) in the stream.
 
@@ -41,9 +43,11 @@ fields). A client needs three kinds:
   carry the next chunk of the answer being written in `content.parts[].text`. Parts with
   `thought: true` are the model's native thinking, which a client can hide. The text is
   the JSON answer, for example `{"clue": "yel`, so a partial JSON parser shows `clue`,
-  `statement` and `private_reasoning` as they grow. Every attempt of a turn has its own
-  `nodeInfo.path`, ending in `player_{seat}_{phase}@{attempt}`, so a client starts over
-  when a new path appears (a retry). Chunk size depends on the model: Gemini sends a
+  `statement` and `private_reasoning` as they grow. An attempt ends with a non-partial
+  event of the same author: the full answer, or an `errorCode` event when it failed.
+  ADK retries a failed attempt under the same `nodeInfo.path`, and a new attempt after
+  a rejected answer gets a new path, ending in `player_{seat}_{phase}@{attempt}`. So a
+  client starts an answer over after an attempt ended or when a new path appears. Chunk size depends on the model: Gemini sends a
   few large chunks, Claude and `gpt-oss` many small ones.
 - **Errors.** An event with `errorCode` from author `game_runner` means the run failed,
   for example on invalid options, and ADK ends the stream with a last line of the form

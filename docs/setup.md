@@ -231,6 +231,29 @@ checklist for trying the deployed app. To get budget alerts, set
 `billing_account_id` in `infra/terraform.tfvars` and run `make tf-apply`. To remove
 everything again, run `make down`, or `make nuke` to also delete the state bucket.
 
+## 11. Let the judge use the Gemini Decisions API (optional)
+
+The judge decides whether a guess is a synonym of the secret word and whether a clue is
+too close to it. By default it asks Gemini Flash-Lite on Vertex AI, which needs nothing
+beyond the steps above. It can also use the Gemini Decisions API, a model made for such
+yes or no decisions. That API is part of the Gemini Developer API, not of Vertex AI, so
+it needs an API key.
+
+1. Create an API key in [Google AI Studio](https://aistudio.google.com/apikey).
+2. For local games, add `GEMINI_API_KEY=<the key>` to `.env`.
+3. For the deployed app, store the key in a secret, set
+   `gemini_api_key_secret = "imposter-gemini-api-key"` in `infra/terraform.tfvars` and
+   run `make tf-apply`:
+
+   ```
+   printf '%s' '<the key>' | gcloud secrets create imposter-gemini-api-key \
+     --data-file=- --labels=app=imposter
+   ```
+
+The trace of a game shows which judge decided: the judge span of a decision names the
+model, and a decision of the Decisions API has a `decisions gemini-decision-1` span
+below it.
+
 ## Done
 
 You have finished the setup when all four of these checks succeed:

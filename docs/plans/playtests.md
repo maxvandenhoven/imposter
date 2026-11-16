@@ -10,8 +10,8 @@ calls.
 ### Setup
 
 The game was played with the code of WP 04, before the rule changes below, using a
-throwaway script that runs `GameRunner` with one `AdkPlayer` per seat and prints the
-event log.
+throwaway script that ran the turn loop of that time with one model player per seat and
+printed the event log.
 
 | Option | Value |
 |---|---|

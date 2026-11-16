@@ -1,11 +1,26 @@
 # ADK simplification plan
 
-This plan replaces the custom orchestration code with ADK primitives: function nodes, a
+This plan replaced the custom orchestration code with ADK primitives: function nodes, a
 parallel worker, plain `LlmAgent`s, session state, node retries and ADK's classifier
 interface for the judge. The game rules stay in the pure `Game` engine and the graph stays
-deterministic. Nothing here is implemented yet. The plan was checked against the installed
-ADK 2.13.0 source and against ADK 2.14.1 and `google-genai` 3.4.0, and the proposed graph
-shape was run as a prototype with a fake model (see §8).
+deterministic. The plan is implemented. The sections below are the plan as it was
+written, and this summary records how it ended.
+
+- The decisions of §6 were taken as recommended, except C: the judge uses the Gemini
+  Decisions API with an API key as soon as `GEMINI_API_KEY` is set, as an exception to
+  D5, and falls back to `LlmClassifier` on Vertex AI without the key.
+- The workflow got a fifth node, `finish`, because ADK warns when a routed node emits no
+  route. A session whose run stopped early plays on when it is run again.
+- The player port stayed a small protocol (`PlayerProtocol.take_turn`) instead of "any
+  node", because the fake players of the tests need the view and the retry reason.
+- The size estimate of §2 was too optimistic. Without docstrings and comments, the
+  orchestration code went from 529 to 277 lines and the player code from 415 to 209
+  (170 of those were the fake players, which moved to `tests/`). The ports (67) and
+  `StructuredTaskAgent` (49) are gone. The engine grew by 131 lines, because the
+  response models and the dispatch moved into it, and the judge grew from 134 to 289,
+  because the Decisions adapter is new. The whole package went from 3,143 to 2,864
+  lines of code.
+- ADK was upgraded to 2.14.1, which the classifier types need.
 
 ## 1. Goals and constraints
 
