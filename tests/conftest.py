@@ -22,7 +22,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from pydantic import Field
 
 from imposter.engine.game import GAME_STATE_KEY, Game, GameSnapshot
-from imposter.judge.base import JudgeProtocol
+from imposter.judge.judge import Judge
 from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
 from imposter.orchestration.setup import GameRequest
 from imposter.orchestration.workflow import REQUEST_STATE_KEY, GameWorkflowBuilder
@@ -36,7 +36,7 @@ START_MESSAGE = types.Content(role="user", parts=[types.Part(text="Play.")])
 def fake_builder(
     *,
     players_for: PlayersFactory = random_players,
-    judge: JudgeProtocol | None = None,
+    judge: Judge | None = None,
     default_request: GameRequest | None = None,
 ) -> GameWorkflowBuilder:
     """Build a workflow builder with random words and fake players, without models."""

@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from imposter.judge.llm_judge import LlmJudge
+from imposter.judge.judge import Judge
 
 pytestmark = [
     pytest.mark.slow,
@@ -18,7 +18,7 @@ pytestmark = [
     ("guess", "word", "expected"), [("couch", "sofa", True), ("chair", "sofa", False)]
 )
 async def test_real_judge_decides_guesses(guess: str, word: str, expected: bool) -> None:
-    verdict = await LlmJudge().is_same_word(guess=guess, word=word)
+    verdict = await Judge.load().is_same_word(guess=guess, word=word)
 
     assert verdict.verdict is expected
     assert verdict.confidence > 0
@@ -29,6 +29,6 @@ async def test_real_judge_decides_guesses(guess: str, word: str, expected: bool)
     [("yesteryear", "nostalgia", True), ("homesick", "homesickness", False)],
 )
 async def test_real_judge_decides_clues(clue: str, word: str, expected: bool) -> None:
-    verdict = await LlmJudge().is_valid_clue(clue=clue, word=word)
+    verdict = await Judge.load().is_valid_clue(clue=clue, word=word)
 
     assert verdict.verdict is expected

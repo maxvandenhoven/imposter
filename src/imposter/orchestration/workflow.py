@@ -11,9 +11,9 @@ from imposter.config import GameConfig, GamePhase, PlayerRole
 from imposter.engine.events import BaseGameEvent
 from imposter.engine.game import GAME_STATE_KEY, ActionRejection, Game, GameSnapshot
 from imposter.engine.responses import ClueResponse, GuessResponse, PhaseResponse
-from imposter.judge.base import JudgeProtocol, JudgeVerdict
+from imposter.judge.base import JudgeVerdict
 from imposter.judge.checks import clue_check
-from imposter.judge.llm_judge import LlmJudge
+from imposter.judge.judge import Judge
 from imposter.models.catalog import ModelCatalog
 from imposter.orchestration.setup import DEFAULT_MODEL_IDS, GameRequest
 from imposter.players.base import PlayerSeatingProtocol, TurnUsage
@@ -96,7 +96,7 @@ class GameWorkflowBuilder:
         *,
         words: SecretWordResolver,
         players: PlayerSeatingProtocol,
-        judge: JudgeProtocol | None = None,
+        judge: Judge | None = None,
         default_request: GameRequest | None = None,
     ) -> None:
         """Initialize the builder.
@@ -137,7 +137,7 @@ class GameWorkflowBuilder:
         return cls(
             words=words,
             players=LlmPlayerSeating(catalog),
-            judge=LlmJudge(),
+            judge=Judge.load(),
             default_request=default_request,
         )
 

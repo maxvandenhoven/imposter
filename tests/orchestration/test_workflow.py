@@ -1,6 +1,6 @@
 import asyncio
 import json
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +9,13 @@ from conftest import fake_builder, play_workflow, run_events
 from fakes import RandomPlayer, ScriptedPlayer, ScriptStep
 from google.adk.agents.context import Context
 from google.adk.events import Event
+from google.adk.labs.classifiers import (
+    BaseClassifier,
+    BinaryAnswer,
+    ClassifierInput,
+    ClassifierResponse,
+    Question,
+)
 from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import types
 from pydantic import Field
@@ -43,7 +50,7 @@ from imposter.engine.responses import (
     VoteResponse,
 )
 from imposter.engine.views import PlayerView
-from imposter.judge.base import JudgeProtocol, JudgeVerdict
+from imposter.judge.judge import Judge
 from imposter.models.catalog import ModelCatalog
 from imposter.orchestration.setup import GameRequest
 from imposter.orchestration.workflow import (
@@ -100,36 +107,46 @@ async def test_workflow_plays_the_golden_games_event_for_event(name: str) -> Non
 WORD = "giraffe"
 
 
-class RecordingJudge:
-    """A judge that accepts every guess and every clue not starting with `bad`.
+class RecordingClassifier(BaseClassifier):
+    """A classifier that says yes to every guess and to clues starting with `bad`.
 
     Attributes:
-        judged: The candidates the judge was asked about, with the word.
+        model: The name of the fake model.
+        judged: The candidates the classifier was asked about, with the word.
     """
 
-    def __init__(self) -> None:
-        self.judged: list[tuple[str, str]] = []
+    model: str | BaseLlm = "fake"
+    judged: list[tuple[str, str]] = Field(default_factory=list)
 
-    def verdict(self, *, candidate: str, word: str) -> JudgeVerdict:
+    async def classify(
+        self, *, input: ClassifierInput, questions: Mapping[str, Question]
+    ) -> ClassifierResponse:
         """Record a question and answer it."""
-        self.judged.append((candidate, word))
+        assert isinstance(input, dict)
+        candidate = str(input.get("guess") or input["clue"])
+        self.judged.append((candidate, str(input["secret_word"])))
+        is_yes = "guess" in input or candidate.startswith("bad")
+        answer = BinaryAnswer(probability=1.0 if is_yes else 0.0)
 
-        return JudgeVerdict(
-            verdict=not candidate.startswith("bad"),
-            confidence=1.0,
-            rationale="Scripted.",
-            judge_model="fake",
-        )
+        return ClassifierResponse(answers=dict.fromkeys(questions, answer))
 
-    async def is_same_word(self, guess: str, word: str) -> JudgeVerdict:
-        return self.verdict(candidate=guess, word=word)
 
-    async def is_valid_clue(self, clue: str, word: str) -> JudgeVerdict:
-        return self.verdict(candidate=clue, word=word)
+class RecordingJudge(Judge):
+    """A judge on a recording classifier: accepts guesses, rejects clues with `bad`."""
+
+    def __init__(self) -> None:
+        super().__init__(RecordingClassifier())
+
+    @property
+    def judged(self) -> list[tuple[str, str]]:
+        """The candidates that reached the classifier, with the word."""
+        assert isinstance(self.classifier, RecordingClassifier)
+
+        return self.classifier.judged
 
 
 async def play(
-    game: Game, *, players: Sequence[PlayerProtocol], judge: JudgeProtocol | None = None
+    game: Game, *, players: Sequence[PlayerProtocol], judge: Judge | None = None
 ) -> Game:
     """Play a game that is already set up through the workflow, with the given players."""
     builder = fake_builder(players_for=lambda _: players, judge=judge)

@@ -24,6 +24,20 @@ resource "google_project_iam_member" "run" {
   member  = google_service_account.run.member
 }
 
+# The Gemini Decisions API is not part of Vertex AI, so the judge calls it with an API key
+# instead of the service account. The key lives in a secret that is created by hand
+# (`docs/setup.md`), and the runtime identity may read only that secret.
+resource "google_secret_manager_secret_iam_member" "run_gemini_api_key" {
+  count = var.gemini_api_key_secret == "" ? 0 : 1
+
+  project   = var.project_id
+  secret_id = var.gemini_api_key_secret
+  role      = "roles/secretmanager.secretAccessor"
+  member    = google_service_account.run.member
+
+  depends_on = [google_project_service.apis]
+}
+
 # Cloud Build runs as its own service account instead of the broad default one.
 resource "google_service_account" "build" {
   account_id   = "imposter-build"

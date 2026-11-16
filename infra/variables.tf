@@ -63,3 +63,9 @@ variable "allowed_origins" {
   type        = list(string)
   default     = []
 }
+
+variable "gemini_api_key_secret" {
+  description = "Name of the Secret Manager secret with the API key of the Gemini Developer API, which the judge uses for the Gemini Decisions API. While it is empty, the judge asks Gemini Flash-Lite on Vertex AI instead."
+  type        = string
+  default     = ""
+}
