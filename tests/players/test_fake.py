@@ -2,8 +2,9 @@ import pytest
 
 from imposter.config import GameConfig, PlayerConfig, SecretWord
 from imposter.engine.game import Game
+from imposter.engine.responses import ClueResponse
 from imposter.engine.views import PlayerView
-from imposter.players.base import ClueResponse, PlayerResponse, TurnUsage
+from imposter.players.base import PlayerResponse, TurnUsage
 from imposter.players.fake import RANDOM_VOCABULARY, RandomPlayer, ScriptedPlayer
 
 

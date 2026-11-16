@@ -8,10 +8,11 @@ from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from pydantic import BaseModel, ConfigDict
 
 from imposter.config import GamePhase
+from imposter.engine.responses import PHASE_RESPONSE_TYPES
 from imposter.engine.views import PlayerView
 from imposter.models.catalog import ModelCatalogEntry
 from imposter.models.factory import adk_model, generate_content_config
-from imposter.players.base import PHASE_RESPONSE_TYPES, PlayerResponse, TurnUsage
+from imposter.players.base import PlayerResponse, TurnUsage
 from imposter.players.prompt import PlayerPromptRenderer
 
 ANSWER_ATTEMPTS = 3

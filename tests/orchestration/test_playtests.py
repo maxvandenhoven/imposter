@@ -16,8 +16,8 @@ from imposter.engine.events import (
     public_projection,
 )
 from imposter.engine.game import Game
+from imposter.engine.responses import ClueResponse, DebriefResponse
 from imposter.orchestration.runner import GameRunner
-from imposter.players.base import ClueResponse, DebriefResponse
 from imposter.players.fake import ScriptedPlayer
 from imposter.players.prompt import PlayerPromptRenderer
 

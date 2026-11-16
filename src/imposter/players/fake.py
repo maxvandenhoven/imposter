@@ -4,17 +4,16 @@ from collections.abc import Sequence
 from google.adk.agents.context import Context
 
 from imposter.config import GamePhase, PlayerRole
-from imposter.engine.views import PlayerView, other_players
-from imposter.players.base import (
+from imposter.engine.responses import (
     ClueResponse,
     DebriefResponse,
     DiscussionResponse,
     GuessResponse,
     PhaseResponse,
-    PlayerResponse,
-    TurnUsage,
     VoteResponse,
 )
+from imposter.engine.views import PlayerView, other_players
+from imposter.players.base import PlayerResponse, TurnUsage
 from imposter.utils.text import normalize_word
 
 RANDOM_VOCABULARY = (

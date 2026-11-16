@@ -9,18 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from imposter.config import GamePhase, PlayerRole
 from imposter.engine.game import ActionRejection, Game
-from imposter.judge.base import JudgeProtocol, JudgeVerdict
-from imposter.judge.checks import clue_check
-from imposter.players.base import (
+from imposter.engine.responses import (
     ClueResponse,
-    DebriefResponse,
     DiscussionResponse,
     GuessResponse,
     PhaseResponse,
-    PlayerProtocol,
-    TurnUsage,
-    VoteResponse,
 )
+from imposter.judge.base import JudgeProtocol, JudgeVerdict
+from imposter.judge.checks import clue_check
+from imposter.players.base import PlayerProtocol, TurnUsage
 from imposter.telemetry.spans import add_response_event, mark_turn
 from imposter.utils.text import truncate_words
 
@@ -272,42 +269,33 @@ class GameRunner:
         Returns:
             Why the output is invalid, or `None` when it is valid.
         """
-        match game.phase, output:
-            case GamePhase.CLUE, ClueResponse(clue=clue):
-                rejection = game.clue_rejection(seat=seat, clue=clue)
+        rejection = game.rejection(seat=seat, response=output)
 
-                # A clue that says the word is accepted: submitting it ends the game.
-                if rejection is not None or game.clue_says_word(clue):
-                    return rejection
+        # A clue that says the word is accepted: submitting it ends the game.
+        if (
+            rejection is not None
+            or not isinstance(output, ClueResponse)
+            or game.phase is not GamePhase.CLUE
+            or game.clue_says_word(output.clue)
+        ):
+            return rejection
 
-                # The judge runs the code checks itself before it asks the model.
-                if self.judge is not None and game.config.model_clue_check:
-                    verdict = await self.judge.is_valid_clue(
-                        clue=clue, word=game.secret.word
-                    )
-                else:
-                    verdict = clue_check(clue=clue, word=game.secret.word)
+        # The judge runs the code checks itself before it asks the model.
+        if self.judge is not None and game.config.model_clue_check:
+            verdict = await self.judge.is_valid_clue(
+                clue=output.clue, word=game.secret.word
+            )
+        else:
+            verdict = clue_check(clue=output.clue, word=game.secret.word)
 
-                if verdict is None or verdict.verdict:
-                    return None
+        if verdict is None or verdict.verdict:
+            return None
 
-                # Telling an imposter why would hint at the word, so it just passes.
-                return ActionRejection(
-                    reason="the clue is too close to the secret word",
-                    retryable=game.seats[seat].role is not PlayerRole.IMPOSTER,
-                )
-            case GamePhase.VOTE, VoteResponse(vote_for=vote_for):
-                return game.vote_rejection(voter=seat, vote_for=vote_for)
-            case (
-                (GamePhase.DISCUSSION, DiscussionResponse())
-                | (GamePhase.GUESS, GuessResponse())
-                | (GamePhase.DEBRIEF, DebriefResponse())
-            ):
-                return None
-            case phase, _:
-                return ActionRejection(
-                    reason=f"expected a response for the {phase} phase"
-                )
+        # Telling an imposter why would hint at the word, so it just passes.
+        return ActionRejection(
+            reason="the clue is too close to the secret word",
+            retryable=game.seats[seat].role is not PlayerRole.IMPOSTER,
+        )
 
     def apply(self, *, game: Game, result: TurnResult) -> None:
         """Apply the answer of a player to the game.
@@ -341,47 +329,9 @@ class GameRunner:
             message = f"invalid action, falling back: {result.rejection.reason}"
             game.record_player_error(seat=seat, message=message)
 
-        accepted = result.output if result.rejection is None else None
-        reasoning = getattr(result.output, "private_reasoning", "")
-
-        match game.phase, accepted:
-            case GamePhase.CLUE, ClueResponse(clue=clue):
-                game.submit_clue(seat=seat, clue=clue, private_reasoning=reasoning)
-            case GamePhase.CLUE, _:
-                game.submit_clue(
-                    seat=seat,
-                    clue=None,
-                    private_reasoning=reasoning,
-                    rejection_reason=result.rejection.reason
-                    if result.rejection
-                    else None,
-                )
-            case GamePhase.DISCUSSION, DiscussionResponse(statement=statement):
-                game.submit_statement(
-                    seat=seat, statement=statement, private_reasoning=reasoning
-                )
-            case GamePhase.DISCUSSION, _:
-                game.submit_statement(
-                    seat=seat, statement="", private_reasoning=reasoning
-                )
-            case GamePhase.VOTE, VoteResponse(vote_for=vote_for):
-                game.submit_vote(
-                    voter=seat, vote_for=vote_for, private_reasoning=reasoning
-                )
-            case GamePhase.VOTE, _:
-                game.submit_vote(voter=seat, vote_for=None, private_reasoning=reasoning)
-            case GamePhase.GUESS, GuessResponse(guess=guess):
-                game.submit_guess(
-                    seat=seat,
-                    guess=guess,
-                    private_reasoning=reasoning,
-                    judge_verdict=result.guess_verdict.verdict
-                    if result.guess_verdict
-                    else None,
-                )
-            case GamePhase.GUESS, _:
-                game.submit_guess(seat=seat, guess="", private_reasoning=reasoning)
-            case GamePhase.DEBRIEF, DebriefResponse(reflection=reflection):
-                game.submit_reflection(seat=seat, reflection=reflection)
-            case _:
-                game.submit_reflection(seat=seat, reflection="")
+        game.submit(
+            seat=seat,
+            response=result.output,
+            rejection=result.rejection,
+            judge_verdict=result.guess_verdict.verdict if result.guess_verdict else None,
+        )

@@ -19,18 +19,17 @@ from imposter.engine.events import (
     VoteCastEvent,
 )
 from imposter.engine.game import Game
-from imposter.engine.views import PlayerView
-from imposter.judge.base import JudgeVerdict
-from imposter.orchestration.runner import GameRunner
-from imposter.players.base import (
+from imposter.engine.responses import (
     ClueResponse,
     DebriefResponse,
     DiscussionResponse,
     GuessResponse,
-    PlayerResponse,
-    TurnUsage,
     VoteResponse,
 )
+from imposter.engine.views import PlayerView
+from imposter.judge.base import JudgeVerdict
+from imposter.orchestration.runner import GameRunner
+from imposter.players.base import PlayerResponse, TurnUsage
 from imposter.players.fake import RandomPlayer, ScriptedPlayer, ScriptStep
 
 WORD = "giraffe"

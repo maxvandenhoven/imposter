@@ -5,8 +5,8 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from imposter.config import GameOutcome, PlayerRole
+from imposter.engine.responses import PHASE_RESPONSE_TYPES
 from imposter.engine.views import PlayerView, other_players
-from imposter.players.base import PHASE_RESPONSE_TYPES
 
 PROMPTS_DIR = Path(__file__).with_name("prompts")
 """The Jinja2 templates of the player prompts."""

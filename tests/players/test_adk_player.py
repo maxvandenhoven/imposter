@@ -10,17 +10,16 @@ from pydantic import Field
 
 from imposter.config import GameConfig, GamePhase, PlayerConfig, PlayerRole, SecretWord
 from imposter.engine.game import Game
-from imposter.engine.views import PlayerView
-from imposter.models.catalog import ModelCatalogEntry, ModelPrice, ModelProvider, ModelVia
-from imposter.players.adk_player import ANSWER_ATTEMPTS, AdkPlayer
-from imposter.players.base import (
+from imposter.engine.responses import (
     PHASE_RESPONSE_TYPES,
     ClueResponse,
     DiscussionResponse,
-    PlayerResponse,
-    TurnUsage,
     VoteResponse,
 )
+from imposter.engine.views import PlayerView
+from imposter.models.catalog import ModelCatalogEntry, ModelPrice, ModelProvider, ModelVia
+from imposter.players.adk_player import ANSWER_ATTEMPTS, AdkPlayer
+from imposter.players.base import PlayerResponse, TurnUsage
 
 WORD = "giraffe"
 
