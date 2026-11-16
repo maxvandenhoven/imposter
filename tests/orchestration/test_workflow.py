@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import fake_builder, play_workflow, run_events
+from conftest import ReplayLlm, fake_builder, play_workflow, run_events
 from fakes import RandomPlayer, ScriptedPlayer, ScriptStep
 from google.adk.agents.context import Context
 from google.adk.events import Event
@@ -51,7 +51,7 @@ from imposter.engine.responses import (
 )
 from imposter.engine.views import PlayerView
 from imposter.judge.judge import Judge
-from imposter.models.catalog import ModelCatalog
+from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
 from imposter.orchestration.setup import GameRequest
 from imposter.orchestration.workflow import (
     GAME_EVENT_METADATA_KEY,
@@ -62,7 +62,9 @@ from imposter.orchestration.workflow import (
 )
 from imposter.players.base import PlayerProtocol, TurnUsage, UsageRecorder
 from imposter.players.llm_player import LlmPlayerSeating
-from imposter.words.options import WordMode, WordOptions
+from imposter.words.generator import WordGenerator
+from imposter.words.options import SecretWordResolver, WordMode, WordOptions
+from imposter.words.picker import WordPicker
 
 SNAPSHOTS_DIR = Path(__file__).with_name("snapshots")
 
@@ -694,3 +696,27 @@ async def test_models_are_sent_only_the_view_of_their_seat() -> None:
             assert all("giraffe" not in text.lower() for text in before_reveal)
         else:
             assert all("giraffe" in text.lower() for text in before_reveal)
+
+
+async def test_generated_word_is_made_by_an_agent_inside_the_game_run(
+    flash_lite: ModelCatalogEntry, replay_llm: ReplayLlm
+) -> None:
+    replay_llm.replies = [
+        json.dumps({"word": "dusk", "category": "times of day", "hint": "fading"})
+    ]
+    builder = fake_builder()
+    builder.words = SecretWordResolver(
+        picker=WordPicker.load(seed=3),
+        generator=WordGenerator(entry=flash_lite, model=replay_llm),
+    )
+    request = GameRequest(
+        config=new_request().config, words=WordOptions(mode=WordMode.GENERATED)
+    )
+
+    events, state = await run_events(builder.build(), state=request_state(request))
+
+    game = Game.load(GameSnapshot.model_validate(state[GAME_STATE_KEY]))
+    authors = [event.author for event in events]
+    assert game.secret.word == "dusk"
+    assert game.phase is GamePhase.DONE
+    assert authors.index("word_generator") < authors.index(WORKFLOW_NAME)

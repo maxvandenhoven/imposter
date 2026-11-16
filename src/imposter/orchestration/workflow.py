@@ -200,7 +200,7 @@ class GameWorkflowBuilder:
             raise ValueError(message)
 
         secret = await self.words.resolve(
-            options=request.words, with_hint=request.config.imposter_hint
+            ctx=ctx, options=request.words, with_hint=request.config.imposter_hint
         )
         game = Game.create(config=request.config, secret=secret, game_id=ctx.session.id)
 

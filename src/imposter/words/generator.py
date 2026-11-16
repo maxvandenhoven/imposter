@@ -1,16 +1,24 @@
 from collections.abc import Collection
 
+from google.adk.agents import LlmAgent
+from google.adk.agents.context import Context
 from google.adk.models import BaseLlm
+from google.adk.workflow import RetryConfig
 from pydantic import BaseModel, ConfigDict, Field
 
 from imposter.models.catalog import ModelCatalog, ModelCatalogEntry
-from imposter.models.structured import StructuredTaskAgent
+from imposter.models.factory import adk_model, output_config
 
 GENERATOR_MODEL_ID = "gemini-flash-lite"
 """The catalog id of the default generator model."""
 
 GENERATOR_MAX_OUTPUT_TOKENS = 200
 """The answer tokens of one generated word: the JSON with three short fields."""
+
+GENERATOR_RETRY = RetryConfig(
+    max_attempts=2, initial_delay=0.5, exceptions=["ValidationError"]
+)
+"""How ADK retries a generator agent: once more when the answer misses the schema."""
 
 GENERATOR_INSTRUCTION = """\
 You pick secret words for Imposter, a social deduction word game. Civilians know the word
@@ -63,6 +71,10 @@ class GeneratedHint(BaseModel):
 class WordGenerator:
     """Generates secret words and imposter hints with Gemini Flash-Lite ("surprise me").
 
+    Each task has a plain ADK `LlmAgent` with the answer type as `output_schema`. The
+    setup node of the game workflow runs the agent as a child node (`ctx.run_node`), so
+    its model call is part of the game run and its trace.
+
     Attributes:
         word_agent: The ADK agent that picks a word, category and hint.
         hint_agent: The ADK agent that gives the hint for a known word.
@@ -78,40 +90,50 @@ class WordGenerator:
             model: The ADK model object, built from the entry when not given.
         """
         entry = entry or ModelCatalog.load().entry(GENERATOR_MODEL_ID)
-        self.word_agent = StructuredTaskAgent(
+        model = model or adk_model(entry)
+        config = output_config(entry=entry, max_output_tokens=GENERATOR_MAX_OUTPUT_TOKENS)
+        self.word_agent = LlmAgent(
             name="word_generator",
-            entry=entry,
-            instruction=GENERATOR_INSTRUCTION,
-            response_type=GeneratedWord,
-            max_output_tokens=GENERATOR_MAX_OUTPUT_TOKENS,
+            description="Picks a secret word with its category and hint.",
             model=model,
+            instruction=GENERATOR_INSTRUCTION,
+            include_contents="none",
+            output_schema=GeneratedWord,
+            generate_content_config=config,
+            retry_config=GENERATOR_RETRY,
         )
-        self.hint_agent = StructuredTaskAgent(
+        self.hint_agent = LlmAgent(
             name="hint_generator",
-            entry=entry,
-            instruction=GENERATOR_INSTRUCTION,
-            response_type=GeneratedHint,
-            max_output_tokens=GENERATOR_MAX_OUTPUT_TOKENS,
+            description="Gives the imposter hint for a secret word.",
             model=model,
+            instruction=GENERATOR_INSTRUCTION,
+            include_contents="none",
+            output_schema=GeneratedHint,
+            generate_content_config=config,
+            retry_config=GENERATOR_RETRY,
         )
 
-    async def generate(self, avoid: Collection[str]) -> GeneratedWord:
+    async def generate(self, *, ctx: Context, avoid: Collection[str]) -> GeneratedWord:
         """Generate a new secret word with its category and hint.
 
         Args:
+            ctx: The context of the node that asks, which runs the agent as a child.
             avoid: Recently used words that must not be picked.
 
         Returns:
             The word, category and hint.
         """
         recent = ", ".join(sorted(avoid)) or "none"
+        task = GENERATE_TASK.format(recent=recent)
+        answer = await ctx.run_node(self.word_agent, node_input=task)
 
-        return await self.word_agent.answer(GENERATE_TASK.format(recent=recent))
+        return GeneratedWord.model_validate(answer)
 
-    async def hint(self, *, word: str, category: str | None) -> str:
+    async def hint(self, *, ctx: Context, word: str, category: str | None) -> str:
         """Generate the imposter hint for a typed or picked word.
 
         Args:
+            ctx: The context of the node that asks, which runs the agent as a child.
             word: The secret word.
             category: The category of the word, if known.
 
@@ -119,6 +141,6 @@ class WordGenerator:
             The hint.
         """
         task = HINT_TASK.format(word=word, category=category or "unknown")
-        answer = await self.hint_agent.answer(task)
+        answer = await ctx.run_node(self.hint_agent, node_input=task)
 
-        return answer.hint
+        return GeneratedHint.model_validate(answer).hint

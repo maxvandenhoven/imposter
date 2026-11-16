@@ -3,6 +3,7 @@
 import os
 
 import pytest
+from conftest import run_in_node
 
 from imposter.utils.text import is_single_word, mentions_word
 from imposter.words.generator import WordGenerator
@@ -16,7 +17,11 @@ pytestmark = [
 
 
 async def test_real_generator_gives_a_word_category_and_hint() -> None:
-    generated = await WordGenerator().generate(["nostalgia", "echo"])
+    generator = WordGenerator()
+
+    generated, _ = await run_in_node(
+        lambda ctx: generator.generate(ctx=ctx, avoid=["nostalgia", "echo"])
+    )
 
     assert is_single_word(generated.word)
     assert generated.word.lower() not in {"nostalgia", "echo"}
